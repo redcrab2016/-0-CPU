@@ -187,39 +187,39 @@ mod1, mod2, mod3 : operation modifier (intruction extension) decribed in "Modifi
 		W[ds], W[ss] or W[ss], W[ds] : #0011 DD SS (ds = S + DD + 1, ss = S + SS + 1)
 
 ## Design
-NOP $00 00 0000
-MOV $00 00 0001 [address]= value with address = W[S] and value = stackword[S+2m] then DROP BYTE 3 or 4 (8 or 16 bits). stackword=8 if stack flag =0 stackword=16 otherwise 
-AND $00 00 0011 
-OR  $00 00 0011
-XOR $00 00 0100
-ADD $00 00 0101
-SUB $00 00 0110
-ADC $00 00 0111
-SBB $00 00 1000
-TST $00 00 1001
-CMP $00 00 1010
+    NOP $00 00 0000
+    MOV $00 00 0001 [address]= value with address = W[S] and value = stackword[S+2m] then DROP BYTE 3 or 4 (8 or 16 bits). stackword=8 if stack flag =0 stackword=16 otherwise 
+    AND $00 00 0011 
+    OR  $00 00 0011
+    XOR $00 00 0100
+    ADD $00 00 0101
+    SUB $00 00 0110
+    ADC $00 00 0111
+    SBB $00 00 1000
+    TST $00 00 1001
+    CMP $00 00 1010
 	(10 operations, 0 modifiers)
 	operate directly on stack (if Stack flag = 0 then 8 bits operation, is stack flag = 1 then 16 bits operation)
 
-MOVS 1 $00 00 1011
-MOVS L $00 00 1100 
-MOVS V[A] $00 00 1101 
-MOVS R $00 00 1110 
-MOVS W[A] $00 00 1111 
+    MOVS 1 $00 00 1011
+    MOVS L $00 00 1100 
+    MOVS V[A] $00 00 1101 
+    MOVS R $00 00 1110 
+    MOVS W[A] $00 00 1111 
 	Direction(source/destination) flag =1 progress in address backward , forward otherwise
 
-RESERVED  $00 01 0000 : reserved for future use
+    RESERVED  $00 01 0000 : reserved for future use
 
-MOV  $00 01 0001
-AND  $00 01 0010
-OR   $00 01 0011
-XOR  $00 01 0100
-ADD  $00 01 0101
-SUB  $00 01 0110
-SDC  $00 01 0111
-SBB  $00 01 1000
-TST  $00 01 1001
-CMP  $00 01 1010
+    MOV  $00 01 0001
+    AND  $00 01 0010
+    OR   $00 01 0011
+    XOR  $00 01 0100
+    ADD  $00 01 0101
+    SUB  $00 01 0110
+    SDC  $00 01 0111
+    SBB  $00 01 1000
+    TST  $00 01 1001
+    CMP  $00 01 1010
 	( 10 operations, 256 modifiers, )
 	V (8 bits in 16 bits mode, 16 bits in 32 bits mode)
 		regV, imV    : #0000 RR 00  imV  
@@ -241,16 +241,16 @@ CMP  $00 01 1010
 		W[ds], regW  : #0111 DD RR / (ds = S + (DD + 1)2m)
 
  
-RESERVED $00 01 1011 : reserved for future use
-LODS L $00 01 1100
-LODS R $00 01 1101 
-STOS L $00 01 1110 
-STOS R $00 01 1111
+    RESERVED $00 01 1011 : reserved for future use
+    LODS L $00 01 1100
+    LODS R $00 01 1101 
+    STOS L $00 01 1110 
+    STOS R $00 01 1111
 
 
 
-$00 1xxxxx
-JMP/CALL/RET/LOOP (32 operation, 0 modifer)
+    $00 1xxxxx
+    JMP/CALL/RET/LOOP (32 operation, 0 modifer)
 	long absolute : 0
 		direct: 0000 addr-abs
 		CALL  : 0001 addr-abs
@@ -282,7 +282,7 @@ JMP/CALL/RET/LOOP (32 operation, 0 modifer)
 
 
 
-STACK $01 xxxxxx
+    STACK $01 xxxxxx
 	(64 operations, 0 modifier)
 	PUSH/DUP : 0
 		V (8 bits in 16 bits mode, 16 bits in 32 bits mode) : 0
@@ -311,11 +311,12 @@ STACK $01 xxxxxx
 			meW  10 MM  MMadressing
 			DROP : 11 nn ( POP is a DROP 16/32 bits nn times , 00 = 4 times)
 
-NOT  $10 00 xxxx 
-INC, $10 01 xxxx
-DEC, $10 10 xxxx
-NEG  $10 11 xxxx
-	( 4 operations, 0 modifier)
+    NOT  $10 00 xxxx 
+    INC, $10 01 xxxx
+    DEC, $10 10 xxxx
+    NEG  $10 11 xxxx
+    ZERO $11 00 xxxx
+	( 5*16 operations, 0 modifier)
 	V (8 bits in 16 bits mode, 16 bits in 32 bits mode): 0
 		regV : 00 RR /
 		meV  : 01 MM MMaddressing
@@ -323,22 +324,11 @@ NEG  $10 11 xxxx
 		regW: 10 RR /
 		meW : 11 MM  MMaddressing
 
-
-ZERO $11 00 xxxx
-	(16 operations, 0 modifier)
-	V (8 bits in 16 bits mode, 16 bits in 32 bits mode) : 0
-		regV 0 RR /
-		meV  1 MM  MMaddressing
-	W (16 bits in 16 bits mode, 32 bits in 32 bits mode) : 1
-		regW 0 RR /
-		meW  1 MM  MMaddressing
-
-
-SHL, $11 01 0000
-SHR, $11 01 0001
-ROL, $11 01 0010
-ROR, $11 01 0011
-ASL  $11 01 0100
+    SHL, $11 01 0000
+    SHR, $11 01 0001
+    ROL, $11 01 0010
+    ROR, $11 01 0011
+    ASL  $11 01 0100
 	(5 operations, 256 modifiers)
 	V (8 bits in 16 bits mode, 16 bits in 32 bits mode) : 0
 		cst N  : 0 NNN
@@ -361,11 +351,11 @@ ASL  $11 01 0100
 			regW : #111RR 0 RR /
 			memW : #111RR 1 MM MMaddressing
 
-RESERVED $11 01 0101 : reserved for future
-RESERVED $11 01 0110 : reserved for future
-RESERVED $11 01 0111 : reserved for future
+    RESERVED $11 01 0101 : reserved for future
+    RESERVED $11 01 0110 : reserved for future
+    RESERVED $11 01 0111 : reserved for future
 
-SWAP  $11 01 1000
+    SWAP  $11 01 1000
 	( 1 operations, 64 modifiers)
 	V (8 bits in 16 bits mode, 16 bits in 32 bits mode): 0
 		regV, regV : #0000 RR RR /
@@ -377,15 +367,15 @@ SWAP  $11 01 1000
 		meW, regW or regW, meW : #1001 RR MM  MMaddressing
 		regW, W[ss] or W[ss], regW : #0010 RR SS  (ss = S + SS + 1)
 		W[ds], W[ss] or W[ss], W[ds] : #0011 DD SS (ds = S + DD + 1, ss = S + SS + 1)
-RESERVED $11 01 1001 : reserved for future
-RESERVED $11 01 1010 : reserved for future
-RESERVED $11 01 1011 : reserved for future
-RESERVED $11 01 1100 : reserved for future
-RESERVED $11 01 1101 : reserved for future
-RESERVED $11 01 1110 : reserved for future
-RESERVED $11 01 1111 : reserved for future
+    RESERVED $11 01 1001 : reserved for future
+    RESERVED $11 01 1010 : reserved for future
+    RESERVED $11 01 1011 : reserved for future
+    RESERVED $11 01 1100 : reserved for future
+    RESERVED $11 01 1101 : reserved for future
+    RESERVED $11 01 1110 : reserved for future
+    RESERVED $11 01 1111 : reserved for future
 
-SET $11 10 0xxx
+    SET $11 10 0xxx
 	(8 Operations range, but defined 4 operations, 0 modifier)
 	carry : 000
 	zero  : 001
@@ -396,7 +386,7 @@ SET $11 10 0xxx
 	direction: 110
 	XXX  : 111 : reserved for future flags
 
-CLEAR $11 10 1xxx
+    CLEAR $11 10 1xxx
 	(8 Operations range, but defined 4 operations, 0 modifier)
 	carry : 000
 	zero  : 001
@@ -407,20 +397,20 @@ CLEAR $11 10 1xxx
 	direction: 110
 	XXX : 111 : reseerved for future flags
 
-RESERVED $11 11 0000
-RESERVED $11 11 0001
-RESERVED $11 11 0010
-RESERVED $11 11 0011
-RESERVED $11 11 0100
-RESERVED $11 11 0101
-RESERVED $11 11 0110
-RESERVED $11 11 0111
-RESERVED $11 11 1000
-RESERVED $11 11 1001
-RESERVED $11 11 1010
+    RESERVED $11 11 0000
+    RESERVED $11 11 0001
+    RESERVED $11 11 0010
+    RESERVED $11 11 0011
+    RESERVED $11 11 0100
+    RESERVED $11 11 0101
+    RESERVED $11 11 0110
+    RESERVED $11 11 0111
+    RESERVED $11 11 1000
+    RESERVED $11 11 1001
+    RESERVED $11 11 1010
 
 
-INT $11 11 1010
+    INT $11 11 1010
 	(1 operations, 16/256 modifiers)
 	0000 xxxx interrupt number
 	0000 0000 Break point (Inner Debug) same as BRKP
@@ -430,12 +420,12 @@ INT $11 11 1010
 	0001 0000
 	... (software interrupt) 32 bits mode only
 	1111 1111
-BRKP $11 11 1011
+    BRKP $11 11 1011
 	(1 operation , 0 modifier)
 	same as INT 0 (but single byte intruction)
-RESERVED   $11 11 1100 : reserved for future use
-RESET $11 11 1101
-WAIT  $11 11 1110
-HLT   $11 11 1111 
+    RESERVED   $11 11 1100 : reserved for future use
+    RESET $11 11 1101
+    WAIT  $11 11 1110
+    HLT   $11 11 1111 
 	( 1 Operation, 0 modifiers)
 	 stop processor 
