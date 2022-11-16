@@ -48,12 +48,17 @@
 	SV : 8 bits head of stack ( same as V[S]) : V[0100]
 
 ### Memory map CPU:
-	
-16bits	0000 - 001F : 30 bytes :16 times 16 bits interruption address initialized by CPU to FFFF
 
-        FFFC - FFFE : 3 bytes : 0010 0000 xxxxxxxx XXXXXXXX : 20 xx XX : expected JMP HHHH HHHH address to bootstrap 
-	FFFF - FFFF : 1 byte : 0010 0011 : 23 : expected IRET
-32bits	0001 0000 - 0000 0400 : 1024 bytes : 256 time 32 bits interruption address
+16bits
+
+    0000 - 001F : 30 bytes :16 times 16 bits interruption address initialized by CPU to FFFF
+    FFFC - FFFE : 3 bytes : 0010 0000 xxxxxxxx XXXXXXXX : 20 xx XX : expected JMP HHHH HHHH address to bootstrap 
+    FFFF - FFFF : 1 byte : 0010 0011 : 23 : expected IRET
+    
+32bits
+
+    0001 0000 - 0000 0400 : 1024 bytes : 256 time 32 bits interruption address (should be initialized to 0000FFFF)
+    
 ### Value and access modes
 		...V : V means 8 bits target in 16 bits mode, 16 bits in 32 bits mode
 		...W : W means 16 bits target in 16 bits mode, 32 bits in 32 bits mode
@@ -101,7 +106,7 @@
 			W[[A]]    : (MM=11) A is the adress where is located the address of the 16/32 bits value
 ### Operation
 
-Horizantal : MSB
+Horizontal : MSB
 Vertical : LSB
 
 | Hex | 0-        | 1-       | 2-            | 3-               | 4-             | 5-            | 6-            | 7-           | 8-           | 9-           | A-           | B-           | C-            | D-        | E-   | F-        |
@@ -125,9 +130,13 @@ Vertical : LSB
 
 
 (rel) : relative branching (immediate data is a branching relative to I, I=I+SignedImmediate)
+
 (abs) : absolute adressing (immediate data is a direct branching, I=immediate)
+
 mod1, mod2, mod3 : operation modifier (intruction extension) decribed in "Modifiers" below
+
 1m : is 1 in 16 bits CPU mode, 2 in 32 bits CPU mode
+
 2m : is 2 in 16 bits CPU mode, 4 in 32 bits CPU mode
 
 
