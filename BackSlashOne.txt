@@ -1,0 +1,511 @@
+32 bits CPU
+Registers:
+	Alias RegisterId = description
+	   PI         R0 = Instruction operator address (always masked as R0 = R0 AND FFFFFFFC)
+	   PD         R1 = Instruction data address = f(R0) (always R1 = R0 + 4, can't be modified by instruction execution)
+	   FL         R2 = Operation flags b0 Carry, b1 Overflow, b2-3 SizeRead1, b4-5 SizeRead2, b6-7 SizeWrite, bn Negative
+	                   SizeRead1, SizeRead2, SizeWrite : 11: 64 bits (but limited to 32 bits read/write), 00:8 bits, 01:16 bits, 10:32 bits
+				if 16 bits read or write, target address is always AND masked with FFFFFFFE
+				if 32 bits read or write, target address is always AND masked with FFFFFFFC
+	   RM         R3 = High value of a multiply operation / remainder of a divide operation
+	   PP         R4 = R0 to next instruction when R0 is changed by process
+	   D0         R5 = value or address
+	   ..         ..
+	   DA/D10     RF/R15 = value or address
+
+
+MEMORY BLOCK TRANSFORM W/O TRANSFER
+
+              33222222222211111111110000000000
+	      10987654321098765432109876543210
+              d10SMzDooooooossssttttZZZZ?????0
+                   1                iiiiiiiihh size as immediate 'i' shift 'h' :
+                 0 0                ZZZZ???x01 interate until to [source] = RZ (x: 0 include final data , 1 do not include final data)
+                 0 0                ZZZZrrrx11 interate RZ times except if [source] = R(r+5)  (x: 0 include final data , 1 do not include final data)
+immediate size value = (i + 1) << h (granularity : 256, range [1 : 256*8=2048] block size [ from 1 byte in 8 bits, 8192 bytes in 32 bits] 
+
+d : immediate data exisiting flag  : 1 there is a 32 bits immediate data just after the instruction o other wise.
+10 : discreminator (bits 30 and 29)
+S : source type : 0 source is address, 1 source is value
+M : 0 for destination = destination op2 source, 1 for destination = source op2 destination
+z : 0 Size is in register Z, 1 size is in (i+1) << h
+D : direction , 0 forward, 1 backward
+o : op (operation de type unary op1 or op2) first bit indicate unary(0)/duary(1)
+s : source register id
+t : destination register id
+Z : register id for size when z is 0
+i : immediate when z is 1 ( see z for computation)
+h : shift when z is 1 ( see z for computation)
+block size ( immediate or by value is the number of iteration , size block depends on SizeRead1 and SizeWrite flags
+
+block transform with/without transfer
+	source, sourcetype, destination, direction, size, sizetype, transform( op, mode)
+		source(s:4): register id (as address or as value)
+		sourcetype(S:1) : 0 source is address, 1 source is value
+		destination(t:4) : registerid as address
+		direction(D:1) : 1 bit (0 forward, 1 backward)
+		size(Z/(ih):4/11) : 
+			register id / immediate with shift left (number of iteration with word size and increment respecting SizeRead1 and SizeWrite (source/destination)
+		sizetype(z:1) : 0 reigister id, 1 immediate with shift 
+		transform(8): 
+			mode(M) ?: op is unary op1 sur source then result on destination (destination = op1 source)
+			mode(M) 0 : op is op2 (or op1as2) with x on destination and y on source (destination = destination op2 source)
+			mode(M) 1 : op is op2 (or op1as2) with x on source and y on destination (destination = source op2 destination)
+-----
+
+
+
+
+
+* Iterative Block read and transform
+* Interative Block write and transform
+compact register and immediate
+
+TRANSFERT
+
+              33222222222211111111110000000000
+	      10987654321098765432109876543210
+              d0pppp11111112222222iiiijjjjkkkk
+
+d : immediate data exisiting flag : 1 there is a 32 bits immediate data just after the instruction o other wise.
+0 : bit 30, discreminator
+i,j,k : Register index
+1,2 : operators op1 and op2 to be used in the process
+p : process to invoke
+0 : discreminator for complex transfer instruction set
+
+Intruction = ( (proc:4, op1:7, op2:7 , i:4, j:4, k:4, d:1):31 , Data:32):31(32)/63(64)
+
+Process:
+	Micro instruction of the CPU (parameters : op1,op2,i or s,j or d,k )
+		0 xxxxxxx   : EXEC operation x   **
+		1 000 00 xx : PUSH Rx  (00: Ri or Rs, 01: Rj or Rd, 10: Rk, 11:?)
+		1 000 01 xx : POP Rx  (00: Ri, 01: Rj, 10: Rk, 11:?) **
+		1 000 10 01 : DUP   (POP v, PUSH v, PUSH v) **
+		1 000 10 10 : DROP  (POP v, v unused) **
+		1 000 10 11 : ?
+                1 100 11 01 : WRITE (POP v, POP a, [a] = v) **
+		1 100 11 10 : READ  (POP a, v = [a], PUSH v) **
+		1 100 11 11 : STOP (stop the process)
+		1 101 xxxx  : JP12 xxxx , go to addresse xxxx if  OP1 is designating an OP2
+		1 110 xxxx  : JPO1 xxxx , go to adresse xxxx if OP1 is an OP2 "ignore" operation
+		1 111 xxxx  : JPO2 xxxx , go to adresse xxxx if OP2 is an "ignore" operation
+** all operation that try to POP an empty stack is equivalent of STOP command
+before process execution, the CPU stack is empty
+the CPU stack size is 4 values.
+at the end of every process there is an implicit STOP command
+before process execution if i == 0 then R4 = R0 + 4 << d
+After process execution if i != 0 then R0 = R0 + 4 << d
+if i == 1 then R1 is not modified (no result written, but flags still modified by operation)
+op1as2 : is op1 when it does represent a duary operation
+Ri                ← (op1 Rj) op2 Rk		1 op1 op2 i j k d
+		00	JP12	8
+		01	PUSH	Rj
+		02	EXEC	op1
+		03	JPO2	06
+		04	PUSH	Rk
+		05	EXEC	op2
+		06	POP	Ri
+		07	STOP
+                    (Ri op1as2 Rj) op2 Rk
+		08	PUSH	Ri
+		09	JPO1	C
+		0A	PUSH	Rj
+		0B	EXEC	op1
+		0C	JPO2	F
+		0D	PUSH	Rk
+		0E	EXEC	op2
+		0F	POP	Ri
+Ri                ← op1 (Rj op2 Rk)		2 op1 op2 i j k d
+		00	JP12	8
+		01	PUSH	Rj
+		02	JPO	05
+		03	PUSH	Rk
+		04	EXEC	op2
+		05	EXEC	op1
+		06	POP	Ri
+		07	STOP
+                    Ri op1as2 (Rj op2 Rk)
+		08	PUSH	Ri
+		09	JPO1    F
+		0A	PUSH	Rj
+		0B	JPO2    E
+		0C	PUSH	Rk
+		0D	EXEC	op2
+		0E	EXEC	op1
+		0F	POP	Ri
+Ri                ← (op1 Rj) op2 [ Rk ]		3 op1 op2 i j k d 
+		00	JP12	9
+		01	PUSH	Rj
+		02	EXEC	op1
+		03	JPO2	7
+		04	PUSH	Rk
+		05	READ
+		06	EXEC	op2
+		07	POP	Ri
+		08	STOP
+                    (Ri op1as2 Rj) op2 [ Rk ]
+		09	PUSH	Ri
+		0A	JPO1	D
+		0B	PUSH	Rj
+		0C	EXEC	op1
+		0D	JPO2	7
+		0E	PUSH	Rk
+		0E	READ
+		0F	EXEC	op2
+		10	POP	Ri
+Ri                ← (op1 [ Rj ]) op2 Rk 	4 op1 op2 i j k d 
+		00	JP12	9
+		01	PUSH	Rj
+		02	READ
+		03	EXEC	op1
+		04	JPO2	07
+		05	PUSH	Rk
+		06	EXEC	op2
+		07	POP	Ri
+		08	STOP
+                    (Ri op1as2 [ Rj ]) op2 Rk
+		09	PUSH	Ri
+		0A	JPO1	E
+		0B	PUSH	Rj
+		0C	READ
+		0D	EXEC	op1
+		0E	JPO2	7
+		0F	PUSH	Rk
+		10	EXEC	op2
+		11	POP	Ri
+Ri                ← op1 (Rj op2 [ Rk ])		5 op1 op2 i j k d 
+		00	JP12	9
+		01	PUSH	Rj
+		02	JPO2	6
+		03	PUSH	Rk
+		04	READ
+		05	EXEC	op2
+		06	EXEC	op1
+		07	POP	Ri
+		08	STOP
+                    Ri op1as2 (Rj op2 [ Rk ])
+		09	PUSH	Ri
+		0A	JPO1	7
+		0B	PUSH	Rj
+		0C	JPO2	6
+		0D	PUSH	Rk
+		0E	READ
+		0F	EXEC	op2
+		10	EXEC	op1
+		11	POP	Ri
+Ri                ← op1 ([ Rj ] op2 Rk) 	6 op1 op2 i j k d 
+		00	JP12	9
+		01	PUSH	Rj
+		02	READ
+		03	JPO2	6
+		04	PUSH	Rk
+		05	EXEC	op2
+		06	EXEC	op1
+		07	POP	Ri
+		08	STOP
+                    Ri op1as2 ([ Rj ] op2 Rk)
+		09	PUSH	Ri
+		0A	JPO1	7
+		0B	PUSH	Rj
+		0C	READ
+		0D	JPO2	6
+		0E	PUSH	Rk
+		0F	EXEC	op2
+		10	EXEC	op1
+		11	POP Ri
+Ri                ← op1[[ Rj op2 Rk ]]		7 op1 op2 i j k d
+		00	JP12	A
+		01	PUSH	Rj
+		02	JPO2	05
+		03	PUSH	Rk
+		04	EXEC	op2
+		05	READ
+		06	READ
+		07	EXEC	op1
+		08	POP	Ri
+		09	STOP
+                    Ri op1as2 [[Rj op2 Rk ]]
+		0A	PUSH	Ri
+		0B	JPO1	8
+		0C	PUSH	Rj
+		0D	JPO2	5
+		0E	PUSH	Rk
+		0F	EXEC	op2
+		10	READ
+		11	READ
+		12	EXEC	op1
+		13	POP	Ri
+Ri                ← op1 [ Rj op2 [ Rk ]]	8 op1 op2 i j k d
+		00	JP12	A
+		01	PUSH	Rj
+		02	JPO2	6
+		03	PUSH	Rk
+		04	READ
+		05	EXEC	op2
+		06	READ
+		07	EXEC	op1
+		08	POP	Ri
+		09	STOP
+                    Ri op1as2 [ Rj op2 [ Rk ]]
+		0A	PUSH	Ri
+		0B	JPO1	8
+		0C	PUSH	Rj
+		0D	JPO2	6
+		0E	PUSH	Rk
+		0F	READ
+		10	EXEC	op2
+		11	READ
+		12	EXEC	op1
+		13	POP Ri
+Ri                ← op1 [[Rj] op2  Rk ]		9 op1 op2 i j k d
+		00	JP12	A
+		01	PUSH	Rj
+		02	READ
+		03	JPO2	6
+		04	PUSH	Rk
+		05	EXEC	op2
+		06	READ
+		07	EXEC	op1
+		08	POP	Ri
+		09	STOP
+                    Ri op1as2 [[Rj] op2 Rk]
+		0A	PUSH	Ri
+		0B	JPO1	8
+		0C	PUSH	Rj
+		0D	READ
+		0E	JPO2	6
+		0F	PUSH	Rk
+		10	EXEC	op2
+		11	READ
+		12	EXEC	op1
+		13	POP	Ri
+After process execution R0 = R0 + 4 << d
+[[ Rj op2 Rk ]]   ← op1 Ri			10 op1 op2 i j k d
+		00	JP12	A
+		01	PUSH	Ri
+		02	EXEC	op1
+		03	PUSH	Rj
+		04	JPO2	6
+		05	PUSH	Rk
+		06	EXEC	op2
+		07	READ
+		08	WRITE
+		09	STOP
+                    [[ Rj op2 Rk ]] op1as2 Ri  
+		0A	PUSH	Rj
+		0B	JPO2	D
+		0B	PUSH	Rk
+		0C	EXEC	op2
+		0D	READ
+		0E	DUP
+		0F	READ
+		10	JPO1	8
+		11	PUSH	Ri
+		12	EXEC	op1
+		13	WRITE
+[ Rj op2 [ Rk ]]  ← op1 Ri			11 op1 op2 i j k d
+		00	JP12	A
+		01	PUSH	Rj
+		02	JPO2	6
+		03	PUSH	Rk
+		04	READ
+		05	EXEC	op2
+		06	PUSH	Ri
+		07	EXEC	op1
+		08	WRITE
+		09	STOP
+                    [ Rj op2 [ Rk ]] op1as2 Ri
+		0A	PUSH	Rj
+		0B	JPO2	F
+		0C	PUSH	Rk
+		0D	READ
+		0E	EXEC	op2
+		0F	DUP
+		10	READ
+		11	JPO1	8
+		12	PUSH	Ri
+		13	EXEC	op1
+		14	WRITE
+[[ Rj ] op2 Rk ]  ← op1 Ri			12 op1 op2 i j k d
+		00	JP12	A
+		01	PUSH	Rj
+		02	READ
+		03	JPO2	6
+		04	PUSH	Rk
+		05	EXEC	op2
+		06	PUSH	Ri
+		07	EXEC	op1
+		08	WRITE
+		09	STOP
+                    [[ Rj ] op2 Rk ] op1as2 Ri
+		0A	PUSH	Rj
+		0B	READ
+		0C	JPO2	F
+		0D	PUSH	Rk
+		0E	EXEC	op2
+		0F	DUP
+		10	READ
+		11	JPO1	8
+		12	PUSH	Ri
+		12	EXEC	op1
+		13	WRITE
+
+
+
+op1 : unary or duary operation with target as first operand (x ← unary y , x ← x duary y )
+op2 : duary operation ( z ← x duary y )
+(98) -> 128 -> 7 bits
+unary operation: (51):6 : first bit = 0  (when operation on 7 bits)
+	CPU pattern on unary operation: (1 stack value consumed, 1 stack value provided)
+		POP x
+		operation with x result in z
+		PUSH z
+
+	special (10)
+*	y ←  read1size x       :  y ← SizeRead1,SizeRead1 ← x 
+*	y ←  read2size x       :  y ← SizeRead2,SizeRead2 ← x 
+*	y ←  writesize x       :  y ← SizeWrite, SizeWrite ← x 
+	y ←  idem x       : x
+	y ←  low16 x      : low16(x)
+	y ←  high16 x     : high16(x)
+	y ←  byte0 x      : byte 0 of x
+	y ←  byte1 x      : byte 1 of x
+	y ←  byte2 x      : byte 2 of x
+	y ←  byte3 x      : byte 3 of x
+	math (3)
+	y ←  inc x        : x + 1
+	y ←  dec x        : x - 1
+	y ←  neg x        : 0 - x
+	math advanced (16)
+	y ←  tofloat x    : convert an integer x to float
+	y ←  tointeger x  : convert a float x to integer (overflow flag set if out of range)
+	y ←  incfloat x   : x + 1 (x float)
+	y ←  decfloat x   : x - 1 (x float)
+	y ←  negfloat x   : 0 - x (x float)
+	y ←  sin x        : Sinus of x (float radian)
+	y ←  cos x        : Cosinus of x (float radian)
+	y ←  tan x        : tangente of x (float radian)
+	y ←  asin x       : ArcSinus of x (float radian)
+	y ←  acos x       : ArcCosinus of x (float radian)
+	y ←  atan x       : ArcTangente of x (float radian) (overflow flag set if unresolved)
+	y ←  atan2 x      : ArcTangente2 of x (float radian) (overflow flag set if unresolved)
+	y ←  ln x	  : Neperian Logarithme of x (float)
+	y ←  log2 x	  : Logarithme base 2 of x (float)
+	y ←  log10 x	  : Logarithme base 10 of x (float)
+	y ←  e x	  : exponential of x (float)
+	binary (18)
+	y ←  shiftleft x  : x << 1
+	y ←  shiftright x : x >> 1
+	y ←  RotateRight x : x >> 1
+	y ←  RotateLeft x : x >> 1
+	y ←  shiftleft16 x  : x << 1
+	y ←  shiftright16 x : x >> 1
+	y ←  RotateRight16 x : x >> 1
+	y ←  RotateLeft16 x : x >> 1
+	y ←  shiftleft8 x  : x << 1
+	y ←  shiftright8 x : x >> 1
+	y ←  RotateRight8 x : x >> 1
+	y ←  RotateLeft8 x : x >> 1
+	y ←  arithmeticshiftleft x  : x << 1 (x signed)
+	y ←  not x        : binary not x
+	y ←  dosign8 x    : if bit(7,x) then return x with bit 8 to n set else return x
+	y ←  dosign16 x    : if bit(15,x) then return x with bit 16 to n set else return x
+	y ←  swap16 x  : high16(x) swapped with low16(x)
+	y ←  swap8 x  : byte 0 of x swapped with byte 1 of x
+	boolean (4)
+*	y ←  positive x   : 1 if x >= 0 , 0 otherwise
+*	y ←  negative x   : 0 if x >= 0 , 1 otherwise
+*	y ←  iszero x     : 1 if x = 0 , 0 otherwise
+*	y ←  isnonzero x  : 0 if x = 0 , 1 otherwise
+
+duary operation: (50):6 : first bit = 1 (when operation on 7 bits)
+	CPU pattern on duary operation (2 stack values consumed, 1 stack value provided)
+		POP y
+		POP x
+		operation with x and y result in z
+		PUSH z
+	special (13)
+	z ←  x ignore y : x 
+	z ←  x passto y : y
+	z ←  x ifcarry y : y if carry flag set,  x  otherwise
+	z ←  x ifnotcarry y : y if carry flag not set, x otherwise
+	z ←  x ifzero y : y if zero flag set,  x  otherwise
+	z ←  x ifnotzero y : y if zero flag not set, x otherwise
+	z ←  x ifnegative y : y if negative flag set,  x  otherwise
+	z ←  x ifnotnegative y : y if negative flag not set, x otherwise
+	z ←  x ifoverflow y : y if overflow flag set,  x  otherwise
+	z ←  x ifnotoverflow y : y if overflow flag not set, x otherwise
+	math (7)
+	z ←  x add y : x + y 
+	z ←  x sub y : x - y 
+	z ←  x addCarry y : x + y + c
+	z ←  x subBorrow y : x - y - c
+	z ←  x multiply y : tt ← x * y : R3 ← high(tt), z ← low(tt)
+	z ←  x divide y : z ← x / y : R3 ← x % y
+	z ←  x modulus y : z ← x % y 
+	math advanced (5)
+	z ←  x addfloat y : x + y  (x,y are float)
+	z ←  x subfloat y : x - y (x,y are float)
+	z ←  x multiplyfloat y :  x * y (x,y are float)
+	z ←  x dividefloat y :  x / y (x,y are float)
+	z ←  x power y :  x ^ y (x,y are float)
+	binary (15)
+	z ←  x and y : x binary AND y
+	z ←  x or y : x binary OR y
+	z ←  x xor y : x binary EXCLUSIVE OR y
+	z ←  x shifleft y : x << y
+	z ←  x shifright y : x >> y
+	z ←  x rotateleft y : x << y
+	z ←  x rotateright y : x >> y
+	z ←  x shifleft16 y : x << y
+	z ←  x shifright16 y : x >> y
+	z ←  x rotateleft16 y : x << y
+	z ←  x rotateright16 y : x >> y
+	z ←  x shifleft8 y : x << y
+	z ←  x shifright8 y : x >> y
+	z ←  x rotateleft8 y : x << y
+	z ←  x rotateright8 y : x >> y
+	boolean (10)
+	z ←  x egual y : 1 if x = y , 0 otherwise
+	z ←  x different y : 0 if x = y , 1 otherwise
+	z ←  x greater y : 1 if x > y (signed) , 0 otherwise
+	z ←  x less y : 0 if x < y (signed) , 1 otherwise
+	z ←  x greaterorequal y : 1 if x >= y (signed) , 0 otherwise
+	z ←  x lessorequal y : 0 if x <= y (signed) , 1 otherwise
+	z ←  x above y : 1 if x > y (unsigned) , 0 otherwise
+	z ←  x below y : 0 if x < y (unsigned) , 1 otherwise
+	z ←  x aboveorequal y : 1 if x >= y (unsigned) , 0 otherwise
+	z ←  x beloworequal y : 0 if x <= y (unsigned) , 1 otherwise
+
+
+
+Annexes:
+Ri ← 0 ± Rj
+Ri ← 0 ± Rj ± Rk
+Ri ⇆ 0 ± [ 0 + Rk ]
+Ri ← 0 ± Rj ± [ 0 + Rk ]
+Ri ⇆ 0 ± [[ 0 + Rj ± Rk ]]
+Ri ⇆ 0 ± [ 0 + Rj ± [ 0 + Rk ]]
+
+[x] consider x as unsigned
+x as signed or unsigned
+
+Simplified
+Ri              ← ±Rj			0 ±1 i j d
+Ri              ← ±Rj ± Rk		1 ±1 ±2 i j k d
+Ri              ← ±[ Rk ]		2 ±1 i k d
+Ri              ← ±Rj ± [ Rk ]		3 ±1 ±2 i j k d 
+Ri              ← ±[[ Rj ± Rk ]]	4 ±1 ±2 i j k d
+Ri              ← ±[ Rj ± [ Rk ]]	5 ±1 ±2 i j k d
+[ Rk ]          ← ±Ri			6 ±1 i k d
+[[ Rj ± Rk ]]   ← ±Ri			7 ±1 ±2 i j k d
+[ Rj ± [ Rk ]]  ← ±Ri			8 ±1 ±2 i j k d
+
+? Ri ← Rj op2 Rk                           9 op2 i j k d
+? Ri ← op1 Rj                              10 op1 op2 i k d
+Ri ← (op1 Rj) op2 Rk                     11 op1 op2 i k d
+Ri ← op1 (Rj op2 Rk)                     12 op1 op2 i k d
+
+
+=============
