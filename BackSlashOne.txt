@@ -1,18 +1,31 @@
 32 bits CPU
 Registers:
 	Alias RegisterId = description
-	   PI         R0 = Instruction operator address (always masked as R0 = R0 AND FFFFFFFC)
-	   PD         R1 = Instruction data value = [f(R0)] (always R1 = [R0 + 4], can't be modified by instruction execution)
-	   FL         R2 = Operation flags b0 Carry, b1 Overflow, b2-3 SizeRead1, b4-5 SizeRead2, b6-7 SizeWrite, bn Negative
+	   PI         R15 = Instruction operator address (effective address is always the result of  R15 AND FFFFFFFC, bit 0 and 1 indicate the CPU state( when written to F15 for branching purpose by program or by interruption) (b1-0, 00:user, 01:Supervisor, 10: IRQ, 11:anomalies )
+	   PD         R14 = Instruction data value = [f(R15)] (always R14 = [R15 + 4], can't be modified by instruction execution)
+	   FL         R13 = Operation flags b0 Carry, b1 Overflow, b3-2 SizeRead1, b5-4 SizeRead2, b7-6 SizeWrite, b9-8 CPUmode, bn Negative
 	                   SizeRead1, SizeRead2, SizeWrite : 11: 64 bits (but limited to 32 bits read/write), 00:8 bits, 01:16 bits, 10:32 bits
 				if 16 bits read or write, target address is always AND masked with FFFFFFFE
 				if 32 bits read or write, target address is always AND masked with FFFFFFFC
-	   RM         R3 = High value of a multiply operation / remainder of a divide operation
-	   PP         R4 = R0 to next instruction when R0 is changed by process
-	   SP         R5 = Head stack address
-	   D0         R6 = value or address
+	   RM         R12 = High value of a multiply operation / remainder of a divide operation
+	   PP         R11 = R15 to next instruction when R0 is changed by process
+	   SP         R10 = Head stack address
+	   D9         R9 = value or address
 	   ..         ..
-	   D9         RF/R15 = value or address
+	   D0         R0 = value or address
+
+
+Subroutine pattern:
+	; example with no stack use for  parameter-in/ parameter-out (parameter by register)
+	main:
+ 		x
+		PI = @subroutine  ; or R15 = R15 + offset subroutine   ; branch to subroutine (absolute or relative)
+		y
+
+	subroutine:
+		PUSH PP ; R11 contains the address of 'y' (with b1-0 of previous CPU state: state before branching)
+		.. do subroutine code
+		POP PI  ( go back to 'y' with previous CPU state)
 
 
 MEMORY BLOCK TRANSFORM W/O TRANSFER
@@ -22,7 +35,7 @@ MEMORY BLOCK TRANSFORM W/O TRANSFER
               d10SMzDooooooossssttttZZZZ?????0
                    1                iiiiiiiihh size as immediate 'i' shift 'h' :
                  0 0                ZZZZ???x01 interate until  [source] = RZ (x: 0 include final data , 1 do not include final data)
-                 0 0                ZZZZrrrx11 interate RZ times except if [source] = R(r+5)  (x: 0 include final data , 1 do not include final data)
+                 0 0                ZZZZrrrx11 interate RZ times except if [source] = R(r)  (x: 0 include final data , 1 do not include final data)
 immediate size value = (i + 1) << h (granularity : 256, range [1 : 256*8=2048] block size [ from 1 byte in 8 bits, 8192 bytes in 32 bits] 
 
 d : immediate data exisiting flag  : 1 there is a 32 bits immediate data just after the instruction 0 other wise.
@@ -38,7 +51,7 @@ Z : register id for size when z is 0
 i : immediate when z is 1 ( see z for computation)
 h : shift when z is 1 ( see z for computation)
 block size ( immediate or by value is the number of iteration , size block depends on SizeRead1 and SizeWrite flags
-after block operation, R0 = R0 + 4 << d
+after block operation, R15 = R15 + 4 << d
 
 block transform with/without transfer
 	source, sourcetype, destination, direction, size, sizetype, transform( op, mode)
@@ -69,8 +82,8 @@ rrrr : Register index to use (Rr)
 iiiiiiiiiiiiiiii hhhhh : signed/unsigned (s=1 / s = 0) compact 16 bits immediate , value = i << h, granularité 65536 value from 0 to 0xFFFF0000 (hhhhh, from 0 to 31)
 pp : process : (bit 27-26)
 	for 00 and 01 then
-		before process execution if r == 0 then R4 = R0 + 4 << d
-		After process execution if r != 0 then R0 = R0 + 4 << d
+		before process execution if r == 0 then R11 = R15 + 4 << d
+		After process execution if r != 0 then R15 = R15 + 4 << d
 	00 : Rr ← i << h  (signed s=1 or unsigned s=0)
 	01 : Rr ← [i unsigned  << h] ( SizeRead1 flag indicates read data size)
 	10 : [ i unsigned << h   ← Rr ( SizeWrite flag indicates write data size)
@@ -82,14 +95,14 @@ STACK
               d1110ppmxxxxxxxxxxxxxxxxxxxxxxxx
                      0rrrrjjjjjjjjjjjjjjjjkkkk 
                      1iiiiiiiiiiiiiiiiiiiiihhh
-PUSH x : SP -=4, [SP] = x
-POP x  : x=[SP], SP +=4
+PUSH x : SP +=4, [SP] = x
+POP x  : x=[SP], SP -=4
 d :  immediate data exisiting flag : 1 there is a 32 bits immediate data just after the instruction 0 otherwise.	
 1110: bit 20-27 , discreminator
 pp : process : 
 		00 PUSH direct Register(m=0) / (m=1)signed compact immediat ( i << h)
 		01 PUSH indirect [Register + signed compact immediat (j << k)](m=0) / (m=1)[unisgned Compact immediat (i << h)] respect SizeRead1 memory read size
-		10 POP  Direct Register(m=0)  (NB : POP R1 is like a DROP)
+		10 POP  Direct Register(m=0)  (NB : POP R14 is like a DROP)
 		11 POP Indirect [Register+signed compact immediat (j << k)](m=0) / [unsigned compact immediat (i << h)] respect SizeWrite memory memory write size
 m : 0, for register, 1 for compact immediate
 rrrr : register index when r=0
@@ -128,9 +141,9 @@ Process:
 before process execution, the CPU stack is empty
 the CPU stack size is 4 values.
 at the end of every process there is an implicit STOP command
-before process execution if i == 0 then R4 = R0 + 4 << d
-After process execution if i != 0 then R0 = R0 + 4 << d
-if i == 1 then R1 is not modified (no result written, but flags still modified by operation)
+before process execution if i == 0 then R11 = R15 + 4 << d
+After process execution if i != 0 then R15 = R15 + 4 << d
+if i == 1 then R14 is not modified (no result written, but flags still modified by operation)
 op1as2 : is op1 when it does represent a duary operation
 Ri                ← (op1 Rj) op2 Rk		1 op1 op2 i j k d
 		00	JP12	8
@@ -475,8 +488,8 @@ duary operation: (50):6 : first bit = 1 (when operation on 7 bits)
 	z ←  x sub y : x - y 
 	z ←  x addCarry y : x + y + c
 	z ←  x subBorrow y : x - y - c
-	z ←  x multiply y : tt ← x * y : R3 ← high(tt), z ← low(tt)
-	z ←  x divide y : z ← x / y : R3 ← x % y
+	z ←  x multiply y : tt ← x * y : R12 ← high(tt), z ← low(tt)
+	z ←  x divide y : z ← x / y : R12 ← x % y
 	z ←  x modulus y : z ← x % y 
 	math advanced (5)
 	z ←  x addfloat y : x + y  (x,y are float)
@@ -489,6 +502,8 @@ duary operation: (50):6 : first bit = 1 (when operation on 7 bits)
 	z ←  x or y : x binary OR y
 	z ←  x xor y : x binary EXCLUSIVE OR y
 	z ←  x shifleft y : x << y
+	z ←  x bitset y : bit number y of x set to 1
+	z ←  x bitclear y : bit number y of x set to 0
 	z ←  x shifright y : x >> y
 	z ←  x rotateleft y : x << y
 	z ←  x rotateright y : x >> y
