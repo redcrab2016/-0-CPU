@@ -2,33 +2,58 @@
 Registers:
 	Alias RegisterId = description
 	   PI         R15 = Instruction operator address (effective address is always the result of  R15 AND FFFFFFFC, bit 0 and 1 indicate the CPU state( when written to F15 for branching purpose by program or by interruption) (b1-0, 00:user, 01:Supervisor, 10: IRQ, 11:anomalies )
-	   PD         R14 = Instruction data value = [f(R15)] (always R14 = [R15 + 4], can't be modified by instruction execution)
-	   FL         R13 = Operation flags b0 Carry, b1 Overflow, b3-2 SizeRead1, b5-4 SizeRead2, b7-6 SizeWrite, b9-8 CPUmode, bn Negative
+	   PD         R14 = Instruction data value = [f(R15)] (always R14 = [R15 + 4], can't be modified by instruction execution, this PD value set operation is done if b31 of the insruction is set)
+	   FL         R13 = Operation flags b0 Carry, b1 Overflow, b3-2 SizeRead1, b5-4 SizeRead2, b7-6 SizeWrite, b9-8 CPUmode, b10 MemoryBlockRun, b11 MemoryBlockInteruptEnabled, bn Negative
 	                   SizeRead1, SizeRead2, SizeWrite : 11: 64 bits (but limited to 32 bits read/write), 00:8 bits, 01:16 bits, 10:32 bits
 				if 16 bits read or write, target address is always AND masked with FFFFFFFE
 				if 32 bits read or write, target address is always AND masked with FFFFFFFC
-	   RM         R12 = High value of a multiply operation / remainder of a divide operation
-	   PP         R11 = R15 to next instruction when R0 is changed by process
-	   SP         R10 = Head stack address
+	   PP         R12 = PI to next instruction when PI is target of result (about to be modified by the instruction)
+	   SP         R11 = Head stack address
+	   RM         R10 = High value of a multiply operation / remainder of a divide operation
 	   D9         R9 = value or address
 	   ..         ..
 	   D0         R0 = value or address
+
+Branching pattern:
+		POP PI ; branch to absolute address designated by head of stack POP operation
+		PI = (any TRANSFER/COMPACT category instruction)
+		examples:
+		PI = Rx ; branch to absolute address designated by address contained in register Rx
+		PI = [Rx] ; branch to absolute address designated by address contained in memmory at address Rx
+		PI = @label ; branch to absolute address designated by 'label'
+		PI = #0x10000BFA ; branch to absolute adress designated by value
+		PI = PI + offset label ; branch to relative address designated by label
+		PI = @label ifcond PP ;  branch to absolute address designated by 'label' if 'ifcond' is met, branch to PP otherwise (next instruction)
+		PI = Rx ifcond PP ;  branch to absolute address contained in register Rx if 'ifcond' is met, branch to PP otherwise (next instruction)
+		PI = [Rx] ifcond PP ;  branch to absolute address contained at address designated by register Rx if 'ifcond' is met, branch to PP otherwise (next instruction)
+
 
 
 Subroutine pattern:
 	; example with no stack use for  parameter-in/ parameter-out (parameter by register)
 	main:
  		x
-		PI = @subroutine  ; or R15 = R15 + offset subroutine   ; branch to subroutine (absolute or relative)
+		PI = @subroutine  ; or any other (Branching pattern)
 		y
 
 	subroutine:
-		PUSH PP ; R11 contains the address of 'y' (with b1-0 of previous CPU state: state before branching)
+		PUSH PP ; R12 contains the address of 'y' (with b1-0 of previous CPU state: state before branching)
 		.. do subroutine code
 		POP PI  ( go back to 'y' with previous CPU state)
 
+CPU State change ???
+	00:user -> 00:user : by operation changing explicitly PI register b1-0 set tp PI explicitly is ignored
+	00:user -> 01:supervisor : by using "Software interrupt" operation
+	00:user -> 10:IRQ : by CPU receiving Interrupt signal.
+	00:user -> 11:Anomalies : by CPU abnormal operation interpretation/execution
+	01:supervisor -> 00:user  : by operation changing explicitly PI register with b1-0 set to 0
+	01:supervisor -> 01:supervisor : by operation changing explicitly PI register b1-0 set t0 01
+	01:supervisor -> 10:IRQ: by CPU receiving Interrupt signal
+	01:supervisor -> 11:Anomalies : by CPU abnormal operation interpretation/execution
+	10:IRQ -> 00:user : by operation changing explicitly PI register with b1-0 set to 0
+	10:IRQ -> 01:supervisor : not authorized : "Software Interrupt" operation  
 
-MEMORY BLOCK TRANSFORM W/O TRANSFER
+MEMORY BLOCK TRANSFORM W/O TRANSFER (CPU, memory transferer/transformer)
 
               33222222222211111111110000000000
 	      10987654321098765432109876543210
@@ -66,6 +91,13 @@ block transform with/without transfer
 			mode(M) ?: op is unary op1 sur source then result on destination (destination = op1 source)
 			mode(M) 0 : op is op2 (or op1as2) with x on destination and y on source (destination = destination op2 source)
 			mode(M) 1 : op is op2 (or op1as2) with x on source and y on destination (destination = source op2 destination)
+flag MemoryBlockRun = 1 as long as the instruction is not finish
+when finished MemoryBlockRun is cleared then if flag MemoryBlockInteruptEnabled is set, IRQ handler is invoked.
+if this instruction is performed with MemoryBlockRun==1 then IRQ handler anomalies is raised
+during execution, there is no side effect on MBTT if source register id, destination id or size register id are changed.
+before to execute this instruction execute the following: wait for block memory transfer transform finished
+	PI = PI ifMemoryBlockRun PP
+
 -----
 
 
@@ -86,7 +118,7 @@ pp : process : (bit 27-26)
 		After process execution if r != 0 then R15 = R15 + 4 << d
 	00 : Rr ← i << h  (signed s=1 or unsigned s=0)
 	01 : Rr ← [i unsigned  << h] ( SizeRead1 flag indicates read data size)
-	10 : [ i unsigned << h   ← Rr ( SizeWrite flag indicates write data size)
+	10 : [ i unsigned << h ]   ← Rr ( SizeWrite flag indicates write data size)
 	11 : [ Rr ] ← i << h ( SizeWrite flag indicates write data size)
 
 STACK
@@ -108,7 +140,7 @@ m : 0, for register, 1 for compact immediate
 rrrr : register index when r=0
 iiiiiiiiiiiiiiiiiiiii hhh signed/unsigned (i << h)
 
-TRANSFERT
+TRANSFER
 
               33222222222211111111110000000000
 	      10987654321098765432109876543210
@@ -141,9 +173,9 @@ Process:
 before process execution, the CPU stack is empty
 the CPU stack size is 4 values.
 at the end of every process there is an implicit STOP command
-before process execution if i == 0 then R11 = R15 + 4 << d
+before process execution if i == 0 then R11 = R15 + 4 << d (PP = PI + 4 << d)
 After process execution if i != 0 then R15 = R15 + 4 << d
-if i == 1 then R14 is not modified (no result written, but flags still modified by operation)
+if i == 1 then R14/PD is not modified (no result written, but flags still modified by operation)
 op1as2 : is op1 when it does represent a duary operation
 Ri                ← (op1 Rj) op2 Rk		1 op1 op2 i j k d
 		00	JP12	8
@@ -404,7 +436,7 @@ op1 : unary or duary operation with target as first operand (x ← unary y , x �
 op2 : duary operation ( z ← x duary y )
 (98) -> 128 -> 7 bits
 unary operation: (51):6 : first bit = 0  (when operation on 7 bits)
-	CPU pattern on unary operation: (1 stack value consumed, 1 stack value provided)
+	CPU pattern on unary operation: (1 innerCPU stack value consumed, 1 innerCPU stack value provided)
 		POP x
 		operation with x result in z
 		PUSH z
@@ -467,7 +499,7 @@ unary operation: (51):6 : first bit = 0  (when operation on 7 bits)
 *	y ←  isnonzero x  : 0 if x = 0 , 1 otherwise
 
 duary operation: (50):6 : first bit = 1 (when operation on 7 bits)
-	CPU pattern on duary operation (2 stack values consumed, 1 stack value provided)
+	CPU pattern on duary operation (2 innerCPU stack values consumed, 1 innerCPU stack value provided)
 		POP y
 		POP x
 		operation with x and y result in z
@@ -488,8 +520,8 @@ duary operation: (50):6 : first bit = 1 (when operation on 7 bits)
 	z ←  x sub y : x - y 
 	z ←  x addCarry y : x + y + c
 	z ←  x subBorrow y : x - y - c
-	z ←  x multiply y : tt ← x * y : R12 ← high(tt), z ← low(tt)
-	z ←  x divide y : z ← x / y : R12 ← x % y
+	z ←  x multiply y : tt ← x * y : RM ← high(tt), z ← low(tt)
+	z ←  x divide y : z ← x / y : RM ← x % y
 	z ←  x modulus y : z ← x % y 
 	math advanced (5)
 	z ←  x addfloat y : x + y  (x,y are float)
@@ -502,8 +534,7 @@ duary operation: (50):6 : first bit = 1 (when operation on 7 bits)
 	z ←  x or y : x binary OR y
 	z ←  x xor y : x binary EXCLUSIVE OR y
 	z ←  x shifleft y : x << y
-	z ←  x bitset y : bit number y of x set to 1
-	z ←  x bitclear y : bit number y of x set to 0
+	z ←  x bitclear y : x binary AND ( binary NOT y)
 	z ←  x shifright y : x >> y
 	z ←  x rotateleft y : x << y
 	z ←  x rotateright y : x >> y
