@@ -167,6 +167,7 @@ OP0:
 	CLZ : clear zero flag
 	CLO : clear overflow flag
 	CLN : clear negative flag
+	RET : POP PC
 
 OP1:
 	INC v : increment v , v=v+1
@@ -189,6 +190,10 @@ OP1:
 	SHR v,16 : right shift v by 1, v = v >> 16
 	SHR v,20 : right shift v by 1, v = v >> 20
 	SHR v,24: right shift v by 1, v = v >> 24
+	BR v : branch PC = v
+	CALL v : PUSH PC, PC=v
+	PUSH v : SP=SP-4, [SP] = v
+	POP v : v=[SP], SP=SP +4
 
 OP2:
 	MOV v1 v2 : v1 = v2
@@ -203,6 +208,7 @@ OP2:
 	CMP v1 v2 : v1 SUB v2 , only change flag
 	SHL v1 v2 : v1 = v1 << v2
 	SHR v1 v2 : v1 = v1 >> v2
+	BIC v1 v2 : v1 = v1 and (not v2)
 
 OP3:
 
