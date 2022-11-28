@@ -150,7 +150,7 @@ OP4 [regi] [regj] [regk] [regl], cond
               cccc111111oooooolllliiiijjjjkkkk
               c = condition
               1111111 = discreminator
-              o = Four registers instruction ( 1 bit : 2 instructions)
+              o = Four registers instruction ( no indirect access)
               i = register id
               j = register id
               k = register id
@@ -168,4 +168,44 @@ OP0:
 	CLO : clear overflow flag
 	CLN : clear negative flag
 
+OP1:
+	INC v : increment v , v=v+1
+	DEC v : decrement v , v=v-1
+	NOT v : binary complement v, v = not v
+	NEG v : complement of 2 of v, v = (not v) + 1
+	SHL v,1 : left shift v by 1, v = v << 1
+	SHL v,2 : left shift v by 1, v = v << 2
+	SHL v,4 : left shift v by 1, v = v << 4
+	SHL v,8 : left shift v by 1, v = v << 8
+	SHL v,12:  left shift v by 1, v = v << 12
+	SHL v,16 : left shift v by 1, v = v << 16
+	SHL v,20 : left shift v by 1, v = v << 20
+	SHL v,24: left shift v by 1, v = v << 24
+	SHR v,1 : right shift v by 1, v = v >> 1
+	SHR v,2 : right shift v by 1, v = v >> 2
+	SHR v,4 : right shift v by 1, v = v >> 4
+	SHR v,8 : right shift v by 1, v = v >> 8
+	SHR v,12:  right shift v by 1, v = v >> 12
+	SHR v,16 : right shift v by 1, v = v >> 16
+	SHR v,20 : right shift v by 1, v = v >> 20
+	SHR v,24: right shift v by 1, v = v >> 24
 
+OP2:
+	MOV v1 v2 : v1 = v2
+	AND v1 v2 : v1 = v1 AND v2
+	OR  v1 v2 : v1 = v1 OR v2
+	EOR v1 v2 : v1 = v1 EOR v2
+	ADD v1 v2 : v1 = v1 ADD v2
+	SUB v1 v2 : v1 = v1 SUB v2
+	ADC v1 v2 : v1 = v1 ADD v2 + C
+	SBB v1 v2 : v1 = v1 SUB v2 + C
+	TST v1 v2 : v1 AND v2 , only change flag
+	CMP v1 v2 : v1 SUB v2 , only change flag
+	SHL v1 v2 : v1 = v1 << v2
+	SHR v1 v2 : v1 = v1 >> v2
+
+OP3:
+
+OP4:
+
+OP5:
