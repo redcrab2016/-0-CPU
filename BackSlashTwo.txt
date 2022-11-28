@@ -1,0 +1,171 @@
+32 bits CPU
+
+PC  R15 : Program counter
+PN  R14 : next instruction when PC is changed
+ST  R13 : CPU status
+          C : carry
+          Z : Zero
+          O : Overflow
+          N : Negative
+	  RS : 00 : read 8 bits, 01 read 16 bits, 10 read 32 bits , 11 read 64 bits (8 << RS bits)
+	  RW : 00 : write 8 bits, 01 write 16 bits, 10 write 32 bts, 11 write 64 bits ( 8 << RW)
+SP  R12 : stack pointer
+D11 R11
+D10 R10
+D9  R9
+D8  R8
+D7  R7
+D6  R6
+D5  R5
+D4  R4
+D3  R3
+D2  R2
+D1  R1
+D0  R0
+
+32 bits intruction size
+bit 31-28  always express the condition of execution : cond
+0000	al (or omitted)	Always executed.					None tested.
+0001	eq		Equal.							Z==1
+0010	ne		Not equal.						Z==0
+0011	cs or hs	Unsigned higher or same (or carry set).			C==1
+0100	cc or lo	Unsigned lower (or carry clear).			C==0
+0101	mi		Negative. The mnemonic stands for "minus".		N==1
+0110	pl		Positive or zero. The mnemonic stands for "plus".	N==0
+0111	os		Signed overflow. The mnemonic stands for "O set".	O==1
+1000	oc		No signed overflow. The mnemonic stands for "O clear".	O==0
+1001	hi		Unsigned higher.					(C==1) && (Z==0)
+1010	ls		Unsigned lower or same.					(C==0) || (Z==1)
+1011	ge		Signed greater than or equal.				N==O
+1100	lt		Signed less than.					N!=O
+1101	gt		Signed greater than.					(Z==0) && (N==O)
+1110	le		Signed less than or equal.				(Z==1) || (N!=O)
+1111	no		never executed (NOP)					None tested
+
+6 instruction category depending of how many register are used
+
+OP0 to OP5, Intruction category that may used short immediate value
+
+              33222222222211111111110000000000
+	      10987654321098765432109876543210
+              cccc0rrrrIIIIIIIIIIIIIIIIIIIhhhh
+              c = condition
+              0 = discreminator
+              r = register id
+              I = immediate value
+              h = left shift of I
+reg = imm SHL h ,cond ; 
+reg = imm , cond ; same as reg = imm shl 0, cond
+
+              33222222222211111111110000000000
+	      10987654321098765432109876543210
+              cccc10oooooooooooooooooooooooooo
+              c = condition
+              110 = discreminator
+              o = no register instruction
+OP0, cond
+
+              33222222222211111111110000000000
+	      10987654321098765432109876543210
+              cccc110ooooooooooooooooooooIiiii
+              c = condition
+              110 = discreminator
+              o = one register instruction
+              I = 1 if i is indirect, 0 otherwise
+              i = register id
+OP1 regi, cond
+OP1 [regi], cond
+
+              33222222222211111111110000000000
+	      10987654321098765432109876543210
+              cccc1110ooooooooooooooIiiiiJjjjj
+              c = condition
+              1110 = discreminator
+              o = two registers instruction
+              I = 1 if i is indirect, 0 otherwise
+              i = register id
+              J = 1 if i is indirect, 0 otherwise
+              j = register id
+OP2 regi regj, cond
+OP2 regi [regj], cond
+OP2 [regi] regj, cond
+OP2 [regi] [regj], cond
+
+              33222222222211111111110000000000
+	      10987654321098765432109876543210
+              cccc11110ooooooooIiiiiJjjjjKkkkk
+              c = condition
+              11110 = discreminator
+              o = three registers instruction
+              I = 1 if i is indirect, 0 otherwise
+              i = register id
+              J = 1 if i is indirect, 0 otherwise
+              j = register id
+              K = 1 if i is indirect, 0 otherwise
+              k = register id
+OP3 regi regj regk, cond
+OP3 regi regj [regk], cond
+OP3 regi [regj] regk, cond
+OP3 regi [regj] [regk], cond
+OP3 [regi] regj regk, cond
+OP3 [regi] regj [regk], cond
+OP3 [regi] [regj] regk, cond
+OP3 [regi] [regj] [regk], cond
+
+              33222222222211111111110000000000
+	      10987654321098765432109876543210
+              cccc111110ooLllllIiiiiJjjjjKkkkk
+              c = condition
+              111110 = discreminator
+              o = Four registers instruction ( 2 bits : 4 instructions)
+              I = 1 if i is indirect, 0 otherwise
+              i = register id
+              J = 1 if i is indirect, 0 otherwise
+              j = register id
+              K = 1 if i is indirect, 0 otherwise
+              k = register id
+              L = 1 if i is indirect, 0 otherwise
+              l = register id
+
+OP4 regi regj regk regl, cond
+OP4 regi regj regk [regl], cond
+OP4 regi regj [regk] regl, cond
+OP4 regi regj [regk] [regl], cond
+OP4 regi [regj] regk regl, cond
+OP4 regi [regj] regk [regl], cond
+OP4 regi [regj] [regk] regl, cond
+OP4 regi [regj] [regk] [regl], cond
+OP4 [regi] regj regk regl, cond
+OP4 [regi] regj regk [regl], cond
+OP4 [regi] regj [regk] regl, cond
+OP4 [regi] regj [regk] [regl], cond
+OP4 [regi] [regj] regk regl, cond
+OP4 [regi] [regj] regk [regl], cond
+OP4 [regi] [regj] [regk] regl, cond
+OP4 [regi] [regj] [regk] [regl], cond
+
+
+              33222222222211111111110000000000
+	      10987654321098765432109876543210
+              cccc111111oooooolllliiiijjjjkkkk
+              c = condition
+              1111111 = discreminator
+              o = Four registers instruction ( 1 bit : 2 instructions)
+              i = register id
+              j = register id
+              k = register id
+              l = register id
+OP5 regi regj regk regl, cond
+
+Instruction per category
+OP0:
+	STC : set carry flag
+	STZ : set Zero flag
+	STO : set Overflow flag
+	STN : Set Negative glag
+	CLC : clear carry flag
+	CLZ : clear zero flag
+	CLO : clear overflow flag
+	CLN : clear negative flag
+
+
