@@ -25,7 +25,7 @@ D0  R0
 
 32 bits intruction size
 bit 31-28  always express the condition of execution : cond
-0000	al (or omitted)	Always executed.					None tested.
+0000	al (or omitted)	Always executed.					No flag tested.
 0001	eq		Equal.							Z==1
 0010	ne		Not equal.						Z==0
 0011	cs or hs	Unsigned higher or same (or carry set).			C==1
@@ -40,7 +40,7 @@ bit 31-28  always express the condition of execution : cond
 1100	lt		Signed less than.					N!=O
 1101	gt		Signed greater than.					(Z==0) && (N==O)
 1110	le		Signed less than or equal.				(Z==1) || (N!=O)
-1111	no		never executed (NOP)					None tested
+1111	no		never executed (NOP)					No flag tested
 
 6 instruction category depending of how many register are used
 
@@ -48,12 +48,12 @@ OP0 to OP5, Intruction category that may used short immediate value
 
               33222222222211111111110000000000
 	      10987654321098765432109876543210
-              cccc0rrrrIIIIIIIIIIIIIIIIIIIhhhh
+              cccc0rrrIIIIIIIIIIIIIIIIIIIIhhhh
               c = condition
               0 = discreminator
-              r = register id
-              I = immediate value
-              h = left shift of I
+              r = register id (between 0 and 7 (from D0 to D7)
+              I = immediate value (20 bits)
+              h = left shift of I ( 4 bits from 0 to 15)
 reg = imm SHL h ,cond ; 
 reg = imm , cond ; same as reg = imm shl 0, cond
 
@@ -126,7 +126,6 @@ OP3 [regi] [regj] [regk], cond
               k = register id
               L = 1 if i is indirect, 0 otherwise
               l = register id
-
 OP4 regi regj regk regl, cond
 OP4 regi regj regk [regl], cond
 OP4 regi regj [regk] regl, cond
@@ -149,7 +148,7 @@ OP4 [regi] [regj] [regk] [regl], cond
 	      10987654321098765432109876543210
               cccc111111oooooolllliiiijjjjkkkk
               c = condition
-              1111111 = discreminator
+              111111 = discreminator
               o = Four registers instruction ( no indirect access)
               i = register id
               j = register id
@@ -158,60 +157,111 @@ OP4 [regi] [regj] [regk] [regl], cond
 OP5 regi regj regk regl, cond
 
 Instruction per category
-OP0:
-	STC : set carry flag
-	STZ : set Zero flag
-	STO : set Overflow flag
-	STN : Set Negative glag
-	CLC : clear carry flag
-	CLZ : clear zero flag
-	CLO : clear overflow flag
-	CLN : clear negative flag
-	RET : POP PC
+OP0: (26 bits) no register in parameter
+	0 parameter
+		ST[C][Z][O][N]
+		C : set carry flag
+		Z : set Zero flag
+		O : set Overflow flag
+		N : Set Negative glag
+		CLR[C][Z][O][N]
+			C : clear carry flag
+			Z : clear zero flag
+			O : clear overflow flag
+			N : clear negative flag
+		RET : POP PC
+	1 parameter
+		BR relativeImmediateAddress : PC = PC + signedImmediateAddress
+		CALL relativeImmediateAddress : PUSH PC, PC = PC + signedImmediateAddress
+		PUSH immediate
+		PUSH [immediate]
+		POP [immediate]
 
-OP1:
-	INC v : increment v , v=v+1
-	DEC v : decrement v , v=v-1
-	NOT v : binary complement v, v = not v
-	NEG v : complement of 2 of v, v = (not v) + 1
-	SHL v,1 : left shift v by 1, v = v << 1
-	SHL v,2 : left shift v by 1, v = v << 2
-	SHL v,4 : left shift v by 1, v = v << 4
-	SHL v,8 : left shift v by 1, v = v << 8
-	SHL v,12:  left shift v by 1, v = v << 12
-	SHL v,16 : left shift v by 1, v = v << 16
-	SHL v,20 : left shift v by 1, v = v << 20
-	SHL v,24: left shift v by 1, v = v << 24
-	SHR v,1 : right shift v by 1, v = v >> 1
-	SHR v,2 : right shift v by 1, v = v >> 2
-	SHR v,4 : right shift v by 1, v = v >> 4
-	SHR v,8 : right shift v by 1, v = v >> 8
-	SHR v,12:  right shift v by 1, v = v >> 12
-	SHR v,16 : right shift v by 1, v = v >> 16
-	SHR v,20 : right shift v by 1, v = v >> 20
-	SHR v,24: right shift v by 1, v = v >> 24
-	BR v : branch PC = v
-	CALL v : PUSH PC, PC=v
-	PUSH v : SP=SP-4, [SP] = v
-	POP v : v=[SP], SP=SP +4
+OP1: (20 bits) one register in parameter
+	1 parameter
+		INC v : increment v , v=v+1
+		DEC v : decrement v , v=v-1
+		NOT v : binary complement v, v = not v
+		NEG v : complement of 2 of v, v = (not v) + 1
+		BR v : branch PC = v
+		CALL v : PUSH PC, PC=v
+		PUSH v : SP=SP-4, [SP] = v
+		POP v : v=[SP], SP=SP +4
+		ROL v 
+		ROR v 
+		ROLB v
+		RORB v
+		ROLW v
+		RORW v
+	2 parameters (register + immediat)
+		SHL v 1 : left shift v by 1, v = v << 1
+		SHL v 2 : left shift v by 1, v = v << 2
+		SHL v 4 : left shift v by 1, v = v << 4
+		SHL v 8 : left shift v by 1, v = v << 8
+		SHL v 12:  left shift v by 1, v = v << 12
+		SHL v 16 : left shift v by 1, v = v << 16
+		SHL v 20 : left shift v by 1, v = v << 20
+		SHL v 24: left shift v by 1, v = v << 24
+		SHR v 1 : right shift v by 1, v = v >> 1
+		SHR v 2 : right shift v by 1, v = v >> 2
+		SHR v 4 : right shift v by 1, v = v >> 4
+		SHR v 8 : right shift v by 1, v = v >> 8
+		SHR v 12:  right shift v by 1, v = v >> 12
+		SHR v 16 : right shift v by 1, v = v >> 16
+		SHR v 20 : right shift v by 1, v = v >> 20
+		SHR v 24: right shift v by 1, v = v >> 24
+		MOV v immediat : v = shortImmediat
+		AND v immediat : v = v AND shortImmediat
+		OR  v immediat : v = v OR shortImmediat
+		EOR v immediat : v = v EOR shortImmediat
+		ADD v immediat : v = v ADD shortImmediat
+		SUB v immediat : v = v SUB shortImmediat
+		ADC v immediat : v = v ADD shortImmediat+ C
+		SBB v immediat : v = v SUB shortImmediat+ C
+		TST v immediat : v  AND shortImmediat, only change flag
+		CMP v immediat : v SUB shortImmediatonly change flag
+		BIC v immediat : v = v and (not shortImmediat)
+		R2A v relativeImmediateAddress : v = PC + shortSignedImmediat
 
-OP2:
-	MOV v1 v2 : v1 = v2
-	AND v1 v2 : v1 = v1 AND v2
-	OR  v1 v2 : v1 = v1 OR v2
-	EOR v1 v2 : v1 = v1 EOR v2
-	ADD v1 v2 : v1 = v1 ADD v2
-	SUB v1 v2 : v1 = v1 SUB v2
-	ADC v1 v2 : v1 = v1 ADD v2 + C
-	SBB v1 v2 : v1 = v1 SUB v2 + C
-	TST v1 v2 : v1 AND v2 , only change flag
-	CMP v1 v2 : v1 SUB v2 , only change flag
-	SHL v1 v2 : v1 = v1 << v2
-	SHR v1 v2 : v1 = v1 >> v2
-	BIC v1 v2 : v1 = v1 and (not v2)
+OP2: (14 bits)
+	2 parameters
+		SWP v1 v2 ; t = v1, v1 = v2, v2 =  t
+		MOV v1 v2 : v1 = v2
+		AND v1 v2 : v1 = v1 AND v2
+		OR  v1 v2 : v1 = v1 OR v2
+		EOR v1 v2 : v1 = v1 EOR v2
+		ADD v1 v2 : v1 = v1 ADD v2
+		SUB v1 v2 : v1 = v1 SUB v2
+		ADC v1 v2 : v1 = v1 ADD v2 + C
+		SBB v1 v2 : v1 = v1 SUB v2 + C
+		TST v1 v2 : v1 AND v2 , only change flag
+		CMP v1 v2 : v1 SUB v2 , only change flag
+		SHL v1 v2 : v1 = v1 << v2
+		SHR v1 v2 : v1 = v1 >> v2
+		ROL v1 v2 
+		ROR v1 v2 
+		ROLB v1 v2 
+		RORB v1 v2 
+		ROLW v1 v2 
+		RORW v1 v2 
+		BIC v1 v2 : v1 = v1 and (not v2)
 
-OP3:
+OP3: (8 bits)
+	3 parameters
+		AND v1 v2 v3 : v1 = v2 AND v3
+		OR  v1 v2 v3 : v1 = v2 OR v3
+		EOR v1 v2 v3 : v1 = v2 EOR v3
+		BIC v1 v2 v3 : v1 = v2 AND NOT v3
+		ADD v1 v2 v3 : v1 = v2 ADD v3
+		SUB v1 v2 v3 : v1 = v2 SUB v3
+		ADC v1 v2 v3 : v1 = v2 ADD v3 + C
+		SBB v1 v2 v3 : v1 = v2 SUB v3 + C
+		DIV v1 v2 v3 : v1 = v1 DIV v2, v3 = v1 MOD v2
+		MUL v1 v2 v3 : t64 = v1 MUL v2, v1 =low32(t64), v3=high32(t64)
+		MULA v1 v2 v3 : t64 = (v1 MUL v2) + v3 , v1 =low32(t64), v3=high32(t64)
+		IDIV v1 v2 v3 : signed v1 = v1 DIV v2, v3 = v1 MOD v2
+		IMUL v1 v2 v3 : signed t64 = v1 MUL v2, v1 =low32(t64), v3=high32(t64)
 
-OP4:
+OP4: (2 bits)
 
-OP5:
+OP5: (6 bits)
