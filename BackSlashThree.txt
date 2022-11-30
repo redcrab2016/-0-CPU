@@ -1,0 +1,155 @@
+CISC 16 bits address, 8/16 bits data
+little-endian data access
+
+1 or 2 bytes operator, 0, 1 or 2 bytes data
+
+11 registers (4 times 16 bits general purpose registers overlaying the 8 times 8 bits general purpose registry)
+16 bits stack, growing downward
+PC
+FL   INVZC
+SP 
+B7 W3(high)
+B6 W3(low)
+B5 W2(high)
+B4 W2(low)
+B3 W1(high)
+B2 W1(low)
+B1 W0(high)
+B0 W0(low)
+
+Wx : 4 times 16 bits registers, 2 bits encoding
+Rx : 8 times 8 bits registers, 3 bits encoding
+
+
+transfer (24)
+	registre => memory
+	memory => registre
+	memory addressing mode (5 modes : encoding 3 bits) used for transfer insruction
+		000 : m0 : [ImmW]
+		001 : m1 : [Wx]
+		010 : m2 : [Wx + immW]
+		011 : m3 : [SP + Wx]
+		100 : m4 : [Wx + Wy]
+
+
+	LDB	Bx [ImmW]	: LDB 000(m0) | '00000xxx' | low(ImmW) | high(ImmW)
+	LDW	Wx [ImmW]	: LDW 000(m0) | '000000xx' | low(ImmW) | high(ImmW)
+	SRB	Bx [ImmW]	: SRB 000(m0) | '00000xxx' | low(ImmW) | high(ImmW)
+	SRW	Wx [ImmW]	: SRW 000(m0) | '000000xx' | low(ImmW) | high(ImmW)
+	LDB	Bx [Wy] 	: LDB 001(m1) | '00yy0xxx' 
+	LDW	Wx [Wy]		: LDW 001(m1) | '00yy00xx'
+	SRB	Bx [Wy] 	: SRB 001(m1) | '00yy0xxx'
+	SRW	Wx [Wy] 	: SRW 001(m1) | '00yy00xx'
+	LDB	Bx [Wy + ImmW]	: LDB 010(m2) | '00yy0xxx' | low(ImmW) | high(ImmW)
+	LDW	Wx [Wy + ImmW]	: LDW 010(m2) | '00yy00xx' | low(ImmW) | high(ImmW)
+	SRB	Bx [Wy + ImmW]	: SRB 010(m2) | '00yy0xxx' | low(ImmW) | high(ImmW)
+	SRW	Wx [Wy + ImmW]	: SRW 010(m2) | '00yy00xx' | low(ImmW) | high(ImmW)
+	LDB	Bx [SP + Wy]	: LDB 011(m3) | '00yy0xxx' 
+	LDW	Wx [SP + Wy]	: LDW 011(m3) | '00yy00xx'
+	SRB	Bx [SP + Wy]	: SRB 011(m3) | '00yy0xxx'
+	SRW	Wx [SP + Wy] 	: SRW 011(m3) | '00yy00xx'
+	LDB	Bx [Wy + Wz]	: LDB 100(m4) | 'yyzz0xxx' 
+	LDW	Wx [Wy + Wz]	: LDW 100(m4) | 'yyzz00xx'
+	SRB	Bx [Wy + Wz]	: SRB 100(m4) | 'yyzz0xxx'
+	SRW	Wx [Wy + Wz]	: SRW 100(m4) | 'yyzz00xx'
+	PUSHF			: PUSHF
+	PUSH	Wx		: PUSH| '000000xx'
+	POPF			: POPF
+	POP	Wx		: POP | '000000xx'
+
+registre transform UAL (46)
+	Byte ( 22)
+		MOV	Bx By	: MOVB	| '0yyy0xxx'
+		MOV	Bx immB : MOVBI | '00000xxx' | 'iiiiiiii'
+		NOT	Bx	: NOTB	| '00000xxx' 
+		AND	Bx By	: ANDB	| '0yyy0xxx'
+		OR	Bx By	: ORB	| '0yyy0xxx'
+		EOR	Bx By	: EORB	| '0yyy0xxx'
+		NEG 	Bx	: NEGB	| '00000xxx'
+		INC	Bx	: INCB	| '00000xxx'
+		DEC	Bx	: DECB	| '00000xxx'
+		ADD	Bx By	: ADDB	| '0yyy0xxx'
+		SUB	Bx By	: SUBB	| '0yyy0xxx'
+		ADC	Bx By	: ADCB	| '0yyy0xxx'
+		SBB	Bx By	: SBBB	| '0yyy0xxx'
+		SHL	Bx 1	: SHLB1	| '00000xxx'
+		SHL	Bx By	: SHLB	| '0yyy0xxx'
+		SHR	Bx 1	: SHRB1	| '00000xxx'
+		SHR	Bx By	: SHRB	| '0yyy0xxx'
+		SAR	Bx 1	: SARB1	| '00000xxx'
+		SAR	Bx By	: SARB	| '0yyy0xxx'
+		ROR	Bx 1	: RORB	| '00000xxx'	
+		ROL	Bx 1	: ROLB	| '00000xxx'
+		SWP	Bx By	: SWPB	| '0yyy0xxx'
+	Word ( 24)
+		MOV	Wx Wy	: MOVW	| '00yy00xx'
+		MOV	Wx immW	: MOVWI	| '000000xx' | 'iiiiiiii' | 'IIIIIIII'
+		MOV	SP Wx	: MOVSW	| '000000xx'
+		MOV	Wx SP	: MOVWS	| '000000xx'
+		NOT	Wx	: NOTW	| '000000xx'
+		AND	Wx Wy	: ANDW	| '00yy00xx'
+		OR	Wx Wy	: ORW	| '00yy00xx'
+		EOR	Wx Wy	: EORW	| '00yy00xx'
+		NEG 	Wx	: NEGW	| '000000xx'
+		INC	Wx	: INCW	| '000000xx'
+		DEC	Wx	: DECW	| '000000xx'
+		ADD	Wx Wy	: ADDW	| '00yy00xx'
+		SUB	Wx Wy	: SUBW	| '00yy00xx'
+		ADC	Wx Wy	: ADCW	| '00yy00xx'
+		SBB	Wx Wy	: SBBW	| '00yy00xx'
+		SHL	Wx 1	: SHLW1	| '000000xx'
+		SHL	Wx By	: SHLWB	| '0yyy00xx'
+		SHR	Wx 1	: SHRW1	| '000000xx'
+		SHR	Wx By	: SHRWB	| '0yyy00xx'
+		SAR	Wx 1	: SARW1	| '000000xx'
+		SAR	Wx By	: SARWB	| '0yyy00xx'
+		ROR	Wx 1	: RORW	| '000000xx'
+		ROL	Wx 1	: ROLW	| '000000xx'
+		SWP	Wx Wy	: SWPW	| '00yy00xx'
+	
+branching: (38)
+	J	relative_immediate	: J_R | 'siiiiiii'		(PC = PC + SimmB)
+	J	absolute_immediate	: J_A |	'iiiiiiii' | 'IIIIIIII'	(PC = immW )
+	JX	Wx			: J_X | '000000xx'		(PC = reg)
+	C	relative_immediate	: C_R | 'siiiiiii'		(PUSH PC, PC = PC + SimmB)
+	C	absolute_immediate	: C_A | 'iiiiiiii' | 'IIIIIIII'	(PUSH PC, PC = immW)
+	CX	Wx			: C_X | '000000xx'		(PUSH PC, PC = reg)
+	INT	1 to 16			: INT xxxx(vector -1)		(PUSH PC, PUSHF , PC = vector(1 to 16))
+	
+	JE/JZ	relative_immediate	: JZ  | 'siiiiiii'		(If Z==1 then PC = PC + SimmB)
+	JNE/JNZ	relative_immediate	: JNZ | 'siiiiiii'		(If Z==0 then PC = PC + SimmB)
+	JC/JAE	relative_immediate	: JC  | 'siiiiiii'  		(If C==1 then PC = PC + SimmB)
+	JNC/JB	relative_immediate	: JNC | 'siiiiiii'  		(If C==O then PC = PC + SimmB)
+	JN/JMI	relative_immediate	: JN  | 'siiiiiii'  		(If N==1 then PC = PC + SimmB)
+	JNN/JPZ	relative_immediate	: JNN | 'siiiiiii'  		(If N==0 then PC = PC + SimmB)
+	JV 	relative_immediate	: JV  | 'siiiiiii'  		(If V==1 then PC = PC + SimmB)
+	JNV	relative_immediate	: JNV | 'siiiiiii'  		(If V==0 then PC = PC + SimmB)
+	JA	relative_immediate	: JA  | 'siiiiiii'  		(If (C==1) && (Z==0) then PC = PC + SimmB)
+	JBE	relative_immediate	: JBE | 'siiiiiii'  		(If (C==0) && (Z==1) then PC = PC + SimmB)
+	JGE	relative_immediate	: JGE | 'siiiiiii'  		(If N==V then PC = PC + immediate)
+	JL	relative_immediate	: JL  | 'siiiiiii'  		(If N!=V then PC = PC + immediate)
+	JG	relative_immediate	: JG  | 'siiiiiii'  		(If (Z==0) && (N==V) then PC = PC + SimmB)
+	JLE	relative_immeidate	: JLE | 'siiiiiii'  		(If (Z==1) || (N!=V) then PC = PC + SimmB)
+
+	RET				: RET				(POP PC)
+	IRET				: IRET				(POPF, POP PC)
+
+Misc (12)
+	NOP
+	STI	(I=1)
+	STC	(C=1)
+	STZ	(Z=1)
+	STV	(V=1)
+	STN	(N=1)
+	
+	CLI	(I=0)
+	CLC	(C=0)
+	CLZ	(Z=0)
+	CLV	(V=0)
+	CLN	(N=0)
+	LEA	Wx SimmW  (Wx = PC + SimmW)
+
+  
+
+
+
