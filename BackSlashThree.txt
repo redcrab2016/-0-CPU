@@ -3,11 +3,13 @@ little-endian data access
 
 1 or 2 bytes operator, 0, 1 or 2 bytes data
 
+REGISTERS
+
 11 registers (4 times 16 bits general purpose registers overlaying the 8 times 8 bits general purpose registry)
 16 bits stack, growing downward
 PC
 FL   INVZC
-SP 
+SP  (initialized to 0x0400)
 B7 W3(high)
 B6 W3(low)
 B5 W2(high)
@@ -20,6 +22,20 @@ B0 W0(low)
 Wx : 4 times 16 bits registers, 2 bits encoding
 Rx : 8 times 8 bits registers, 3 bits encoding
 
+MEMORY MAP
+	2^16 memory space, adressing 8bits byte
+	address from 0x0000 to 0xFFFF
+	0000 - 001F : interruption handler
+		0000 : Reset handler (contains address of bootstarp)
+		0002 : Escape to CPU supervisor ( it is not a address and is ignore, keep 0000)
+		0004 : Supervisor Event (handler of supervisor event)
+		0006 : System Timer (periodic interuption)
+		0008 : Keyboard input
+
+	0400 - 04FF : Supervisor event data exchange
+
+
+INSTRUCTION SET
 
 transfer (24)
 	registre => memory
@@ -148,8 +164,3 @@ Misc (12)
 	CLV	(V=0)
 	CLN	(N=0)
 	LEA	Wx SimmW  (Wx = PC + SimmW)
-
-  
-
-
-
