@@ -7,7 +7,7 @@ REGISTERS
 
 11 registers (4 times 16 bits general purpose registers overlaying the 8 times 8 bits general purpose registry)
 16 bits stack, growing downward
-dedicated purpose registers
+dedicated purpose register
 	PC		: 16 bits : Reset at [0] (reset handler) : Program Counter , is where the CPU is fetching instruction and immediate data
 	FL   		: 8(internal)/16 bits(when stored in stack) : Reset at 0x0000 : CPU status flags INVZC (interrupt, Negative, Overflow, Zero, Carry)
 	SP		: 16 bits : Reset at 0x0400 (initialized to 0x0400)
@@ -63,7 +63,80 @@ MEMORY MAP
 	0030 - 03FF : Default Stack(grow downward, SP initial value to 0400) / possible Data / possible Code		
 	0400 - FEFF : Code / Data / possible stack
 	FF00 - FFFF : I-O (256 I/O port)
-INSTRUCTION SET (225)
+
+INSTRUCTION SET (fully qualified 225 CPU instruction)
+
+Human Mnemonic (60 Human instructions)		
+	Misc	
+		NOP
+		HLT
+		RESET
+		WAIT
+		HEVT
+		LEA
+		CL
+		ST
+	Core I/O	
+		IN
+		OUT
+		OUT2
+	Uncondiational branching	
+		INT
+		J
+		C
+		RET
+		IRET
+	Conditional Branching	
+		JZ
+		JNZ
+		JC
+		JNC
+		JN
+		JNN
+		JV
+		JNV
+		JA
+		JBE
+		JGE
+		JL
+		JG
+		JLE
+	Direct Memory Access	
+		LD
+		SR
+	Stack memory Access	
+		PUSH
+		POP
+		DROP
+		DUP
+	UAL Binary	
+		AND
+		OR
+		EOR
+		BIC
+		TST
+		SHL
+		SHR
+		SAR
+		ROR
+		ROL
+		NOT
+	Reg transfer	
+		MOV
+		SWP
+	UAL Simple math	
+		INC
+		DEC
+		NEG
+		ADD
+		SUB
+		SBB
+		CMP
+	UAL Math 	
+		MUL
+		IMUL
+		DIV
+		IDIV
 
 Intruction memonic table code (8 bits byte : Horizontal MS4bits, Vertical LS4bits)
 	0-	1-	2-	3-	4-	5-	6-	7-	8-	9-	A-	B-	C-	D-	E-	F-
@@ -83,6 +156,8 @@ Intruction memonic table code (8 bits byte : Horizontal MS4bits, Vertical LS4bit
 -D		STZ	INT13	IRET	JLE	POPB5	POPF	PUSHB5	PUSHF	SUBB	SUBW	MOVSW	SUBBI	SUBWI	MOVSI	WAIT
 -E		STV	INT14	J_A	J_R	POPB6	POPPC	PUSHB6	PUSHPC	SBBB	SBBW	MOVWS	SBBBI	SBBWI		RESET
 -F		STN	INT15	C_A	C_R	POPB7	DROP	PUSHB7	DUP	CMPB	CMPW	SWPW	CMPBI	CMPWI		HLT
+
+
 
 transfer (56)
 	registre => memory
