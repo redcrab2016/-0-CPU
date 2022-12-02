@@ -235,6 +235,8 @@
 #define BS3_STATUS_ESCHYP 5
 
 #define BS3_INT_BADINSTR 7
+#define BS3_INT_TIMER 3
+#define BS3_INT_INPUTEVT 4
 
 #define BYTE unsigned char
 #define WORD unsigned short
@@ -383,11 +385,46 @@ void bs3_cpu_interrupt(struct bs3_cpu_data * pbs3, int intnum)
   }
 }
 
+// to be called by Hypervisor
+void bs3_cpu_input_data(struct bs3_cpu_data * pbs3, BYTE data) 
+{
+  pbs3->input_data = data;
+  pbs3->input_data_ready = 0;
+  bs3_cpu_interrupt( pbs3, BS3_INT_INPUTEVT);
+}
+
+// to be called by hypervisor
+void bs3_cpu_input_status(struct bs3_cpu_data * pbs3, BYTE status)
+{
+  pbs3->input_ready = status;
+}
+
+// to be called by hypervisor
+void bs3_cpu_output_status(struct bs3_cpu_data * pbs3, BYTE status)
+{
+  pbs3->output_ready = status;
+}
+
+// to be called by hypervisor
+void bs3_cpu_output2_status(struct bs3_cpu_data * pbs3, BYTE status)
+{
+  pbs3->output2_ready = status;
+}
+
 void bs3_cpu(struct bs3_cpu_data * pbs3)
 {
   // is there pending interrupt ?
   if (pbs3->r.I == 0 && pbs3->pending_interrupt != 0xFF) {
     bs3_cpu_interrupt(pbs3, pbs3->pending_interrupt);
+  } 
+  else 
+  {
+    if (pbs3->r.I == 0)
+      if (--pbs3->counter == 0) 
+      {
+        pbs3->counter = pbs3->timer;
+         bs3_cpu_interrupt(pbs3, BS3_INT_TIMER);
+      } 
   }
   switch ( pbs3->m[pbs3->r.PC] ) 
   {
