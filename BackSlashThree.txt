@@ -1,7 +1,11 @@
 CISC 16 bits address, 8/16 bits data
 little-endian data access and immediate encoding
+Event/Interruption enabled
+Hypervisor controlled
+No stack/code/data protection
+No multicore capabilities
+No coprocessor capabilities
 
-1 or 2 bytes operator, 0, 1 or 2 bytes immediate data
 
 REGISTERS
 
@@ -23,6 +27,56 @@ general registers
 
 	Wx : 4 times 16 bits registers, 2 bits encoding (W0:00, W1:01, W2:10, W3:11)
 	Rx : 8 times 8 bits registers, 3 bits encoding (B0:000, B1:001, B2:010, B3:011, B4:100, B5:101, B6:110, B7:111)
+If CPU registers is a C language structure on a Little-Endian data access then it may looks like
+
+#define BYTE unsigned char
+#define WORD unsigned short
+#define BIT unsigned short
+struct bs3_registers
+{
+  WORD PC;
+	union
+  {
+    WORD FL;
+    struct 
+    {
+      BIT C:1;
+      BIT Z:1;
+      BIT V:1;
+      BIT N:1;
+      BIT I:1;
+      BIT reserved:11;
+    };
+  };
+  WORD SP;
+	union 
+	{
+		WORD W[4];
+		BYTE B[8];
+	};
+};
+
+INSTRUCTION
+	1 or 2 bytes operator, 0, 1 or 2 bytes immediate data
+	instruction can be composed by an Opcode and possible OpParam and an Immediate 8 or 16 bits value
+
+	OpCode	: Operation Code, corresponding to one of the valid value in the intruction memonic table code
+	OpParam	: 8 bits byte parameter of Operation code
+	immB	: 8 bits byte immediate value, the value can be signed or unsigned 
+	LimmW	: 8 bits byte representing the LSB of a 16 bits immediate value that can be signed or unsigned
+	HimmW	: 8 bits byte representing the MSB of a 16 bits immediate value that can be signed or unsigned
+	Instruction is executed at PC register address
+	PC+0,	PC+1,	PC+2,	PC+3
+	Opcode
+	Opcode	immB
+	Opcode	LimmW	HimmW
+	Opcode	OpParam
+	Opcode	OpParam	immB
+	Opcode	OpParam LimmW	HimmW
+	If the instruction use the PC register (e.g conditional branching) the PC value used is the address of the next instruction,
+	except for instruction 'PUSH PC' using this instruction address 
+	Each Opcode correspond to a unique instruction size (1, 2, 3 or 4 bytes long)	
+
 
 MEMORY MAP
 	2^16 memory space, adressing 8bits byte
@@ -32,12 +86,12 @@ MEMORY MAP
 	0000 - 001F : interruption handler
 		vector 0  : 0000 : Reset handler (contains address of bootstrap at RESET time ) / may be redefined by program execution (e.g system library)
 		vector 1  : 0002 : Escape to CPU hypervisor ( it is not a address and is ignored, keep 0x0000. Only to be used with INT 1, instruction)
-		vector 2  : 0004 : Hypervisor Event (handler of supervisor event)
+		vector 2  : 0004 : Hypervisor Event (handler of supervisor event, data at 0030-00FF)
 		vector 3  : 0006 : System Timer (periodic interuption, by clock count)
 		vector 4  : 0008 : byte input data event (Hypervisor data input event, meta and data at 0020, 0021)
 		vector 5  : 000A : data block input data (Hypervisor data input event, metadata at 002A-002F)
 		vector 6  : 000C : Division by Zero
-		vector 7  : 000E : user defined
+		vector 7  : 000E : Bad instruction
 		vector 8  : 0010 : user defined
 		vector 9  : 0012 : user defined
 		vector 10 : 0014 : user defined
@@ -46,8 +100,7 @@ MEMORY MAP
 		vector 13 : 001A : user defined
 		vector 14 : 001C : user defined
 		vector 15 : 001E : user defined
-
-	0020 - 002F : Timer/core I-O/Hypervisor event data exchange
+	0020 - 002F : Timer/core I-O/Hypervisor data block receiver exchange
 		0020 : byte input data
 		0021 : input data ready (==0 , 0020 is ready for a read operation, ==FF no input available, ==01 wait(about to come))
 		0022 : byte output data
@@ -57,88 +110,41 @@ MEMORY MAP
 		0026 : Timer clock count low  (32 bits counters, set here from 0026 0029, the tick delay)
 		0028 : Timer clock count high
 		002A : data block input ready
+		002B : reserved
 		002C : data block input address
 		002E : data block input length 
-	
-	0030 - 03FF : Default Stack(grow downward, SP initial value to 0400) / possible Data / possible Code		
-	0400 - FEFF : Code / Data / possible stack
-	FF00 - FFFF : I-O (256 I/O port)
+	0030 - 00FF: Hypervisor Event data (768 bytes)
+		0030 : 16 bits Event Id
+		0032-00FF : Event data, with structure depending of Event Id
+	0100 - 01FF : reserved for I/O (256 I/O ports)
+	0200 - 03FF : Default Stack(grow downward, SP initial value to 0400) / possible Data / possible Code		
+	0400 - FFFF : Code / Data(ROM, RAM System or shared with device) / possible stack
 
 INSTRUCTION SET (fully qualified 225 CPU instruction)
 
-Human Mnemonic (60 Human instructions)		
+Human Mnemonic (47 Human handlable instructions)		
 	Misc	
-		NOP
-		HLT
-		RESET
-		WAIT
-		HEVT
-		LEA
-		CL
-		ST
+		NOP, HLT, RESET, WAIT, HEVT, LEA, CLx, STx
 	Core I/O	
-		IN
-		OUT
-		OUT2
-	Uncondiational branching	
-		INT
-		J
-		C
-		RET
-		IRET
+		IN, OUT, OUT2
+	Unconditional branching	
+		INT, J, C, RET, IRET
 	Conditional Branching	
-		JZ
-		JNZ
-		JC
-		JNC
-		JN
-		JNN
-		JV
-		JNV
-		JA
-		JBE
-		JGE
-		JL
-		JG
-		JLE
+		Jx
 	Direct Memory Access	
-		LD
-		SR
+		LD, SR
 	Stack memory Access	
-		PUSH
-		POP
-		DROP
-		DUP
+		PUSH, POP, DROP, DUP
 	UAL Binary	
-		AND
-		OR
-		EOR
-		BIC
-		TST
-		SHL
-		SHR
-		SAR
-		ROR
-		ROL
-		NOT
+		NOT, AND, OR, EOR, BIC, TST, SHL, SHR, SAR, ROR, ROL
 	Reg transfer	
-		MOV
-		SWP
+		MOV, SWP
 	UAL Simple math	
-		INC
-		DEC
-		NEG
-		ADD
-		SUB
-		SBB
-		CMP
+		INC, DEC, NEG, ADD, SUB, SBB, CMP
 	UAL Math 	
-		MUL
-		IMUL
-		DIV
-		IDIV
+		MUL, IMUL, DIV,	IDIV
 
-Intruction memonic table code (8 bits byte : Horizontal MS4bits, Vertical LS4bits)
+Intruction memonic table code (8 bits byte raw opcode : Horizontal MS4bits, Vertical LS4bits)
 	0-	1-	2-	3-	4-	5-	6-	7-	8-	9-	A-	B-	C-	D-	E-	F-
 -0	NOP	LEAW0	INT0	J_W0	JZ	LDBm0	LDWm0	SRBm0	SRWm0	ANDB	ANDW	MULB	ANDBI	ANDWI	MULBI	
 -1	INB	LEAW1	INT1	J_W1	JNZ	LDBm1	LDWm1	SRBm1	SRWm1	ORB	ORW	IMULB	ORBI	ORWI	IMULBI	
@@ -162,6 +168,7 @@ Intruction memonic table code (8 bits byte : Horizontal MS4bits, Vertical LS4bit
 transfer (56)
 	registre => memory
 	memory => registre
+	CPU status flag untouched
 	memory addressing mode (8 modes : encoding 3 bits) used for transfer insruction
 		000 : m0 : [ImmW]
 		001 : m1 : [Wx]
@@ -172,50 +179,50 @@ transfer (56)
 		110 : m6 : [SP + Wx + immB]
 		111 : m7 : [Wx + Wy + immB]
 
-	LD	Bx [ImmW]		: LDBm0 | '00000xxx' | 'iiiiiii' | 'IIIIIIII'
-	LD	Wx [ImmW]		: LDWm0 | '000000xx' | 'iiiiiii' | 'IIIIIIII'
-	SR	Bx [ImmW]		: SRBm0 | '00000xxx' | 'iiiiiii' | 'IIIIIIII'
-	SR	Wx [ImmW]		: SRWm0 | '000000xx' | 'iiiiiii' | 'IIIIIIII'
-	LD	Bx [Wy] 		: LDBm1 | '00yy0xxx' 
-	LD	Wx [Wy]			: LDWm1 | '00yy00xx'
-	SR	Bx [Wy] 		: SRBm1 | '00yy0xxx'
-	SR	Wx [Wy] 		: SRWm1 | '00yy00xx'
-	LD	Bx [Wy + immB]		: LDBm2 | '00yy0xxx' | 'iiiiiiii'
-	LD	Wx [Wy + immB]		: LDWm2 | '00yy00xx' | 'iiiiiiii'
-	SR	Bx [Wy + immB]		: SRBm2 | '00yy0xxx' | 'iiiiiiii'
-	SR	Wx [Wy + immB]		: SRWm2 | '00yy00xx' | 'iiiiiiii'
-	LD	Bx [SP + Wy]		: LDBm3 | '00yy0xxx' 
-	LD	Wx [SP + Wy]		: LDWm3 | '00yy00xx'
-	SR	Bx [SP + Wy]		: SRBm3 | '00yy0xxx'
-	SR	Wx [SP + Wy] 		: SRWm3 | '00yy00xx'
-	LD	Bx [SP + immB]		: LDBm4 | '00yy0xxx' | 'iiiiiiii'
-	LD	Wx [SP + immB]		: LDWm4 | '00yy00xx' | 'iiiiiiii'
-	SR	Bx [SP + immB]		: SRBm4 | '00yy0xxx' | 'iiiiiiii'
-	SR	Wx [SP + immB]		: SRWm4 | '00yy00xx' | 'iiiiiiii'
-	LD	Bx [Wy + Wz]		: LDBm5 | 'yyzz0xxx' 
-	LD	Wx [Wy + Wz]		: LDWm5 | 'yyzz00xx'
-	SR	Bx [Wy + Wz]		: SRBm5 | 'yyzz0xxx'
-	SR	Wx [Wy + Wz]		: SRWm5 | 'yyzz00xx'
-	LD	Bx [SP + Wy + immB]	: LDBm6 | '00yy0xxx' | 'iiiiiiii' 
-	LD	Wx [SP + Wy + immB]	: LDWm6 | '00yy00xx' | 'iiiiiiii'
-	SR	Bx [SP + Wy + immB]	: SRBm6 | '00yy0xxx' | 'iiiiiiii'
-	SR	Wx [SP + Wy + immB]	: SRWm6 | '00yy00xx' | 'iiiiiiii'
-	LD	Bx [Wy + Wz + immB]	: LDBm7 | 'yyzz0xxx' | 'iiiiiiii' 
-	LD	Wx [Wy + Wz + immB]	: LDWm7 | 'yyzz00xx' | 'iiiiiiii'
-	SR	Bx [Wy + Wz + immB]	: SRBm7 | 'yyzz0xxx' | 'iiiiiiii'
-	SR	Wx [Wy + Wz + immB]	: SRWm7 | 'yyzz00xx' | 'iiiiiiii'
-	PUSH PC			: PUSHPC	(PC on stack, PC is address of this instruction : usefull for DO LOOP clock)
-	PUSHF			: PUSHF
-	PUSHA			: PUSHA	(PUSH W3,W2,W1,W0)
-4	PUSH	Wx		: PUSHWxx
-4	PUSH	Bx		: PUSHBxxx	(PUSH Bx in 16 bits, High byte is 0)
-	DUP
-	POP PC			: POPPC
-	POPF			: POPF
-	POPA			: POPA		(POP W0,W1,W2,W3)
-4	POP	Wx		: POPWxx
-4	POP	Bx		: POPBxxx	(POP w , Bx=low(w))
-	DROP
+	LD	Bx [ImmW]		: LDBm0 | '00000xxx' | 'iiiiiii' | 'IIIIIIII'	{x = m[++PC] & 7; immW = m[++PC] | ((WORD)m[++PC])<<8; PC++ ; B[x] = m[immW]}
+	LD	Wx [ImmW]		: LDWm0 | '000000xx' | 'iiiiiii' | 'IIIIIIII'	{x = m[++PC] & 3; immW = m[++PC] | ((WORD)m[++PC])<<8; PC++ ; W[x] = m[immW]}
+	SR	Bx [ImmW]		: SRBm0 | '00000xxx' | 'iiiiiii' | 'IIIIIIII'	{x = m[++PC] & 7; immW = m[++PC] | ((WORD)m[++PC])<<8; PC++; m[immW] = B[x]}
+	SR	Wx [ImmW]		: SRWm0 | '000000xx' | 'iiiiiii' | 'IIIIIIII'	{x = m[++PC] & 3; immW = m[++PC] | ((WORD)m[++PC])<<8; PC++; m[immW] = W[x]}
+	LD	Bx [Wy] 		: LDBm1 | '00yy0xxx' 				{x = m[++PC] & 7; y = (m[PC++] & 0x30) >> 4; B[x] = m[W[y]]}
+	LD	Wx [Wy]			: LDWm1 | '00yy00xx'				{x = m[++PC] & 3; y = (m[PC++] & 0x30) >> 4; W[x] = m[W[y]]}
+	SR	Bx [Wy] 		: SRBm1 | '00yy0xxx'				{x = m[++PC] & 7; y = (m[PC++] & 0x30) >> 4; m[W[y]] = B[x]}
+	SR	Wx [Wy] 		: SRWm1 | '00yy00xx'				{x = m[++PC] & 3; y = (m[PC++] & 0x30) >> 4; m[W[y]] = W[x]}
+	LD	Bx [Wy + immB]		: LDBm2 | '00yy0xxx' | 'iiiiiiii'		{x = m[++PC] & 7; y = (m[PC++] & 0x30) >> 4; immB = m[PC++]; B[x] = m[W[y] + immB]}
+	LD	Wx [Wy + immB]		: LDWm2 | '00yy00xx' | 'iiiiiiii'		(x = m[++PC] & 3; y = (m[PC++] & 0x30) >> 4; immB = m[PC++]; W[x] = m[W[y] + immB])
+	SR	Bx [Wy + immB]		: SRBm2 | '00yy0xxx' | 'iiiiiiii'		(PC += 3, [Wy + immB] = Bx)
+	SR	Wx [Wy + immB]		: SRWm2 | '00yy00xx' | 'iiiiiiii'		(PC += 3, [Wy + immB] = Wx)
+	LD	Bx [SP + Wy]		: LDBm3 | '00yy0xxx' 				(PC += 2, Bx = [SP + Wy])
+	LD	Wx [SP + Wy]		: LDWm3 | '00yy00xx'				(PC += 2, Wx = [SP + Wy])
+	SR	Bx [SP + Wy]		: SRBm3 | '00yy0xxx'				(PC += 2, [SP + Wy] = Bx)
+	SR	Wx [SP + Wy] 		: SRWm3 | '00yy00xx'				(PC += 2, [SP + Wy] = Wx)
+	LD	Bx [SP + immB]		: LDBm4 | '00yy0xxx' | 'iiiiiiii'		(PC += 3, Bx = [SP + immB])
+	LD	Wx [SP + immB]		: LDWm4 | '00yy00xx' | 'iiiiiiii'		(PC += 3, Wx = [SP + immB])
+	SR	Bx [SP + immB]		: SRBm4 | '00yy0xxx' | 'iiiiiiii'		(PC += 3, [SP + immB] = Bx)
+	SR	Wx [SP + immB]		: SRWm4 | '00yy00xx' | 'iiiiiiii'		(PC += 3, [SP + immB] = By)
+	LD	Bx [Wy + Wz]		: LDBm5 | 'zzyy0xxx' 				(PC += 2, Bx = [Wy + Wz])
+	LD	Wx [Wy + Wz]		: LDWm5 | 'zzyy00xx'				(PC += 2, Wx = [Wy + Wz])
+	SR	Bx [Wy + Wz]		: SRBm5 | 'zzyy0xxx'				(PC += 2, [Wy + Wz] = Bx)
+	SR	Wx [Wy + Wz]		: SRWm5 | 'zzyy00xx'				(PC += 2, [Wy + Wz] = Wx)
+	LD	Bx [SP + Wy + immB]	: LDBm6 | '00yy0xxx' | 'iiiiiiii' 		(PC += 3, Bx = [SP + Wy + immB])
+	LD	Wx [SP + Wy + immB]	: LDWm6 | '00yy00xx' | 'iiiiiiii'		(PC += 3, Wx = [SP + Wy + immB])
+	SR	Bx [SP + Wy + immB]	: SRBm6 | '00yy0xxx' | 'iiiiiiii'		(PC += 3, [SP + Wy + immB] = Bx)
+	SR	Wx [SP + Wy + immB]	: SRWm6 | '00yy00xx' | 'iiiiiiii'		(PC += 3, [SP + Wy + immB] = Wx)
+	LD	Bx [Wy + Wz + immB]	: LDBm7 | 'zzyy0xxx' | 'iiiiiiii' 		(PC += 3, Bx = [Wy + Wz + immB])
+	LD	Wx [Wy + Wz + immB]	: LDWm7 | 'zzyy00xx' | 'iiiiiiii'		(PC += 3, Wx = [Wy + Wz + immB])
+	SR	Bx [Wy + Wz + immB]	: SRBm7 | 'zzyy0xxx' | 'iiiiiiii'		(PC += 3, [Wy + Wz + immB] = Bx)
+	SR	Wx [Wy + Wz + immB]	: SRWm7 | 'zzyy00xx' | 'iiiiiiii'		(PC += 3, [Wy + Wz + immB] = Wx)
+	PUSH PC				: PUSHPC					(SP -= 2, [SP] = PC, PC += 1 ;on stack, PC is address of this instruction : usefull for DO LOOP clock)
+	PUSHF				: PUSHF						(PC += 1, SP -= 2, [SP] = FL)
+	PUSHA				: PUSHA						(PC += 1, for x in 0 to 3 do (SP -= 2, [SP] = Wx))
+	PUSH	Wx			: PUSHWxx					(PC += 1, SP -= 2, [SP] = Wx)
+	PUSH	Bx			: PUSHBxxx					(PC += 1, SP -= 2, [SP] = (0x00FF AND Bx))
+	DUP				: DUP						(PC += 1, SP -= 2, [SP] = [SP + 2])
+	POP PC				: POPPC						(PC = [SP], SP += 2)
+	POPF				: POPF						(PC += 1, FL = [SP], SP+= 2)
+	POPA				: POPA						(PC += 1, for x in 3 to 0 do (Wx = [SP], SP += 2))
+	POP	Wx			: POPWxx					(PC += 1, Wx = [SP], SP += 2)
+	POP	Bx			: POPBxxx					(PC += 1, Bx = low[Sp], SP += 2)
+	DROP				: DROP						(PC += 1, SP += 2)
 
 register transform UAL (81)
 	Byte ( 39)
@@ -317,57 +324,55 @@ register transform UAL (81)
 		IDIV	Wx SimmB: IDIVWI| '000000xx' | 'iiiiiiii' | 'SIIIIIII'	( signed Wx = Wx / immW)
 	
 branching: (44)
-	relative_immediate with PC = PC + SimmB, imply current PC(before PC change by branching instruction) is at next intruction.
-	J	relative_immediate	: J_R | 'siiiiiii'		(PC = PC + SimmB)
-	J	absolute_immediate	: J_A |	'iiiiiiii' | 'IIIIIIII'	(PC = immW )
-4	J	Wx			: J_Wxx				(PC = Wx)
-	C	relative_immediate	: C_R | 'siiiiiii'		(PUSH PC, PC = PC + SimmB)
-	C	absolute_immediate	: C_A | 'iiiiiiii' | 'IIIIIIII'	(PUSH PC, PC = immW)
-4	C	Wx			: C_Wxx				(PUSH PC, PC = Wx)
-16	INT	0 to 15			: INTxxxx			(PUSH PC, PUSHF , PC = [x<<1])
+	J	relative_immediate	: J_R | 'siiiiiii'			(PC += 2, PC = PC + SimmB)
+	J	absolute_immediate	: J_A |	'iiiiiiii' | 'IIIIIIII'		(PC = immW )
+	J	Wx			: J_Wxx					(PC = Wx)
+	C	relative_immediate	: C_R | 'siiiiiii'			(PC += 2, SP -= 2, [SP] = PC, PC = PC + SimmB)
+	C	absolute_immediate	: C_A | 'iiiiiiii' | 'IIIIIIII'		(PC += 3, SP -= 2, [SP] = PC, PC = immW)
+	C	Wx			: C_Wxx					(PC += 1, SP -= 2, [SP] = PC, PC = Wx)
+	INT	0 to 15			: INTxxxx				(PC += 2, SP -= 2, [SP] = PC, SP -=2, [SP] = FL, PC = [x<<1])
 	
-	JE/JZ	relative_immediate	: JZ  | 'siiiiiii'		(If Z==1 then PC = PC + SimmB)
-	JNE/JNZ	relative_immediate	: JNZ | 'siiiiiii'		(If Z==0 then PC = PC + SimmB)
-	JC/JAE	relative_immediate	: JC  | 'siiiiiii'  		(If C==1 then PC = PC + SimmB)
-	JNC/JB	relative_immediate	: JNC | 'siiiiiii'  		(If C==O then PC = PC + SimmB)
-	JN/JMI	relative_immediate	: JN  | 'siiiiiii'  		(If N==1 then PC = PC + SimmB)
-	JNN/JPZ	relative_immediate	: JNN | 'siiiiiii'  		(If N==0 then PC = PC + SimmB)
-	JV 	relative_immediate	: JV  | 'siiiiiii'  		(If V==1 then PC = PC + SimmB)
-	JNV	relative_immediate	: JNV | 'siiiiiii'  		(If V==0 then PC = PC + SimmB)
-	JA	relative_immediate	: JA  | 'siiiiiii'  		(If (C==1) && (Z==0) then PC = PC + SimmB)
-	JBE	relative_immediate	: JBE | 'siiiiiii'  		(If (C==0) && (Z==1) then PC = PC + SimmB)
-	JGE	relative_immediate	: JGE | 'siiiiiii'  		(If N==V then PC = PC + SimmB)
-	JL	relative_immediate	: JL  | 'siiiiiii'  		(If N!=V then PC = PC + SimmB)
-	JG	relative_immediate	: JG  | 'siiiiiii'  		(If (Z==0) && (N==V) then PC = PC + SimmB)
-	JLE	relative_immeidate	: JLE | 'siiiiiii'  		(If (Z==1) || (N!=V) then PC = PC + SimmB)
+	JE/JZ	relative_immediate	: JZ  | 'siiiiiii'			(PC += 2, If Z==1 then PC = PC + SimmB)
+	JNE/JNZ	relative_immediate	: JNZ | 'siiiiiii'			(PC += 2, If Z==0 then PC = PC + SimmB)
+	JC/JAE	relative_immediate	: JC  | 'siiiiiii'  			(PC += 2, If C==1 then PC = PC + SimmB)
+	JNC/JB	relative_immediate	: JNC | 'siiiiiii'  			(PC += 2, If C==O then PC = PC + SimmB)
+	JN/JMI	relative_immediate	: JN  | 'siiiiiii'  			(PC += 2, If N==1 then PC = PC + SimmB)
+	JNN/JPZ	relative_immediate	: JNN | 'siiiiiii'  			(PC += 2, If N==0 then PC = PC + SimmB)
+	JV 	relative_immediate	: JV  | 'siiiiiii'  			(PC += 2, If V==1 then PC = PC + SimmB)
+	JNV	relative_immediate	: JNV | 'siiiiiii'  			(PC += 2, If V==0 then PC = PC + SimmB)
+	JA	relative_immediate	: JA  | 'siiiiiii'  			(PC += 2, If (C==1) && (Z==0) then PC = PC + SimmB)
+	JBE	relative_immediate	: JBE | 'siiiiiii'  			(PC += 2, If (C==0) && (Z==1) then PC = PC + SimmB)
+	JGE	relative_immediate	: JGE | 'siiiiiii'  			(PC += 2, If N==V then PC = PC + SimmB)
+	JL	relative_immediate	: JL  | 'siiiiiii'  			(PC += 2, If N!=V then PC = PC + SimmB)
+	JG	relative_immediate	: JG  | 'siiiiiii'  			(PC += 2, If (Z==0) && (N==V) then PC = PC + SimmB)
+	JLE	relative_immeidate	: JLE | 'siiiiiii'  			(PC += 2, If (Z==1) || (N!=V) then PC = PC + SimmB)
 
-	RET				: RET				(POP PC)
-	IRET				: IRET				(POPF, POP PC)
+	RET				: RET					(PC = [SP], SP += 2)
+	IRET				: IRET					(FL = [SP], SP += 2, PC = [SP])
 
 Core I/O
-	IN	Bx			: INB   | '00000xxx'		(Z=([0021]==0),V=([0021]==0xFF), if Z==1 then Bx = [0020])
-	OUT	Bx			: OUTB  | '00000xxx'		(Z=([0023]==0),V=([0021]==0xFF), if Z==1 then [0022]=Bx)
-	OUT	immB			: OUTBI	| 'iiiiiiii'
-	OUT2	Bx			: OUTB2 | '00000xxx'		(Z=([0025]==0),V=([0021]==0xFF), if Z==1 then [0024]=Bx)
-	OUT2	immB			: OUTB2I| 'iiiiiiii'
+	IN	Bx			: INB   | '00000xxx'			(PC += 2, Z=([0021]==0), V=([0021]==0xFF), if Z==1 then Bx = [0020])
+	OUT	Bx			: OUTB  | '00000xxx'			(PC += 2, Z=([0023]==0),V=([0021]==0xFF), if Z==1 then [0022]=Bx)
+	OUT	immB			: OUTBI	| 'iiiiiiii'			(PC += 2, Z=([0023]==0),V=([0021]==0xFF), if Z==1 then [0022]=immB)
+	OUT2	Bx			: OUTB2 | '00000xxx'			(PC += 2, Z=([0025]==0),V=([0021]==0xFF), if Z==1 then [0024]=Bx)
+	OUT2	immB			: OUTB2I| 'iiiiiiii'			(PC += 2, Z=([0025]==0),V=([0021]==0xFF), if Z==1 then [0024]=immB)
 
 Misc (23)
-	NOP
-	HLT
-	RESET	(Hypervisor reintialize the memory(with prepared RAM content) and CPU)
-	WAIT
-	HEVT
+	NOP				: NOP					(PC += 1)
+	HLT				: HLT					(Hypervisor stop CPU state)
+	RESET				: RESET					(Hypervisor reintialize the memory(with prepared RAM content) and CPU)
+	WAIT				: WAIT					(PC += 1, Hypervisor wait interruption CPU state)
+	HEVT				:					(PC += 1, send event to Hypervisor)
 
-	STI	(I=1)
-	STC	(C=1)
-	STZ	(Z=1)
-	STV	(V=1)
-	STN	(N=1)
+	ST	I			: STI					(I=1)
+	ST	C			: STC					(C=1)
+	ST	Z			: STZ					(Z=1)
+	ST	V			: STV					(V=1)
+	ST	N			: STN					(N=1)
 	
-	CLI	(I=0)
-	CLC	(C=0)
-	CLZ	(Z=0)
-	CLV	(V=0)
-	CLN	(N=0)
-4	LEA	Wx SimmW  		: LEAW xx | 'iiiiiiii' | 'SIIIIIII'	(Wx = PC + SimmW) PC is at next instruction
-4	LEA	Wx SimmB  		: LEAB xx | 'siiiiiii' 			(Wx = PC + SimmB) PC is at next instruction
+	CL	I			: CLI					(I=0)
+	CL	C			: CLC					(C=0)
+	CL	Z			: CLZ					(V=0)
+	CL	N			: CLN					(N=0)
+	LEA	Wx SimmW  		: LEAW xx | 'iiiiiiii' | 'SIIIIIII'	(PC += 3, Wx = PC + SimmW)
+	LEA	Wx SimmB  		: LEAB xx | 'siiiiiii' 			(PC += 2, Wx = PC + SimmB) 
