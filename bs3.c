@@ -1,5 +1,13 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <unistd.h>
+#include <poll.h>
+#include <signal.h>
+#include <termios.h>
+#include <sys/ioctl.h>
+#include <errno.h>
 
 // Instruction set
 #define NOP 0x00
@@ -234,9 +242,10 @@
 #define BS3_STATUS_RESET 4
 #define BS3_STATUS_ESCHYP 5
 
+#define BS3_INT_PENDING 0xFF
 #define BS3_INT_BADINSTR 7
 #define BS3_INT_TIMER 3
-#define BS3_INT_INPUTEVT 4
+#define BS3_INT_INPUT 4
 
 #define BYTE unsigned char
 #define WORD unsigned short
@@ -283,6 +292,7 @@ struct bs3_registers
 	};
 };
 
+// operator param (optional second byte of an instruction)
 union opParam
 {
   BYTE param;
@@ -323,6 +333,13 @@ struct bs3_cpu_data
     BYTE m[65536];
     struct {
       WORD vector[16]; // interrupt vectors
+      BYTE input_datablock_ready;
+      BYTE reserved;
+      WORD input_datablock_address;
+      WORD input_datablock_length;
+      BYTE hypervisor_reserved[10];
+      WORD hypervisor_event_id;
+      BYTE hypervisor_event_data[206];
       BYTE input_data;   // core I/O input
       BYTE input_ready;  // core I/O input status
       BYTE output_data;  // core I/O output
@@ -330,18 +347,18 @@ struct bs3_cpu_data
       BYTE output2_data; // core I/O auxiliary output
       BYTE output2_ready; // core I/O auxilairy output status
       DWORD timer;        // system timer 
-      BYTE input_datablock_ready;
-      BYTE reserved;
-      WORD input_datablock_address;
-      WORD input_datablock_length;
-      WORD hypervisor_event_id;
-      BYTE hypervisor_event_data[206];
     };
   };
   BYTE status;
   DWORD counter; // countdown counter intialized at 'timer' value
   BYTE pending_interrupt;
 };
+
+
+
+
+
+
 
 // initialize CPU (memory not initialized)
 void bs3_cpu_init(struct bs3_cpu_data * pbs3)
@@ -359,15 +376,17 @@ void bs3_cpu_init(struct bs3_cpu_data * pbs3)
   pbs3->r.W[3] = 0;
   // reset status and counter/timer
   pbs3->status = BS3_STATUS_DEFAULT;
-  pbs3->counter = 0;
-  pbs3->timer = 0;
+  pbs3->counter = pbs3->timer; // cpu current countdown (initialiazed with timer)
+  pbs3->pending_interrupt = BS3_INT_PENDING;
+  pbs3->input_ready = 0x01;
 }
 
 
 // for interrupt from external (not by program INT instruction)
 void bs3_cpu_interrupt(struct bs3_cpu_data * pbs3, int intnum)
 {
-  if (intnum == BS3_INT_BADINSTR || pbs3->r.I == 0)
+  if (pbs3->status == BS3_STATUS_HALT) return;
+  if (intnum == BS3_INT_BADINSTR || pbs3->r.I == 1)
   {
     // PUSH PC,
      pbs3->r.SP-=2;
@@ -377,55 +396,134 @@ void bs3_cpu_interrupt(struct bs3_cpu_data * pbs3, int intnum)
      *(WORD *)&(pbs3->m[ pbs3->r.SP ]) = pbs3->r.FL;
     //PC=m[intnum << 1]
     pbs3->r.PC = pbs3->vector[intnum]; 
-    // I=0
+    // I=0 , by default in interrupt handler , disallowed interrupt
     pbs3->r.I = 0;
-    pbs3->pending_interrupt = 0xFF;
+    pbs3->pending_interrupt = BS3_INT_PENDING;
   } else {
     pbs3->pending_interrupt = intnum;
   }
+  if (pbs3->status == BS3_STATUS_WAIT) pbs3->status = BS3_STATUS_DEFAULT;
 }
 
-// to be called by Hypervisor
-void bs3_cpu_input_data(struct bs3_cpu_data * pbs3, BYTE data) 
+
+void bs3_cpu_write_byte(struct bs3_cpu_data * pbs3, WORD address, BYTE data) 
 {
-  pbs3->input_data = data;
-  pbs3->input_data_ready = 0;
-  bs3_cpu_interrupt( pbs3, BS3_INT_INPUTEVT);
+  if ((address & 0xFF00) == 0x0100) // System Write I/O
+  {
+    switch (address)
+    {
+      case 0x0100: // write on input data is ignored
+      case 0x0101: // write on input status is ignored
+        break;
+      case 0x0102:
+        if (pbs3->m[0x0103] == 0x00) // if ok to write on output 
+        {
+          pbs3->m[0x0103] == 0x01; // output is waiting to be consummed
+          pbs3->m[address] = data; // output data available
+        }
+        break;
+      case 0x0103: // write on output status is ignored
+        break;
+      case 0x0104:
+        if (pbs3->m[0x0105] == 0x00) // if ok to write on auxiliary output
+        {
+          pbs3->m[0x0106] == 0x01; // output is waiting to be consummed
+          pbs3->m[address] = data; // output data available
+        }
+        break;
+      case 0x0105: // write on auxiliary output status is ignored 
+        break;
+      case 0x0106: // low byte of the low 16 bits of the 32 bits timer
+      case 0x0107: // high byte of the low 16 bits of the 32 bits timer
+      case 0x0108: // low byte of the high 16 bits of the 32 bits timer
+        pbs3->m[address] = data;
+        break;
+      case 0x0109: // high byte of the high 16 bits of the 3é bits timer : at this write, timer is restarted
+        pbs3->m[address] = data;
+        pbs3->counter = pbs3->timer;
+        break;
+      default:
+        // TODO : manage Write I/O
+        //        do nothing for now
+        break;
+    }
+  }
+  else
+  {
+    pbs3->m[address] = data;
+  }
 }
 
-// to be called by hypervisor
-void bs3_cpu_input_status(struct bs3_cpu_data * pbs3, BYTE status)
-{
-  pbs3->input_ready = status;
+
+
+BYTE bs3_cpu_read_byte(struct bs3_cpu_data * pbs3, WORD address) {
+  if ((address & 0xFF00) == 0x0100) // System I/O
+  {
+    switch (address)
+    {
+      case 0x0100:
+        if (pbs3->m[0x101] == 0x00)
+        {
+          pbs3->m[0x0101] = 0x01; // core input consummed
+        }
+        return pbs3->m[address]; 
+        break;
+      case 0x0101: // core input status
+      case 0x0102: // core output
+      case 0x0103: // core output status
+      case 0x0104: // core auxiliary output
+      case 0x0105: // core auxliiary output status
+      case 0x0106: // timer 32 low, 16 bits low
+      case 0x0107: // timer 32 low, 1§ bit high
+      case 0x0108: // timer 32 high, 16 bits low
+      case 0x0109: // timer 32 high, 16 bits high
+        return pbs3->m[address];
+        break;
+      default:
+      // TODO : manage other system  I/O read, return NULL byte for now.
+        return 0;
+    }
+  }
+  else
+  {
+    return pbs3->m[address];
+  }
+  return 0;
 }
 
-// to be called by hypervisor
-void bs3_cpu_output_status(struct bs3_cpu_data * pbs3, BYTE status)
+
+void bs3_cpu_write_word(struct bs3_cpu_data * pbs3, WORD address, WORD data) 
 {
-  pbs3->output_ready = status;
+  bs3_cpu_write_byte(pbs3, address, (BYTE)(data & 0x00FF));
+  bs3_cpu_write_byte(pbs3, address+1, (BYTE)((data>>8) & 0x00FF));
 }
 
-// to be called by hypervisor
-void bs3_cpu_output2_status(struct bs3_cpu_data * pbs3, BYTE status)
-{
-  pbs3->output2_ready = status;
+WORD bs3_cpu_read_word(struct bs3_cpu_data * pbs3, WORD address) {
+  return bs3_cpu_read_byte(pbs3, address) |  (((WORD)bs3_cpu_read_byte(pbs3, address + 1)) << 8);
 }
+
 
 void bs3_cpu(struct bs3_cpu_data * pbs3)
 {
-  // is there pending interrupt ?
-  if (pbs3->r.I == 0 && pbs3->pending_interrupt != 0xFF) {
-    bs3_cpu_interrupt(pbs3, pbs3->pending_interrupt);
-  } 
-  else 
+  if (pbs3->status == BS3_STATUS_HALT) return; 
+  if (pbs3->status == BS3_STATUS_RESET) 
   {
-    if (pbs3->r.I == 0)
-      if (--pbs3->counter == 0) 
-      {
-        pbs3->counter = pbs3->timer;
-         bs3_cpu_interrupt(pbs3, BS3_INT_TIMER);
-      } 
+    bs3_cpu_init(pbs3);
   }
+  // is there pending interrupt, with interrupt enabled?
+  if (pbs3->r.I == 1 && pbs3->pending_interrupt != BS3_INT_PENDING) {
+    bs3_cpu_interrupt(pbs3, pbs3->pending_interrupt);
+  }
+  else // timer interrupt ?
+  {
+     pbs3->counter--;
+     if (pbs3->counter == 0)  
+     {
+       bs3_cpu_interrupt(pbs3, BS3_INT_TIMER);
+       pbs3->counter == pbs3->timer;
+     }
+  }
+  if (pbs3->status == BS3_STATUS_WAIT) return;
   switch ( pbs3->m[pbs3->r.PC] ) 
   {
         case NOP:
@@ -866,21 +964,121 @@ void bs3_cpu(struct bs3_cpu_data * pbs3)
         case MOVWI:
             break;
         case STI:
+            pbs3->r.PC++;
+            pbs3->r.I = 0;
             break;
         case CLI:
+            pbs3->r.PC++;
+            pbs3->r.I = 0;
             break;
         case HEVT:
+            pbs3->r.PC++;
+            pbs3->status = BS3_STATUS_HEVT;
             break;
         case WAIT:
+            pbs3->r.PC++;
+            pbs3->status = BS3_STATUS_WAIT;
             break;
         case RESET:
+            pbs3->status = BS3_STATUS_RESET;
             break;
         case HLT:
+            pbs3->status = BS3_STATUS_HALT;
             break;
         default:
             bs3_cpu_interrupt(pbs3, BS3_INT_BADINSTR);
 
   }
+}
+
+// Hypervisor
+void bs3_hyper_reset_memory(struct bs3_cpu_data * pbs3)
+{
+  WORD i;
+  for (i=0; i <= 0xFFFF; i++) pbs3->m[i] = 0;
+}
+
+void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, BYTE * data, long length, WORD address)
+{
+  long i;
+  for (i=0; i < length; i++) pbs3->m[(address + i) & 0xFFFF] = data[i];
+}
+
+// process core I/O between Hypervisor and bs3 CPU
+void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
+{
+  int ret;
+  int data;
+  // process output 
+  if (pbs3->output_ready == 0x01) { // something pending for output
+    data = pbs3->output_data;
+    ret = fputc(data, stdout);
+    if (ret == EOF) 
+    {
+      switch (errno)
+      {
+        case EAGAIN : // output is not ready, another try is necessary
+          break;
+        case EBADF :
+        case EIO :
+          pbs3->output_ready = 0xFF; // output is not usable
+      }
+    } 
+    else
+    {
+      pbs3->output_ready == 0x00; // data sent to output , ouput is ready for another sending
+    }
+  }
+  // process auxiliary output
+  if (pbs3->output2_ready == 0x01) { // something pending for auxiliary output
+    data = pbs3->output2_data;
+    ret = fputc(data, stderr);
+    if (ret == EOF) 
+    {
+      switch (errno)
+      {
+        case EAGAIN : // auxiliary output is not ready, another try is necessary
+          break;
+        case EBADF :
+        case EIO :
+          pbs3->output2_ready = 0xFF; // auxiliary output is not usable
+      }
+    } 
+    else
+    {
+      pbs3->output2_ready == 0x00; // data sent to auxiliary output , auxiliary ouput is ready for another sending
+    }
+  }
+  // process input
+  if (pbs3->input_ready == 0x01) { // input byte is consummed, then it is an opportunity to provide another input if there is one available
+    struct pollfd pfds[1];
+    int ret;
+    char c;
+    
+    /* See if there is data available */
+    pfds[0].fd = 0;
+    pfds[0].events = POLLIN;
+    ret = poll(pfds, 1, 0);
+    
+    /* Consume Hypervisor input data, to provide as an available input data for the bs3 CPU */
+    if (ret > 0 && ((pfds[0].revents & 1) == 1)) {
+      read(0, &c, 1);
+      pbs3->input_data = (BYTE)c;
+      pbs3->input_ready == 0x00;
+      bs3_cpu_interrupt(pbs3, BS3_INT_INPUT);
+    }
+  
+  }
+}
+
+
+
+
+static sig_atomic_t end = 0;
+
+static void sighandler(int signo)
+{
+    end = 1;
 }
 
 void main() {
@@ -901,4 +1099,62 @@ void main() {
   printf("N %X\n",reg.N);
   printf("I %X\n",reg.I);
   printf("reserved %X\n",reg.reserved);
+  printf("sizeof cpu %d\n", sizeof(struct bs3_cpu_data));
+  
+  ///
+  
+    struct termios oldtio, curtio;
+    struct sigaction sa;
+
+    /* Save stdin terminal attributes */
+    tcgetattr(0, &oldtio);
+
+    /* Make sure we exit cleanly */
+    memset(&sa, 0, sizeof(struct sigaction));
+    sa.sa_handler = sighandler;
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGQUIT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+
+    /* This is needed to be able to tcsetattr() after a hangup (Ctrl-C)
+     * see tcsetattr() on POSIX
+     */
+    memset(&sa, 0, sizeof(struct sigaction));
+    sa.sa_handler = SIG_IGN;
+    sigaction(SIGTTOU, &sa, NULL);
+
+    /* Set non-canonical no-echo for stdin */
+    tcgetattr(0, &curtio);
+    curtio.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(0, TCSANOW, &curtio);
+
+    /* main loop */
+    while (!end) {
+            struct pollfd pfds[1];
+            int ret;
+            char c;
+
+            /* See if there is data available */
+            pfds[0].fd = 0;
+            pfds[0].events = POLLIN;
+            ret = poll(pfds, 1, 0);
+
+            /* Consume data */
+            if (ret > 0 && ((pfds[0].revents & 1) == 1) ) {
+                    //printf("Data available\n");
+                    read(0, &c, 1);
+                    int d = (int) c;
+                    int e = pfds[0].revents;
+                    printf("revents %X, ret =%X, c=%d\n",e, ret,d);
+            }
+    }
+
+    /* restore terminal attributes */
+    tcsetattr(0, TCSANOW, &oldtio);
+
+    //return 0;
+  
+  
+  
+  
 }
