@@ -1,4 +1,4 @@
-CISC 16 bits address, 8/16 bits data
+CISC 16 bits address, 8/16 bits data   0x5C33
 little-endian data access and immediate encoding
 Event/Interruption enabled
 Hypervisor controlled
@@ -100,23 +100,25 @@ MEMORY MAP
 		vector 13 : 001A : user defined
 		vector 14 : 001C : user defined
 		vector 15 : 001E : user defined
-	0020 - 002F : Timer/core I-O/Hypervisor data block receiver exchange
-		0020 : byte input data
-		0021 : input data ready (==0 , 0020 is ready for a read operation, ==FF no input available, ==01 wait(about to come))
-		0022 : byte output data
-		0023 : output data ready (==0 , 0022 is ready for a write operation)
-		0024 : byte secondary output data
-		0025 : secondary output data ready (==0, 0024 is ready for write operation)
-		0026 : Timer clock count low  (32 bits counters, set here from 0026 0029, the tick delay)
-		0028 : Timer clock count high
-		002A : data block input ready
-		002B : reserved
-		002C : data block input address
-		002E : data block input length 
+	0020 - 002F : Hypervisor data block receiver exchange memory
+		0020 : data block input ready
+		0021 : reserved
+		0022 : data block input address
+		0024 : data block input length 
+		0026-002F : reserved data for Hypervisor working
 	0030 - 00FF: Hypervisor Event data (768 bytes)
 		0030 : 16 bits Event Id
 		0032-00FF : Event data, with structure depending of Event Id
 	0100 - 01FF : reserved for I/O (256 I/O ports)
+		0100 : byte input data
+		0101 : input data ready (==0 , 0100 is ready for a read operation, ==FF no input available, ==01 wait(about to come))
+		0102 : byte output data
+		0103 : output data ready (==0 , 0102 is ready for a write operation, ==FF no output available, ==01 wait(about to come))
+		0104 : byte secondary output data
+		0105 : secondary output data ready (==0, 0104 is ready for write operation, ==FF no output available, ==01 wait(about to come))
+		0106 : Timer clock count low  (32 bits counters, set here from 0106 0109, the tick delay)
+		0108 : Timer clock count high (a word write operation at this address will restart the timer counter)
+		010A - 01FF : other system I/O
 	0200 - 03FF : Default Stack(grow downward, SP initial value to 0400) / possible Data / possible Code		
 	0400 - FFFF : Code / Data(ROM, RAM System or shared with device) / possible stack
 
