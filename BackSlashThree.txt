@@ -118,7 +118,8 @@ MEMORY MAP
 		0105 : secondary output data ready (==0, 0104 is ready for write operation, ==FF no output available, ==01 wait(about to come))
 		0106 : Timer clock count low  (32 bits counters, set here from 0106 0109, the tick delay)
 		0108 : Timer clock count high (a word write operation at this address will restart the timer counter)
-		010A - 01FF : other system I/O
+		010A : Timer msseconds(0) or cpu tick(1)
+		010B - 01FF : other system I/O
 	0200 - 03FF : Default Stack(grow downward, SP initial value to 0400) / possible Data / possible Code		
 	0400 - FFFF : Code / Data(ROM, RAM System or shared with device) / possible stack
 
@@ -197,10 +198,10 @@ transfer (56)
 	LD	Wx [SP + Wy]		: LDWm3 | '00yy00xx'				(PC += 2, Wx = [SP + Wy])
 	SR	Bx [SP + Wy]		: SRBm3 | '00yy0xxx'				(PC += 2, [SP + Wy] = Bx)
 	SR	Wx [SP + Wy] 		: SRWm3 | '00yy00xx'				(PC += 2, [SP + Wy] = Wx)
-	LD	Bx [SP + immB]		: LDBm4 | '00yy0xxx' | 'iiiiiiii'		(PC += 3, Bx = [SP + immB])
-	LD	Wx [SP + immB]		: LDWm4 | '00yy00xx' | 'iiiiiiii'		(PC += 3, Wx = [SP + immB])
-	SR	Bx [SP + immB]		: SRBm4 | '00yy0xxx' | 'iiiiiiii'		(PC += 3, [SP + immB] = Bx)
-	SR	Wx [SP + immB]		: SRWm4 | '00yy00xx' | 'iiiiiiii'		(PC += 3, [SP + immB] = By)
+	LD	Bx [SP + immB]		: LDBm4 | '00000xxx' | 'iiiiiiii'		(PC += 3, Bx = [SP + immB])
+	LD	Wx [SP + immB]		: LDWm4 | '000000xx' | 'iiiiiiii'		(PC += 3, Wx = [SP + immB])
+	SR	Bx [SP + immB]		: SRBm4 | '00000xxx' | 'iiiiiiii'		(PC += 3, [SP + immB] = Bx)
+	SR	Wx [SP + immB]		: SRWm4 | '000000xx' | 'iiiiiiii'		(PC += 3, [SP + immB] = Wx)
 	LD	Bx [Wy + Wz]		: LDBm5 | 'zzyy0xxx' 				(PC += 2, Bx = [Wy + Wz])
 	LD	Wx [Wy + Wz]		: LDWm5 | 'zzyy00xx'				(PC += 2, Wx = [Wy + Wz])
 	SR	Bx [Wy + Wz]		: SRBm5 | 'zzyy0xxx'				(PC += 2, [Wy + Wz] = Bx)
