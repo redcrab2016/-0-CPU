@@ -244,7 +244,7 @@
 #define BS3_STATUS_RESET 4
 #define BS3_STATUS_ESCHYP 5
 
-#define BS3_INT_PENDING 0xFF
+#define BS3_INT_NOPENDING 0xFF
 #define BS3_INT_BADINSTR 7
 #define BS3_INT_TIMER 3
 #define BS3_INT_INPUT 4
@@ -412,7 +412,7 @@ void bs3_cpu_init(struct bs3_cpu_data * pbs3)
   /* reset status and counter/timer */
   pbs3->status = BS3_STATUS_DEFAULT;
   pbs3->counter = pbs3->timer; /* cpu current countdown (initialiazed with timer) */
-  pbs3->pending_interrupt = BS3_INT_PENDING; /* no pending interrupt */
+  pbs3->pending_interrupt = BS3_INT_NOPENDING; /* no pending interrupt */
   pbs3->input_ready = 0x01; /* by default nothing available for input */
   pbs3->output_ready = 0x00; /* by default output is ready to receveive data */
   pbs3->output2_ready = 0x00; /* by default auxiliary output is ready to receveive data. */
@@ -437,7 +437,7 @@ void bs3_cpu_interrupt(struct bs3_cpu_data * pbs3, int intnum)
     pbs3->r.PC = pbs3->vector[intnum]; 
     /* I=0 , by default in interrupt handler , disallowed interrupt */
     pbs3->r.I = 0;
-    pbs3->pending_interrupt = BS3_INT_PENDING;
+    pbs3->pending_interrupt = BS3_INT_NOPENDING;
   } else {
     pbs3->pending_interrupt = intnum;
   }
@@ -553,7 +553,7 @@ WORD bs3_cpu_read_word(struct bs3_cpu_data * pbs3, WORD address) {
 }
 
 
-void bs3_cpu(struct bs3_cpu_data * pbs3)
+void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
 {
   BYTE ope;
   BYTE immB;
@@ -572,7 +572,7 @@ void bs3_cpu(struct bs3_cpu_data * pbs3)
     bs3_cpu_init(pbs3);
   }
   /* is there pending interrupt, with interrupt enabled?*/
-  if (pbs3->r.I == 1 && pbs3->pending_interrupt != BS3_INT_PENDING) {
+  if (pbs3->r.I == 1 && pbs3->pending_interrupt != BS3_INT_NOPENDING) {
     bs3_cpu_interrupt(pbs3, pbs3->pending_interrupt);
   }
   else /* timer interrupt ?*/
@@ -1215,10 +1215,10 @@ void bs3_cpu(struct bs3_cpu_data * pbs3)
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
-            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; // keep sign of first 
-            s2 = (pbs3->r.B[p.y3] & 0x80) != 0; // keep sign of second
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */ 
+            s2 = (pbs3->r.B[p.y3] & 0x80) != 0; /* keep sign of second */
             w = ((WORD)(pbs3->r.B[p.x3])) + ((WORD)(pbs3->r.B[p.y3]));
-            pbs3->r.R[p.x3] = (BYTE)(w & 0x00FF);
+            pbs3->r.B[p.x3] = (BYTE)(w & 0x00FF);
             s3 = (pbs3->r.B[p.x3] & 0x80) != 0;
             pbs3->r.C = (w & 0x0100) != 0;
             pbs3->r.V = (s1 == s2) && (s3 != s1);
@@ -1229,23 +1229,60 @@ void bs3_cpu(struct bs3_cpu_data * pbs3)
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
-            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; // keep sign of first 
-            s2 = (pbs3->r.B[p.y3] & 0x80) != 0; // keep sign of second
-            w = ((WORD)(pbs3->r.B[p.x3])) + ((WORD)(pbs3->r.B[p.y3]))
-            s3 = (w & 0x0080) != 0; // keep sign after first+second bubt before adding carry
-            w += pbs3->r.C;
-            s4 = (w & 0x0080) != 0; // keep sign of first+second+carry
-            pbs3->r.R[p.x3] = (BYTE)(w & 0x00FF);
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */
+            s2 = (pbs3->r.B[p.y3] & 0x80) != 0; /* keep sign of second */
+            w = ((WORD)(pbs3->r.B[p.x3])) + ((WORD)(pbs3->r.B[p.y3])) + pbs3->r.C;
+            s3 = (w & 0x0080) != 0; /* keep sign of first+second+carry */
+            pbs3->r.B[p.x3] = (BYTE)(w & 0x00FF);
             pbs3->r.C = (w & 0x0100) != 0;
-            pbs3->r.V = (s1 == s2) && ( s3 != s1 || s4 != s1); // should be (s1 == s2) && (s4 != s1) ? TODO : check 
+            pbs3->r.V = (s1 == s2) && ( s3 != s1); 
             pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
             pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case SUBB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b =  (~pbs3->r.B[p.y3]) + 1;
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */
+            s2 = (b & 0x80) == 0; /* keep sign of neg(second) */
+            w = ((WORD)(pbs3->r.B[p.x3])) + ((WORD)b); /* first + neg(second) */
+            pbs3->r.B[p.x3] = (BYTE)(w & 0x00FF);
+            s3 = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.C = (w & 0x0100) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case SBBB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b =  ~pbs3->r.B[p.y3]; /* not(second) */
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */
+            s2 = (b & 0x80) == 0; /* keep sign of not(second) */
+            w = ((WORD)(pbs3->r.B[p.x3])) + ((WORD)b) + pbs3->r.C; /* first + not(second) + carry */
+            pbs3->r.B[p.x3] = (BYTE)(w & 0x00FF);
+            s3 = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.C = (w & 0x0100) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case CMPB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b =  (~pbs3->r.B[p.y3]) + 1;
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */
+            s2 = (b & 0x80) == 0; /* keep sign of neg(second) */
+            w = ((WORD)(pbs3->r.B[p.x3])) + ((WORD)b); /* first + neg(second) */
+            b = (BYTE)(w & 0x00FF);
+            s3 = (b & 0x80) != 0;
+            pbs3->r.C = (w & 0x0100) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (b & 0x80) != 0;
+            pbs3->r.Z = (b == 0);
             break;
         case ANDW:
             pbs3->r.PC++;
@@ -1349,119 +1386,545 @@ void bs3_cpu(struct bs3_cpu_data * pbs3)
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
+            s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */ 
+            s2 = (pbs3->r.W[p.y2] & 0x8000) != 0; /* keep sign of second */
             dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)(pbs3->r.B[p.y2]));
             pbs3->r.W[p.x2] = (WORD)(dw & 0x0000FFFF);
+            s3 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first+second */
             pbs3->r.C = (dw & 0x00010000) != 0;
-            pbs3->r.V = pbs3->r.C;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
             pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
             pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
+            break;
         case ADCW:
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
+            s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */ 
+            s2 = (pbs3->r.W[p.y2] & 0x8000) != 0; /* keep sign of second */
             dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)(pbs3->r.B[p.y2])) + pbs3->r.C;
             pbs3->r.W[p.x2] = (WORD)(dw & 0x0000FFFF);
+            s3 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first+second */
             pbs3->r.C = (dw & 0x00010000) != 0;
-            pbs3->r.V = pbs3->r.C;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
             pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
             pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
+            break;
         case SUBW:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            w = ~pbs3->r.W[p.y2] + 1; /* neg(second) */
+            s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */ 
+            s2 = (w & 0x8000) != 0; /* keep sign of neg(second) */
+            dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)w);
+            pbs3->r.W[p.x2] = (WORD)(dw & 0x0000FFFF);
+            s3 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first + neg(second) */
+            pbs3->r.C = (dw & 0x00010000) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case SBBW:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            w = ~pbs3->r.W[p.y2]; /* not(second) */
+            s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */ 
+            s2 = (w & 0x8000) != 0; /* keep sign of neg(second) */
+            dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)w) + pbs3->r.C;
+            pbs3->r.W[p.x2] = (WORD)(dw & 0x0000FFFF);
+            s3 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first + neg(second) */
+            pbs3->r.C = (dw & 0x00010000) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case CMPW:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            w = ~pbs3->r.W[p.y2] + 1; /* neg(second) */
+            s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */ 
+            s2 = (w & 0x8000) != 0; /* keep sign of neg(second) */
+            dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)w);
+            w = (WORD)(dw & 0x0000FFFF);
+            s3 = (w & 0x8000) != 0; /* keep sign of first + neg(second) */
+            pbs3->r.C = (dw & 0x00010000) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (w & 0x8000) != 0;
+            pbs3->r.Z = (w == 0);
             break;
         case MULB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            w =  ((WORD)pbs3->r.B[p.x3]) * ((WORD)pbs3->r.B[p.y3]);
+            pbs3->r.B[p.x3] = w & 0x00FF; 
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case IMULB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            // TODO 
             break;
         case DIVB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            // TODO 
             break;
         case IDIVB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            // TODO 
             break;
         case MOVB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.B[p.x3] = pbs3->r.B[p.y3];
             break;
         case SWPB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b = pbs3->r.B[p.x3];
+            pbs3->r.B[p.x3] = pbs3->r.B[p.y3];
+            pbs3->r.B[p.y3] = b;
             break;
         case MULW:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            dw =  ((DWORD)pbs3->r.B[p.x3]) * ((DWORD)pbs3->r.B[p.y3]);
+            pbs3->r.W[p.x2] = dw & 0x0000FFFF; 
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case IMULW:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            // TODO 
             break;
         case DIVW:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            // TODO 
             break;
         case IDIVW:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            // TODO 
             break;
         case MOVW:
-            break;
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.W[p.x2] = pbs3->r.W[p.y2];
         case MOVSW:
-            break;
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.W[p.x2] = pbs3->r.SP;
         case MOVWS:
-            break;
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.SP = pbs3->r.W[p.x2];
         case SWPW:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            w = pbs3->r.W[p.x2];
+            pbs3->r.W[p.x2] = pbs3->r.W[p.y2];
+            pbs3->r.W[p.y2] = w;
             break;
         case ANDBI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.B[p.x3] &= b;
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case ORBI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.B[p.x3] |= b;
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case EORBI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.B[p.x3] ^= b;
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case BICBI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.B[p.x3] &= ~b;
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case TSTBI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b &= pbs3->r.B[p.x3];
+            pbs3->r.N = (b & 0x80) != 0;
+            pbs3->r.Z = (b == 0);
             break;
         case SHLB1:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.C = (pbs3->r.B[p.x3] & 0x80) !=0;
+            pbs3->r.B[p.x3] <<= 1;
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case SHRB1:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.C = (pbs3->r.B[p.x3] & 0x01) !=0;
+            pbs3->r.B[p.x3] >>= 1;
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case SARB1:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            w =  ((SWORD)(((WORD)(pbs3->r.B[p.x3])) << 8)) >> 1;
+            pbs3->r.B[p.x3] = (BYTE)((w & 0xFF00)>>8);
+            pbs3->r.N = (w & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
+            pbs3->r.C = (w & 0x0080) !=0;
             break;
         case INCB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */ 
+            pbs3->r.C = pbs3->r.B[p.x3] == 0xFF;
+            pbs3->r.B[p.x3]++;
+            s3 = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.V = (s3 == 1 && s1 == 0);
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case DECB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */ 
+            pbs3->r.C = pbs3->r.B[p.x3] == 0x00;
+            pbs3->r.B[p.x3]--;
+            s3 = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.V = (s3 == 0 && s1 == 0);
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case NEGB:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.B[p.x3] = (BYTE)(-((SBYTE)(pbs3->r.B[p.x3])));
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case ADDBI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */ 
+            s2 = (b & 0x80) != 0; /* keep sign of second */
+            w = ((WORD)(pbs3->r.B[p.x3])) + ((WORD)b);
+            pbs3->r.B[p.x3] = (BYTE)(w & 0x00FF);
+            s3 = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.C = (w & 0x0100) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case ADCBI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */
+            s2 = (b & 0x80) != 0; /* keep sign of second */
+            w = ((WORD)(pbs3->r.B[p.x3])) + ((WORD)b) + pbs3->r.C;
+            s3 = (w & 0x0080) != 0; /* keep sign of first+second+carry */
+            pbs3->r.B[p.x3] = (BYTE)(w & 0x00FF);
+            pbs3->r.C = (w & 0x0100) != 0;
+            pbs3->r.V = (s1 == s2) && ( s3 != s1); 
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case SUBBI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b = (BYTE)(-(SBYTE)bs3_cpu_read_byte(pbs3, pbs3->r.PC));
+            pbs3->r.PC++;
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */
+            s2 = (b & 0x80) == 0; /* keep sign of neg(second) */
+            w = ((WORD)(pbs3->r.B[p.x3])) + ((WORD)b); /* first + neg(second) */
+            pbs3->r.B[p.x3] = (BYTE)(w & 0x00FF);
+            s3 = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.C = (w & 0x0100) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case SBBBI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b = ~bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */
+            s2 = (b & 0x80) == 0; /* keep sign of not(second) */
+            w = ((WORD)(pbs3->r.B[p.x3])) + ((WORD)b) + pbs3->r.C; /* first + not(second) + carry */
+            pbs3->r.B[p.x3] = (BYTE)(w & 0x00FF);
+            s3 = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.C = (w & 0x0100) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (pbs3->r.B[p.x3] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
             break;
         case CMPBI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            b = (BYTE)(-((SBYTE)bs3_cpu_read_byte(pbs3, pbs3->r.PC)));
+            pbs3->r.PC++;
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */
+            s2 = (b & 0x80) == 0; /* keep sign of neg(second) */
+            w = ((WORD)(pbs3->r.B[p.x3])) + ((WORD)b); /* first + neg(second) */
+            b = (BYTE)(w & 0x00FF);
+            s3 = (b & 0x80) != 0;
+            pbs3->r.C = (w & 0x0100) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (b & 0x80) != 0;
+            pbs3->r.Z = (b == 0);
             break;
         case ANDWI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            immW = bs3_cpu_read_word(pbs3, pbs3->r.PC);
+            pbs3->r.PC += 2;
+            pbs3->r.W[p.x2] &= immW;
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case ORWI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            immW = bs3_cpu_read_word(pbs3, pbs3->r.PC);
+            pbs3->r.PC += 2;
+            pbs3->r.W[p.x2] |= immW;
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case EORWI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            immW = bs3_cpu_read_word(pbs3, pbs3->r.PC);
+            pbs3->r.PC += 2;
+            pbs3->r.W[p.x2] ^= immW;
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case BICWI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            immW = bs3_cpu_read_word(pbs3, pbs3->r.PC);
+            pbs3->r.PC += 2;
+            pbs3->r.W[p.x2] &= ~immW;
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case TSTWI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            immW = bs3_cpu_read_word(pbs3, pbs3->r.PC);
+            pbs3->r.PC += 2;
+            w = pbs3->r.W[p.x2] & immW;
+            pbs3->r.N = (w & 0x8000) != 0;
+            pbs3->r.Z = (w == 0);
             break;
         case SHLW1:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.C = (pbs3->r.W[p.x2] & 0x8000) !=0;
+            pbs3->r.W[p.x2] <<= 1;
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case SHRW1:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.C = (pbs3->r.W[p.x2] & 0x01) !=0;
+            pbs3->r.W[p.x2] >>= 1;
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x80) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case SARW1:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            dw =  ((SDWORD)(((DWORD)(pbs3->r.W[p.x2])) << 16)) >> 1;
+            pbs3->r.W[p.x2] = (WORD)((dw & 0xFFF0000)>>16);
+            pbs3->r.N = (dw & 0x80000000) != 0;
+            pbs3->r.Z = (pbs3->r.B[p.x3] == 0);
+            pbs3->r.C = (w & 0x00008000) !=0;
             break;
         case INCW:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */ 
+            pbs3->r.C = pbs3->r.W[p.x2] == 0xFFFF;
+            pbs3->r.W[p.x2]++;
+            s3 = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.V = (s3 == 1 && s1 == 0);
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case DECW:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            s1 = (pbs3->r.B[p.x3] & 0x80) != 0; /* keep sign of first */ 
+            pbs3->r.C = pbs3->r.W[p.x2] == 0x0000;
+            pbs3->r.W[p.x2]--;
+            s3 = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.V = (s3 == 0 && s1 == 0);
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case NEGW:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            pbs3->r.W[p.x2] = (WORD)(-((SWORD)(pbs3->r.W[p.x2])));
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case ADDWI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            immW = bs3_cpu_read_word(pbs3, pbs3->r.PC);
+            pbs3->r.PC +=2;
+            s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */ 
+            s2 = (immW & 0x8000) != 0; /* keep sign of second */
+            dw = ((DWORD)(pbs3->r.w[p.x2])) + ((DWORD)immW);
+            pbs3->r.W[p.x2] = (WORD)(dw & 0x0000FFFF);
+            s3 = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.C = (dw & 0x00010000) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case ADCWI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            immW = bs3_cpu_read_word(pbs3, pbs3->r.PC);
+            pbs3->r.PC += 2;
+            s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */
+            s2 = (immW & 0x8000) != 0; /* keep sign of second */
+            dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)immW) + pbs3->r.C;
+            s3 = (dww & 0x00008000) != 0; /* keep sign of first+second+carry */
+            pbs3->r.W[p.x2] = (WORD)(dw & 0x0000FFFF);
+            pbs3->r.C = (dww & 0x00010000) != 0;
+            pbs3->r.V = (s1 == s2) && ( s3 != s1); 
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case SUBWI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            immW = (WORD)(-(SWORD)bs3_cpu_read_word(pbs3, pbs3->r.PC));
+            pbs3->r.PC += 2;
+            s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */
+            s2 = (immW & 0x8000) == 0; /* keep sign of neg(second) */
+            dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)immW); /* first + neg(second) */
+            pbs3->r.W[p.x2] = (WORD)(dw & 0x0000FFFF);
+            s3 = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.C = (dww & 0x00010000) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case SBBWI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            immW = ~bs3_cpu_read_word(pbs3, pbs3->r.PC);
+            pbs3->r.PC += 2;
+            s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */
+            s2 = (immW & 0x8000) == 0; /* keep sign of not(second) */
+            dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)immW) + pbs3->r.C; /* first + not(second) + carry */
+            pbs3->r.W[p.x2] = (WORD)(dww & 0x0000FFFF);
+            s3 = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.C = (dw & 0x00010000) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (pbs3->r.W[p.x2] & 0x8000) != 0;
+            pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             break;
         case CMPWI:
+            pbs3->r.PC++;
+            p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
+            pbs3->r.PC++;
+            immW = (WORD)(-((SWORD)bs3_cpu_read_word(pbs3, pbs3->r.PC)));
+            pbs3->r.PC += 2;
+            s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */
+            s2 = (immW & 0x8000) == 0; /* keep sign of neg(second) */
+            dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)immW); /* first + neg(second) */
+            w = (WORD)(dw & 0x0000FFFF);
+            s3 = (w & 0x8000) != 0;
+            pbs3->r.C = (dw & 0x00010000) != 0;
+            pbs3->r.V = (s1 == s2) && (s3 != s1);
+            pbs3->r.N = (w & 0x8000) != 0;
+            pbs3->r.Z = (w == 0);
             break;
         case MULBI:
             break;
@@ -1648,8 +2111,11 @@ void bs3_hyper_main(BYTE * program, WORD programsize)
           break;
         case BS3_STATUS_HEVT:
           /* TODO : CPU notification */
+          cpu.status = BS3_STATUS_DEFAULT;
+          break;
         case BS3_STATUS_ESCHYP:
           /* TODO : CPU invoke hypervisor high level feature*/
+          cpu.status = BS3_STATUS_DEFAULT;
           break;
       }
     }
