@@ -354,11 +354,11 @@ branching: (44)
 	IRET				: IRET					(FL = [SP], SP += 2, PC = [SP])
 
 Core I/O
-	IN	Bx			: INB   | '00000xxx'			(PC += 2, Z=([0021]==0), V=([0021]==0xFF), if Z==1 then Bx = [0020])
-	OUT	Bx			: OUTB  | '00000xxx'			(PC += 2, Z=([0023]==0),V=([0021]==0xFF), if Z==1 then [0022]=Bx)
-	OUT	immB			: OUTBI	| 'iiiiiiii'			(PC += 2, Z=([0023]==0),V=([0021]==0xFF), if Z==1 then [0022]=immB)
-	OUT2	Bx			: OUTB2 | '00000xxx'			(PC += 2, Z=([0025]==0),V=([0021]==0xFF), if Z==1 then [0024]=Bx)
-	OUT2	immB			: OUTB2I| 'iiiiiiii'			(PC += 2, Z=([0025]==0),V=([0021]==0xFF), if Z==1 then [0024]=immB)
+	IN	Bx			: INB   | '00000xxx'			(PC += 2, Z=([0101]==0), V=([0101]==0xFF), if Z==1 then Bx = [0100])
+	OUT	Bx			: OUTB  | '00000xxx'			(PC += 2, Z=([0103]==0), V=([0101]==0xFF), if Z==1 then [0102]=Bx)
+	OUT	immB			: OUTBI	| 'iiiiiiii'			(PC += 2, Z=([0103]==0), V=([0101]==0xFF), if Z==1 then [0102]=immB)
+	OUT2	Bx			: OUTB2 | '00000xxx'			(PC += 2, Z=([0105]==0), V=([0101]==0xFF), if Z==1 then [0104]=Bx)
+	OUT2	immB			: OUTB2I| 'iiiiiiii'			(PC += 2, Z=([0105]==0), V=([0101]==0xFF), if Z==1 then [0104]=immB)
 
 Misc (23)
 	NOP				: NOP					(PC += 1)
