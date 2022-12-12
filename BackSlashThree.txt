@@ -84,14 +84,14 @@ MEMORY MAP
 	Memory initialized by Hypervisor. 
 	Memory map : RAM and I/O 
 	0000 - 001F : interruption handler
-		vector 0  : 0000 : Reset handler (contains address of bootstrap at RESET time ) / may be redefined by program execution (e.g system library)
+		vector 0  : 0000 : Reset handler (contains address of bootstrap at RESET time ) / may be redefined by program execution (e.g for system library purpose)
 		vector 1  : 0002 : Escape to CPU hypervisor ( it is not a address and is ignored, keep 0x0000. Only to be used with INT 1, instruction)
 		vector 2  : 0004 : Hypervisor Event (handler of supervisor event, data at 0030-00FF)
 		vector 3  : 0006 : System Timer (periodic interuption, by clock count)
 		vector 4  : 0008 : byte input data event (Hypervisor data input event, meta and data at 0020, 0021)
 		vector 5  : 000A : data block input data (Hypervisor data input event, metadata at 002A-002F)
-		vector 6  : 000C : Division by Zero
-		vector 7  : 000E : Bad instruction
+		vector 6  : 000C : Division by Zero (can be catch by hypervisor)
+		vector 7  : 000E : Bad instruction (can be catch by hypervisor)
 		vector 8  : 0010 : user defined
 		vector 9  : 0012 : user defined
 		vector 10 : 0014 : user defined
