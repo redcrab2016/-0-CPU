@@ -5,118 +5,7 @@
 
 #include "bs3.h"
 
-#define BS3_ASM_LINE_SIZE  72
-#define BS3_ASM_LINE_BUFFER  (BS3_ASM_LINE_SIZE + 2)
-
-/* param types : mask 0xF0 for type, mask 0x0F for sub type */
-#define BS3_ASM_PARAM_TYPE_UNKNOWN       0x00
-#define BS3_ASM_PARAM_TYPE_DECIMAL       0x10
-#define BS3_ASM_PARAM_TYPE_HEXA          0x20
-#define BS3_ASM_PARAM_TYPE_CHAR          0x30
-#define BS3_ASM_PARAM_TYPE_SYMBOL        0x40
-#define BS3_ASM_PARAM_TYPE_STRING        0x50
-#define BS3_ASM_PARAM_TYPE_REGISTER      0x60
-#define BS3_ASM_PARAM_TYPE_REGISTER_B    0x61
-#define BS3_ASM_PARAM_TYPE_REGISTER_W    0x62
-#define BS3_ASM_PARAM_TYPE_REGISTER_SP   0x63
-#define BS3_ASM_PARAM_TYPE_M0            0x70
-#define BS3_ASM_PARAM_TYPE_M0DECIMAL     0x71
-#define BS3_ASM_PARAM_TYPE_M0HEXA        0x72
-#define BS3_ASM_PARAM_TYPE_M0CHAR        0x73
-#define BS3_ASM_PARAM_TYPE_M0SYMBOL      0X74
-#define BS3_ASM_PARAM_TYPE_M1            0x80
-#define BS3_ASM_PARAM_TYPE_M2            0x80
-#define BS3_ASM_PARAM_TYPE_M2DECIMAL     0x81
-#define BS3_ASM_PARAM_TYPE_M2HEXA        0x82
-#define BS3_ASM_PARAM_TYPE_M2CHAR        0x83
-#define BS3_ASM_PARAM_TYPE_M2SYMBOL      0x84
-#define BS3_ASM_PARAM_TYPE_M3            0x90
-#define BS3_ASM_PARAM_TYPE_M4            0xA0
-#define BS3_ASM_PARAM_TYPE_M4DECIMAL     0xA1
-#define BS3_ASM_PARAM_TYPE_M4HEXA        0xA2
-#define BS3_ASM_PARAM_TYPE_M4CHAR        0xA3
-#define BS3_ASM_PARAM_TYPE_M4SYMBOL      0xA4
-#define BS3_ASM_PARAM_TYPE_M5            0xB0
-#define BS3_ASM_PARAM_TYPE_M6            0xC0
-#define BS3_ASM_PARAM_TYPE_M6DECIMAL     0xC1
-#define BS3_ASM_PARAM_TYPE_M6HEXA        0xC2
-#define BS3_ASM_PARAM_TYPE_M6CHAR        0xC3
-#define BS3_ASM_PARAM_TYPE_M6SYMBOL      0xC4
-#define BS3_ASM_PARAM_TYPE_M7            0xD0
-#define BS3_ASM_PARAM_TYPE_M7DECIMAL     0xD1
-#define BS3_ASM_PARAM_TYPE_M7HEXA        0xD2
-#define BS3_ASM_PARAM_TYPE_M7CHAR        0xD3
-#define BS3_ASM_PARAM_TYPE_M7SYMBOL      0xD4
-#define BS3_ASM_PARAM_TYPE_LABEL         0xE0
-
-
-/* one asm line pass 1 parsing states */ 
-#define BS3_ASM_PASS1_PARSE_STATE_START        0 
-#define BS3_ASM_PASS1_PARSE_STATE_LABEL        1 
-#define BS3_ASM_PASS1_PARSE_STATE_ALABEL       2 
-#define BS3_ASM_PASS1_PARSE_STATE_OPE          3 
-#define BS3_ASM_PASS1_PARSE_STATE_AOPE         4 
-#define BS3_ASM_PASS1_PARSE_STATE_PARAM        5 
-#define BS3_ASM_PASS1_PARSE_STATE_PARAM_STRING 6 
-#define BS3_ASM_PASS1_PARSE_STATE_PARAM_CHAR   7 
-#define BS3_ASM_PASS1_PARSE_STATE_PARAM_NUMBER 8
-#define BS3_ASM_PASS1_PARSE_STATE_PARAM_HEXA   9
-#define BS3_ASM_PASS1_PARSE_STATE_APARAM       10 
-
-/* Error messages */
-#define BS3_ASM_PASS1_PARSE_ERR_OK           0
-#define BS3_ASM_PASS1_PARSE_ERR_NOPE         1
-#define BS3_ASM_PASS1_PARSE_ERR_FAIL         2
-#define BS3_ASM_PASS1_PARSE_ERR_LINETOOLONG  3
-#define BS3_ASM_PASS1_PARSE_ERR_EMPTYLABEL   4
-#define BS3_ASM_PASS1_PARSE_ERR_BADLABEL     5
-#define BS3_ASM_PASS1_PARSE_ERR_BADOPE       6
-#define BS3_ASM_PASS1_PARSE_ERR_BADPARAM     7
-#define BS3_ASM_PASS1_PARSE_ERR_BADSTRING    8
-#define BS3_ASM_PASS1_PARSE_ERR_BADCHAR      9
-#define BS3_ASM_PASS1_PARSE_ERR_BADNUMBER    10
-#define BS3_ASM_PASS1_PARSE_ERR_BADREGISTER  11
-#define BS3_ASM_PASS1_PARSE_ERR_BADSYMBOL    12
-#define BS3_ASM_PASS1_PARSE_ERR_KEYWORD      13
-#define BS3_ASM_PASS1_PARSE_ERR_ADDRMODE     14
-
-/* Symbol type */
-#define BS3_ASM_SYMBOLTYPE_UNKNOWN       0x00
-#define BS3_ASM_SYMBOLTYPE_DECIMAL       0x10
-#define BS3_ASM_SYMBOLTYPE_DECIMAL_BYTE  0x10
-#define BS3_ASM_SYMBOLTYPE_DECIMAL_WORD  0x11
-#define BS3_ASM_SYMBOLTYPE_DECIMAL_SBYTE 0x18
-#define BS3_ASM_SYMBOLTYPE_DECIMAL_SWORD 0x19
-#define BS3_ASM_SYMBOLTYPE_DECIMAL_BIG   0x1F
-#define BS3_ASM_SYMBOLTYPE_HEXA          0x20
-#define BS3_ASM_SYMBOLTYPE_HEXA_BYTE     0x20
-#define BS3_ASM_SYMBOLTYPE_HEXA_WORD     0x21
-#define BS3_ASM_SYMBOLTYPE_HEXA_BIG      0x2F
-#define BS3_ASM_SYMBOLTYPE_CHAR          0x30
-#define BS3_ASM_SYMBOLTYPE_REGISTER      0x40
-#define BS3_ASM_SYMBOLTYPE_REGISTER_BYTE 0x40
-#define BS3_ASM_SYMBOLTYPE_REGISTER_WORD 0x41
-#define BS3_ASM_SYMBOLTYPE_REGISTER_SP   0x42
-#define BS3_ASM_SYMBOLTYPE_KEYWORD       0x50
-#define BS3_ASM_SYMBOLTYPE_SYMBOL        0x60
-#define BS3_ASM_SYMBOLTYPE_LABEL         0x70
-
-struct bs3_asm_line
-{
-  WORD linenum;
-  char line[BS3_ASM_LINE_BUFFER];
-  union {
-    SBYTE label;
-    SBYTE column; /* if parsing error, then it indicates the character index in the line where the error has been detected */
-  }
-  SBYTE ope;
-  BYTE nbParam;
-  SBYTE param[40]; /* store the index inside line[] */
-  BYTE paramType[40];
-  long paramValue; /* meaning depends of paramType, BS3_ASM_PARAM_TYPE...DECIMAL/HEXA/CHAR the value , SYMBOL/LABEL the index in the param... */
-};
-
-static const char * bs3_asm_message[]=
+const char * bs3_asm_message[]=
 {
   [BS3_ASM_PASS1_PARSE_ERR_OK]           = "Parse succeeded",
   [BS3_ASM_PASS1_PARSE_ERR_NOPE]         = "Nothing to parse",
@@ -133,6 +22,8 @@ static const char * bs3_asm_message[]=
   [BS3_ASM_PASS1_PARSE_ERR_BADSYMBOL]    = "Bad symbol parameter",
   [BS3_ASM_PASS1_PARSE_ERR_KEYWORD]      = "Keyword used in parameter",
   [BS3_ASM_PASS1_PARSE_ERR_ADDRMODE]     = "Addressing mode error"
+  [BS3_ASM_PASS1_PARSE_ERR_BIGVALUE]     = "Value too big (> 65535) or too small (< -32768)";
+  [BS3_ASM_PASS1_PARSE_ERR_NOALIAS]      = "Missing alias identification";
 };
 
 struct bs3_asm_line bs3_asm[65536];
@@ -296,11 +187,11 @@ int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue)
     /* check if it is a keyword */
     for (i = 0 ; i < length; i++) temp[i] = symbol[i];
     temp[i] = 0;
-    for (l = 0 ; l < 256; l++)
+    for (l = 0 ; l <= BS3_INSTR_LAST; l++)
     {
       if ( strcmp( bs3Instr[l].fullName,temp ) == 0 )
       {
-        if (pvalue && ( symbol[0] != 'D' || symbol[1] != 'B' || length != 2 )) *pvalue = l;
+        if (pvalue) *pvalue = l;
         return BS3_ASM_SYMBOLTYPE_KEYWORD;
       }
       if (strcmp( bs3Instr[l].name, temp ) == 0 )
@@ -427,6 +318,21 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
               }
               /* correct end of label */
               bs3line->line[idxLine] = 0;
+              bs3line->labelIsAlias = 0 ; /* by default the label is not an alias */
+              /* checks */
+              symboltype = bs3_asm_pass1_symboltype(&bs3line->line[bs3line->label], &value);
+              switch (symboltype)
+              {
+                case BS3_ASM_SYMBOLTYPE_SYMBOL:
+                case BS3_ASM_SYMBOLTYPE_LABEL:
+                  break;
+                default:
+                  isok = 0;
+                  idxLine = bs3line->label;
+                  err = BS3_ASM_PASS1_PARSE_ERR_BADLABEL;                
+              }
+              if (!isok) break;
+              /* checks done and ok then carry on operation */
               state = BS3_ASM_PASS1_PARSE_STATE_ALABEL;
               idxLine++;
               break;
@@ -478,6 +384,55 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
             case ' ':
             case '\t':
               bs3line->line[idxLine] = 0;
+              /* checks */
+              symboltype = bs3_asm_pass1_symboltype(&bs3line->line[bs3line->ope], &value);
+              switch (symboltype)
+              {
+                case BS3_ASM_SYMBOLTYPE_KEYWORD:
+                  /* TODO , human or full ope name, indicate ope quality  */
+                  if (value == -1) 
+                  {
+                    bs3line->opeType = BS3_ASM_OPETYPE_HUMAN;
+                    bs3line->opeCode = 0;
+                  }
+                  else
+                  {
+                    if (value < 256 && value >= 0)
+                    {
+                      bs3line->opeType = BS3_ASM_OPETYPE_FULL;
+                      bs3line->opeCode = (BYTE)value;
+                    }
+                    else
+                    {
+                      bs3line->opeType = bs3instr[value].opeType;
+                      bs3Instr->opeCode = value; 
+                      if (bs3line->opeType == BS3_ASM_OPETYPE_ALIAS )
+                      {
+                        if (bs3line->label == -1) 
+                        {
+                          isok = 0;
+                          idxLine = 0;
+                          err = BS3_ASM_PASS1_PARSE_ERR_NOALIAS;
+                        }
+                        else
+                        {
+                          bs3instr->labelIsAlias = 1;
+                        }
+                      }
+                    } 
+                  }
+                  break;
+                case BS3_ASM_SYMBOLTYPE_SYMBOL:
+                  bs3line->opeType = BS3_ASM_OPETYPE_SYMBOL;
+                  bs3line->opeCode = 0;
+                  break;
+                default:
+                  isok = 0;
+                  idxLine = bs3line->ope;
+                  err = BS3_ASM_PASS1_PARSE_ERR_BADOPE;
+              }
+              if (!isok) break;
+              /* checks are ok then carry on possible parameter */
               idxLine++;
               state = BS3_ASM_PASS1_PARSE_STATE_APARAM;
               break;
@@ -545,18 +500,21 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
                 case ' ':
                 case '\t':
                 case ',':
-                  bs3line->line[idxLine] = 0;
-                  idxLine++;
-                  state = BS3_ASM_PASS1_PARSE_STATE_APARAM;
-                  break;
                 case ';':
                   bs3line->line[idxLine] = 0;
                   state = BS3_ASM_PASS1_PARSE_STATE_APARAM;
+                  if (c != ';') idxLine++;
                   break;
                 default:
                   isok = 0;
                   err = BS3_ASM_PASS1_PARSE_ERR_BADSTRING;
               }
+              break;
+            case 0 ... 9:
+            case 11 ... 12:
+            case 14 ... 31:
+              isok = 0;
+              err = BS3_ASM_PASS1_PARSE_ERR_BADSTRING;
               break;
             default:
               idxLine++;
@@ -573,6 +531,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
               err = BS3_ASM_PASS1_PARSE_ERR_BADCHAR;
               break;
             default:
+              value = (BYTE)c;
               idxLine++;
               c = oneLine[idxLine];
               switch (c)
@@ -587,13 +546,12 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
                     case ' ':
                     case ',':
                     case '\t':
-                      bs3line->line[idxLine] = 0;
-                      idxLine++;
-                      state = BS3_ASM_PASS1_PARSE_STATE_APARAM;
-                      break;
                     case ';':
                       bs3line->line[idxLine] = 0;
                       state = BS3_ASM_PASS1_PARSE_STATE_APARAM;
+                      bs3line->paramValue[bs3line->nbParam-1] = value;
+                      if (c != ';' ) idxLine++;
+                      break;
                     default:
                       isok = 0;
                       err = BS3_ASM_PASS1_PARSE_ERR_BADPARAM;
@@ -612,17 +570,29 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
             case '\n':
             case '\r':
             case ';':
-              bs3line->line[idxLine] = 0;
               eol = 1;
-              break;
             case ' ':
             case '\t':
             case ',':
               bs3line->line[idxLine] = 0;
+              value = (bs3line->line[  bs3line->param[bs3line->nbParam-1]  ] == '-') ? -value : value;
+              if (value >= 0 && value < 256) bs3line->paramType[bs3line->nbParam-1] = BS3_ASM_PARAM_TYPE_BYTE_DECIMAL;
+              if (value >= 256 && value < 65536 ) bs3line->paramType[bs3line->nbParam-1] = BS3_ASM_PARAM_TYPE_WORD_DECIMAL;
+              if (value < 0 && value >= -128)  bs3line->paramType[bs3line->nbParam-1] = BS3_ASM_PARAM_TYPE_SBYTE_DECIMAL;
+              if (value < -128 && value >= -32768) bs3line->paramType[bs3line->nbParam-1] = BS3_ASM_PARAM_TYPE_SWORD_DECIMAL;
+              bs3line->paramValue[bs3line->nbParam-1] = value;
+              if (eol) break;
               idxLine++;
               state = BS3_ASM_PASS1_PARSE_STATE_APARAM;
               break;
             case '0' ... '9':
+              value = value * 10 + ((BYTE)c) - '0';
+              if ( value < -32768 || value > 65535) 
+              {
+                isok = 0;
+                err = BS3_ASM_PASS1_PARSE_ERR_BIGVALUE;
+                break;
+              }
               idxLine++;
               break;
             default:
@@ -637,20 +607,30 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
             case '\n':
             case '\r':
             case ';':
-              bs3line->line[idxLine] = 0;
               eol = 1;
-              break;
             case ' ':
             case '\t':
             case ',':
               bs3line->line[idxLine] = 0;
+              bs3line->paramValue[bs3line->nbParam-1] = value;
+              j = strlen(&bs3line->line[  bs3line->param[bs3line->nbParam-1]  ]);
+              bs3line->paramType[bs3line->nbParam-1] = (j<=3) ? BS3_ASM_PARAM_TYPE_BYTE_HEXA : BS3_ASM_PARAM_TYPE_WORD_HEXA;
+              if (eol) break;
               idxLine++;
               state = BS3_ASM_PASS1_PARSE_STATE_APARAM;
               break;
             case 'a' ... 'f':
               bs3line->line[idxLine] -= 32;
+              c -= 32;
             case 'A' ... 'F':
             case '0' ... '9':
+              value = (c <= '9') ? (value * 10 + (((BYTE)c) -'0')) :  (value * 10 + (((BYTE)c) -'A' + 10 ));
+              if ( value > 65535) 
+              {
+                isok = 0;
+                err = BS3_ASM_PASS1_PARSE_ERR_BIGVALUE;
+                break;
+              }
               idxLine++;
               break;
             default:
@@ -706,17 +686,18 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
                   break;
                 case '\'':
                   state = BS3_ASM_PASS1_PARSE_STATE_PARAM_CHAR;
-                  bs3line->paramType[bs3line->nbParam-1] = BS3_ASM_PARAM_TYPE_CHAR;
+                  bs3line->paramType[bs3line->nbParam-1] = BS3_ASM_PARAM_TYPE_BYTE_CHAR;
+                  value = 0;
                   break;
                 case '+':
                 case '-':
                 case '0' ... '9':
                   state = BS3_ASM_PASS1_PARSE_STATE_PARAM_NUMBER;
-                  bs3line->paramType[bs3line->nbParam-1] = BS3_ASM_PARAM_TYPE_DECIMAL;
+                  value = (c >= '0')?((BYTE)c) - '0':0;
                   break;
                 case '$':
                   state = BS3_ASM_PASS1_PARSE_STATE_PARAM_HEXA;
-                  bs3line->paramType[bs3line->nbParam-1] = BS3_ASM_PARAM_TYPE_HEXA;
+                  value = 0;
                 default:
                   state = BS3_ASM_PASS1_PARSE_STATE_PARAM
                   break;
@@ -735,18 +716,6 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
   /*Parameter post treatment*/
   for (i =0; i< bs3line->nbParam && isok; i++) /* for each param */
   {
-   /* for decimal,hexa,char param type, determine its value*/
-   if (bs3line->paramType[i] == BS3_ASM_PARAM_TYPE_DECIMAL ||
-       bs3line->paramType[i] == BS3_ASM_PARAM_TYPE_HEXA    ||
-       bs3line->paramType[i] == BS3_ASM_PARAM_TYPE_CHAR)
-   {
-     j = bs3line->param[i];
-     c = bs3line->line[j];
-     symboltype = bs3_asm_pass1_symboltype(&bs3line->line[j], &value);
-     /* no check on symbol type because we trust paramType[i] */
-     bs3line->paramValue[i] = value;
-     continue; /* continue with next param */
-   }
 
    /* for symbol param type, determine if it is not a label in fact (local label : start with dot '.') */
    if (bs3line->paramType[i] == BS3_ASM_PARAM_TYPE_SYMBOL)
@@ -870,7 +839,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
            }
            if ( symboltype == BS3_ASM_SYMBOLTYPE_SYMBOL )
            {
-             bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M6SYMBOL;
+             bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M6SYMBOL; /* only alias */
              bs3line->paramValue[i] = j+6; /* index of symbol inside addressing mode param */
              continue; /* go to next param */           
            }
@@ -911,7 +880,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
            }
            if ( symboltype == BS3_ASM_SYMBOLTYPE_SYMBOL )
            {
-             bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M7SYMBOL;
+             bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M7SYMBOL; /* only alias */
              bs3line->paramValue[i] = j+6; /* index of symbol inside addressing mode param */
              continue; /* go to next param */           
            }
@@ -975,7 +944,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
            }
            if ( symboltype == BS3_ASM_SYMBOLTYPE_SYMBOL )
            {
-             bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M4SYMBOL;
+             bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M4SYMBOL; /* only alias */
              bs3line->paramValue[i] = j+4; /* index of symbol inside addressing mode param */
              continue; /* go to next param */           
            }
@@ -1011,7 +980,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
            }
            if ( symboltype == BS3_ASM_SYMBOLTYPE_SYMBOL )
            {
-             bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M2SYMBOL;
+             bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M2SYMBOL; /* only alias */
              bs3line->paramValue[i] = value; /* index of symbol inside addressing mode param */
              continue; /* go to next param */           
            }
@@ -1059,7 +1028,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
            }
            if ( symboltype == BS3_ASM_SYMBOLTYPE_SYMBOL )
            {
-             bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M0SYMBOL;
+             bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M0SYMBOL; /* can be alias or label */
              bs3line->paramValue[i] = value; /* index of symbol inside addressing mode param */
              continue; /* go to next param */           
            }
@@ -1082,8 +1051,13 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
    
   } /* end of for each param */
   
+  /* validate instruction*/
+  if (isok && bs3line->ope != -1)
+  {
+    /* TODO : need more data in 'struct bs3_cpu_instr' */
+  }
   
-  if (!isok) 
+  if (!isok) /* something wrong ... */
   {
     bs3line->column  = (SBYTE)idxLine;
     idxLine = 0;
@@ -1096,11 +1070,8 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
     if (err == BS3_ASM_PASS1_PARSE_ERR_OK) return BS3_ASM_PASS1_PARSE_ERR_FAIL;
     return err;
   }
-
+  /* parsing done and ok */
   return BS3_ASM_PASS1_PARSE_ERR_OK;
   
 } 
 
-void main() {
- 
-}
