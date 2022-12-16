@@ -1,4 +1,6 @@
 /* Instruction set */
+#define BS3_INSTR_LAST 0x106
+
 #define BS3_INSTR_NOP 0x00
 #define BS3_INSTR_INB 0x01
 #define BS3_INSTR_OUTB 0x02
@@ -332,6 +334,7 @@ struct bs3_cpu_instr
 {
   const char * fullName;  // Machine name (e.g MOVWI)
   const char * name;      // Human name   ( e.g MOV )
+  int  opeType; 
   int  size;          // from 1 to 4
   int  hasParam;      // 1 or 0
   int  hasImmediate;  // 1 or 0
@@ -349,6 +352,141 @@ struct bs3_cpu_instr
   //@ for PC + SimmB/W in 4 hexacharacter
   //o for instruction name(short) in 5 characters (right space tail padding)
 };
+
+/*  ASSEMBLER */
+#define BS3_ASM_LINE_SIZE  72
+#define BS3_ASM_LINE_BUFFER  (BS3_ASM_LINE_SIZE + 2)
+
+/* param types : mask 0xF0 for type, mask 0x0F for sub type */
+#define BS3_ASM_PARAM_TYPE_UNKNOWN       0x00
+#define BS3_ASM_PARAM_TYPE_BYTE          0x10
+#define BS3_ASM_PARAM_TYPE_BYTE_DECIMAL  0x11
+#define BS3_ASM_PARAM_TYPE_BYTE_HEXA     0x12
+#define BS3_ASM_PARAM_TYPE_BYTE_CHAR     0x13
+#define BS3_ASM_PARAM_TYPE_BYTE_SYMBOL   0x14
+#define BS3_ASM_PARAM_TYPE_SBYTE_DECIMAL 0x15
+#define BS3_ASM_PARAM_TYPE_WORD          0x20
+#define BS3_ASM_PARAM_TYPE_WORD_DECIMAL  0x21
+#define BS3_ASM_PARAM_TYPE_WORD_HEXA     0x22
+#define BS3_ASM_PARAM_TYPE_WORD_SYMBOL   0x23
+#define BS3_ASM_PARAM_TYPE_SWORD_DECIMAL 0x24
+#define BS3_ASM_PARAM_TYPE_MISC          0x30
+#define BS3_ASM_PARAM_TYPE_SYMBOL        0x31
+#define BS3_ASM_PARAM_TYPE_STRING        0x32
+#define BS3_ASM_PARAM_TYPE_LABEL         0x33
+#define BS3_ASM_PARAM_TYPE_REGISTER_B    0x40
+#define BS3_ASM_PARAM_TYPE_REGISTER_W    0x50
+#define BS3_ASM_PARAM_TYPE_REGISTER_SP   0x60
+#define BS3_ASM_PARAM_TYPE_M0            0x70
+#define BS3_ASM_PARAM_TYPE_M0DECIMAL     0x71
+#define BS3_ASM_PARAM_TYPE_M0HEXA        0x72
+#define BS3_ASM_PARAM_TYPE_M0CHAR        0x73
+#define BS3_ASM_PARAM_TYPE_M0SYMBOL      0X74
+#define BS3_ASM_PARAM_TYPE_M1            0x80
+#define BS3_ASM_PARAM_TYPE_M2            0x90
+#define BS3_ASM_PARAM_TYPE_M2DECIMAL     0x91
+#define BS3_ASM_PARAM_TYPE_M2HEXA        0x92
+#define BS3_ASM_PARAM_TYPE_M2CHAR        0x93
+#define BS3_ASM_PARAM_TYPE_M2SYMBOL      0x94
+#define BS3_ASM_PARAM_TYPE_M3            0xA0
+#define BS3_ASM_PARAM_TYPE_M4            0xB0
+#define BS3_ASM_PARAM_TYPE_M4DECIMAL     0xB1
+#define BS3_ASM_PARAM_TYPE_M4HEXA        0xB2
+#define BS3_ASM_PARAM_TYPE_M4CHAR        0xB3
+#define BS3_ASM_PARAM_TYPE_M4SYMBOL      0xB4
+#define BS3_ASM_PARAM_TYPE_M5            0xC0
+#define BS3_ASM_PARAM_TYPE_M6            0xD0
+#define BS3_ASM_PARAM_TYPE_M6DECIMAL     0xD1
+#define BS3_ASM_PARAM_TYPE_M6HEXA        0xD2
+#define BS3_ASM_PARAM_TYPE_M6CHAR        0xD3
+#define BS3_ASM_PARAM_TYPE_M6SYMBOL      0xD4
+#define BS3_ASM_PARAM_TYPE_M7            0xE0
+#define BS3_ASM_PARAM_TYPE_M7DECIMAL     0xE1
+#define BS3_ASM_PARAM_TYPE_M7HEXA        0xE2
+#define BS3_ASM_PARAM_TYPE_M7CHAR        0xE3
+#define BS3_ASM_PARAM_TYPE_M7SYMBOL      0xE4
+
+/* one asm line pass 1 parsing states */ 
+#define BS3_ASM_PASS1_PARSE_STATE_START        0 
+#define BS3_ASM_PASS1_PARSE_STATE_LABEL        1 
+#define BS3_ASM_PASS1_PARSE_STATE_ALABEL       2 
+#define BS3_ASM_PASS1_PARSE_STATE_OPE          3 
+#define BS3_ASM_PASS1_PARSE_STATE_AOPE         4 
+#define BS3_ASM_PASS1_PARSE_STATE_PARAM        5 
+#define BS3_ASM_PASS1_PARSE_STATE_PARAM_STRING 6 
+#define BS3_ASM_PASS1_PARSE_STATE_PARAM_CHAR   7 
+#define BS3_ASM_PASS1_PARSE_STATE_PARAM_NUMBER 8
+#define BS3_ASM_PASS1_PARSE_STATE_PARAM_HEXA   9
+#define BS3_ASM_PASS1_PARSE_STATE_APARAM       10 
+
+/* Error messages */
+#define BS3_ASM_PASS1_PARSE_ERR_OK             0
+#define BS3_ASM_PASS1_PARSE_ERR_NOPE           1
+#define BS3_ASM_PASS1_PARSE_ERR_FAIL           2
+#define BS3_ASM_PASS1_PARSE_ERR_LINETOOLONG    3
+#define BS3_ASM_PASS1_PARSE_ERR_EMPTYLABEL     4
+#define BS3_ASM_PASS1_PARSE_ERR_BADLABEL       5
+#define BS3_ASM_PASS1_PARSE_ERR_BADOPE         6
+#define BS3_ASM_PASS1_PARSE_ERR_BADPARAM       7
+#define BS3_ASM_PASS1_PARSE_ERR_BADSTRING      8
+#define BS3_ASM_PASS1_PARSE_ERR_BADCHAR        9
+#define BS3_ASM_PASS1_PARSE_ERR_BADNUMBER      10
+#define BS3_ASM_PASS1_PARSE_ERR_BADREGISTER    11
+#define BS3_ASM_PASS1_PARSE_ERR_BADSYMBOL      12
+#define BS3_ASM_PASS1_PARSE_ERR_KEYWORD        13
+#define BS3_ASM_PASS1_PARSE_ERR_ADDRMODE       14
+#define BS3_ASM_PASS1_PARSE_ERR_BIGVALUE       15
+#define BS3_ASM_PASS1_PARSE_ERR_NOALIAS        16
+
+/* Symbol type */
+#define BS3_ASM_SYMBOLTYPE_UNKNOWN             0x00
+#define BS3_ASM_SYMBOLTYPE_DECIMAL             0x10
+#define BS3_ASM_SYMBOLTYPE_DECIMAL_BYTE        0x10
+#define BS3_ASM_SYMBOLTYPE_DECIMAL_WORD        0x11
+#define BS3_ASM_SYMBOLTYPE_DECIMAL_SBYTE       0x18
+#define BS3_ASM_SYMBOLTYPE_DECIMAL_SWORD       0x19
+#define BS3_ASM_SYMBOLTYPE_DECIMAL_BIG         0x1F
+#define BS3_ASM_SYMBOLTYPE_HEXA                0x20
+#define BS3_ASM_SYMBOLTYPE_HEXA_BYTE           0x20
+#define BS3_ASM_SYMBOLTYPE_HEXA_WORD           0x21
+#define BS3_ASM_SYMBOLTYPE_HEXA_BIG            0x2F
+#define BS3_ASM_SYMBOLTYPE_CHAR                0x30
+#define BS3_ASM_SYMBOLTYPE_REGISTER            0x40
+#define BS3_ASM_SYMBOLTYPE_REGISTER_BYTE       0x40
+#define BS3_ASM_SYMBOLTYPE_REGISTER_WORD       0x41
+#define BS3_ASM_SYMBOLTYPE_REGISTER_SP         0x42
+#define BS3_ASM_SYMBOLTYPE_KEYWORD             0x50
+#define BS3_ASM_SYMBOLTYPE_SYMBOL              0x60
+#define BS3_ASM_SYMBOLTYPE_LABEL               0x70
+
+/* Operation type */
+#define BS3_ASM_OPETYPE_SYMBOL                 0x00
+#define BS3_ASM_OPETYPE_HUMAN                  0x01
+#define BS3_ASM_OPETYPE_FULL                   0x02
+#define BS3_ASM_OPETYPE_META                   0x03
+#define BS3_ASM_OPETYPE_DIRECTIVE              0x04
+#define BS3_ASM_OPETYPE_CPU                    0x05
+#define BS3_ASM_OPETYPE_ALIAS                  0x06
+
+struct bs3_asm_line
+{
+  WORD linenum;
+  char line[BS3_ASM_LINE_BUFFER];
+  union {
+    SBYTE label;
+    SBYTE column; /* if parsing error, then it indicates the character index in the line where the error has been detected */
+  }
+  BYTE labelIsAlias; /* =0 if label repesent a place in code, =1 if label represent an alias of a value (like EQU, DIST ...)
+  SBYTE ope; /* operation , index inside line[] */
+  BYTE opeType;
+  WORD opeCode; /* CPU operation indentifier */
+  BYTE nbParam;
+  SBYTE param[40]; /* store the index inside line[] */
+  BYTE paramType[40];
+  long paramValue; /* meaning depends of paramType, BS3_ASM_PARAM_TYPE...DECIMAL/HEXA/CHAR the value , SYMBOL/LABEL the index in the param... */
+};
+
+extern const char * bs3_asm_message[];
 
 extern struct bs3_cpu_instr bs3Instr[];
 
