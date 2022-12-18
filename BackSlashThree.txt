@@ -13,7 +13,7 @@ REGISTERS
 16 bits stack, growing downward
 dedicated purpose register
 	PC		: 16 bits : Reset at [0] (reset handler) : Program Counter , is where the CPU is fetching instruction and immediate data
-	FL   		: 8(internal)/16 bits(when stored in stack) : Reset at 0x0000 : CPU status flags INVZC (interrupt, Negative, Overflow, Zero, Carry)
+	FL   	: 8(internal)/16 bits(when stored in stack) : Reset at 0x0000 : CPU status flags INVZC (interrupt, Negative, Overflow, Zero, Carry)
 	SP		: 16 bits : Reset at 0x0400 (initialized to 0x0400)
 general registers
 	B7 W3(high)		

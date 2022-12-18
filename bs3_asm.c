@@ -21,9 +21,9 @@ const char * bs3_asm_message[]=
   [BS3_ASM_PASS1_PARSE_ERR_BADREGISTER]  = "Bad register parameter",
   [BS3_ASM_PASS1_PARSE_ERR_BADSYMBOL]    = "Bad symbol parameter",
   [BS3_ASM_PASS1_PARSE_ERR_KEYWORD]      = "Keyword used in parameter",
-  [BS3_ASM_PASS1_PARSE_ERR_ADDRMODE]     = "Addressing mode error"
-  [BS3_ASM_PASS1_PARSE_ERR_BIGVALUE]     = "Value too big (> 65535) or too small (< -32768)";
-  [BS3_ASM_PASS1_PARSE_ERR_NOALIAS]      = "Missing alias identification";
+  [BS3_ASM_PASS1_PARSE_ERR_ADDRMODE]     = "Addressing mode error",
+  [BS3_ASM_PASS1_PARSE_ERR_BIGVALUE]     = "Value too big (> 65535) or too small (< -32768)",
+  [BS3_ASM_PASS1_PARSE_ERR_NOALIAS]      = "Missing alias identification"
 };
 
 struct bs3_asm_line bs3_asm[65536];
@@ -77,7 +77,7 @@ int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue)
   if (symbol[0] >= '0' && symbol[0] <= '9') /* possible decimal value */
   {
     l = length - 1;
-    i= 1
+    i= 1;
     for (i = 0; i <= l; i++)
     {
       switch (symbol[i])
@@ -104,7 +104,7 @@ int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue)
             ( symbol[0] == '6' && symbol[1] < '5') ||
             ( symbol[0] == '6' && symbol[1] == '5' && symbol[2] < '5') ||
             ( symbol[0] == '6' && symbol[1] == '5' && symbol[2] == '5' && symbol[3] < '3') ||
-            ( symbol[0] == '6' && symbol[1] == '5' && symbol[2] == '5' && symbol[3] = '3' && symbol[4] < '6')
+            ( symbol[0] == '6' && symbol[1] == '5' && symbol[2] == '5' && symbol[3] == '3' && symbol[4] < '6')
           )
         ) return BS3_ASM_SYMBOLTYPE_DECIMAL_WORD;
     return BS3_ASM_SYMBOLTYPE_DECIMAL_BIG;
@@ -142,8 +142,8 @@ int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue)
             ( symbol[0] == '3' && symbol[1] < '2') ||
             ( symbol[0] == '3' && symbol[1] == '2' && symbol[2] < '7') ||
             ( symbol[0] == '3' && symbol[1] == '2' && symbol[2] == '7' && symbol[3] < '6') ||
-            ( symbol[0] == '3' && symbol[1] == '2' && symbol[2] == '7' && symbol[3] = '6' && symbol[4] < '8' && symbol[0] == '+') ||
-            ( symbol[0] == '3' && symbol[1] == '2' && symbol[2] == '7' && symbol[3] = '6' && symbol[4] < '9' && symbol[0] == '-')
+            ( symbol[0] == '3' && symbol[1] == '2' && symbol[2] == '7' && symbol[3] == '6' && symbol[4] < '8' && symbol[0] == '+') ||
+            ( symbol[0] == '3' && symbol[1] == '2' && symbol[2] == '7' && symbol[3] == '6' && symbol[4] < '9' && symbol[0] == '-')
           )
         ) return BS3_ASM_SYMBOLTYPE_DECIMAL_SWORD;
     return BS3_ASM_SYMBOLTYPE_DECIMAL_BIG;
@@ -310,7 +310,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
             case '\t':
             case ':':
               /* check if we have at least one character if it is a local label */
-              if (bs3lie->line[bs3lie->label] == '.' && bs3lie->label == idxLine-1) 
+              if (bs3line->line[bs3line->label] == '.' && bs3line->label == idxLine-1) 
               {
                 isok = 0;
                 err = BS3_ASM_PASS1_PARSE_ERR_BADLABEL;
@@ -320,7 +320,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
               bs3line->line[idxLine] = 0;
               bs3line->labelIsAlias = 0 ; /* by default the label is not an alias */
               /* checks */
-              symboltype = bs3_asm_pass1_symboltype(&bs3line->line[bs3line->label], &value);
+              symboltype = bs3_asm_pass1_symboltype(&bs3line->line[bs3line->label], 0, &value);
               switch (symboltype)
               {
                 case BS3_ASM_SYMBOLTYPE_SYMBOL:
@@ -385,7 +385,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
             case '\t':
               bs3line->line[idxLine] = 0;
               /* checks */
-              symboltype = bs3_asm_pass1_symboltype(&bs3line->line[bs3line->ope], &value);
+              symboltype = bs3_asm_pass1_symboltype(&bs3line->line[bs3line->ope], 0, &value);
               switch (symboltype)
               {
                 case BS3_ASM_SYMBOLTYPE_KEYWORD:
@@ -404,8 +404,8 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
                     }
                     else
                     {
-                      bs3line->opeType = bs3instr[value].opeType;
-                      bs3Instr->opeCode = value; 
+                      bs3line->opeType = bs3Instr[value].opeType;
+                      bs3line->opeCode = value; 
                       if (bs3line->opeType == BS3_ASM_OPETYPE_ALIAS )
                       {
                         if (bs3line->label == -1) 
@@ -416,7 +416,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
                         }
                         else
                         {
-                          bs3instr->labelIsAlias = 1;
+                          bs3line->labelIsAlias = 1;
                         }
                       }
                     } 
@@ -538,7 +538,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
               {
                 case '\'':
                   idxLine++;
-                  c = oneLine[idxLine]:
+                  c = oneLine[idxLine];
                   switch (c)
                   {
                     case '\n':
@@ -699,7 +699,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
                   state = BS3_ASM_PASS1_PARSE_STATE_PARAM_HEXA;
                   value = 0;
                 default:
-                  state = BS3_ASM_PASS1_PARSE_STATE_PARAM
+                  state = BS3_ASM_PASS1_PARSE_STATE_PARAM;
                   break;
               }
               break;
@@ -765,7 +765,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const cha
      }
 
  
-     symboltype =  bs3_asm_pass1_symboltype(&bs3line->line[j], &value);
+     symboltype =  bs3_asm_pass1_symboltype(&bs3line->line[j], 0, &value);
      switch (symboltype)
      {
         case BS3_ASM_SYMBOLTYPE_REGISTER_BYTE:
