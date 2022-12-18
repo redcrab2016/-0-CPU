@@ -437,6 +437,7 @@ struct bs3_cpu_instr
 #define BS3_ASM_PASS1_PARSE_ERR_ADDRMODE       14
 #define BS3_ASM_PASS1_PARSE_ERR_BIGVALUE       15
 #define BS3_ASM_PASS1_PARSE_ERR_NOALIAS        16
+#define BS3_ASM_PASS1_PARSE_ERR_BADHEXA        17
 
 /* Symbol type */
 #define BS3_ASM_SYMBOLTYPE_UNKNOWN             0x00
@@ -475,15 +476,15 @@ struct bs3_asm_line
   union {
     SBYTE label;
     SBYTE column; /* if parsing error, then it indicates the character index in the line where the error has been detected */
-  }
-  BYTE labelIsAlias; /* =0 if label repesent a place in code, =1 if label represent an alias of a value (like EQU, DIST ...)
+  };
+  BYTE labelIsAlias; /* =0 if label repesent a place in code, =1 if label represent an alias of a value (like EQU, DIST ...) */
   SBYTE ope; /* operation , index inside line[] */
   BYTE opeType;
   WORD opeCode; /* CPU operation indentifier */
   BYTE nbParam;
   SBYTE param[40]; /* store the index inside line[] */
   BYTE paramType[40];
-  long paramValue; /* meaning depends of paramType, BS3_ASM_PARAM_TYPE...DECIMAL/HEXA/CHAR the value , SYMBOL/LABEL the index in the param... */
+  long paramValue[40]; /* meaning depends of paramType, BS3_ASM_PARAM_TYPE...DECIMAL/HEXA/CHAR the value , SYMBOL/LABEL the index in the param... */
 };
 
 extern const char * bs3_asm_message[];
