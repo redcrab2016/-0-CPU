@@ -245,13 +245,14 @@
 #define BS3_INT_DIVZERO     6
 
 /* BS3 internal types */
-#define BYTE unsigned char
-#define SBYTE signed char
-#define WORD unsigned short
-#define SWORD signed short
-#define BIT unsigned short
-#define DWORD unsigned long
-#define SDWORD signed long
+#define BYTE    unsigned  char
+#define WORD    unsigned  short
+#define DWORD   unsigned  long
+#define SBYTE   signed    char
+#define SWORD   signed    short
+#define SDWORD  signed    long
+#define BIT     unsigned  short
+
 
 /* BS3 CPU Registers structure */
 struct bs3_registers

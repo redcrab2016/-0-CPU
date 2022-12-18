@@ -210,7 +210,7 @@ int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue)
 int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const char * oneLine)
 {
   int idxLine = 0;
-  int state = -1 ; 
+  int state = BS3_ASM_PASS1_PARSE_STATE_START; 
   int symboltype;
   long value;
   int i; /* general index for iteration */
