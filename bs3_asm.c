@@ -206,20 +206,7 @@ int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue)
   return BS3_ASM_SYMBOLTYPE_UNKNOWN;
 }
 
-int bs3_asm_pass1_symboltype(const char * symbol)
-{
- return bs3_asm_pass1_symboltype(symbol, 0, 0);
-}
 
-int bs3_asm_pass1_symboltype(const char * symbol, int length)
-{
- return bs3_asm_pass1_symboltype(symbol, length, 0);
-}
-
-int bs3_asm_pass1_symboltype(const char * symbol, long * value)
-{
- return bs3_asm_pass1_symboltype(symbol, 0, value);
-}
 
 
 int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const char * oneLine)
