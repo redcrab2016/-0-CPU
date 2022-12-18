@@ -207,8 +207,6 @@ int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue)
 }
 
 
-
-
 int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, const char * oneLine)
 {
   int idxLine = 0;
