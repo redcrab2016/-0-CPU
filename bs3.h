@@ -1,5 +1,5 @@
 /* Instruction set */
-#define BS3_INSTR_LAST 0x106
+#define BS3_INSTR_LAST 0x107
 
 #define BS3_INSTR_NOP 0x00
 #define BS3_INSTR_INB 0x01
@@ -227,6 +227,15 @@
 #define BS3_INSTR_RESET 0xFE
 #define BS3_INSTR_HLT 0xFF
 
+#define BS3_INSTR_DB  0x100
+#define BS3_INSTR_DW  0x101
+#define BS3_INSTR_EQU 0x102
+#define BS3_INSTR_DIST 0x103
+#define BS3_INSTR_ORG 0x104
+#define BS3_INSTR_MACRO 0x105
+#define BS3_INSTR_ENDM 0x106
+#define BS3_INSTR_INCLUDE 0x107
+
 /* BS3 CPU Status */
 #define BS3_STATUS_DEFAULT  0
 #define BS3_STATUS_HALT     1
@@ -335,6 +344,21 @@ struct bs3_cpu_instr
 {
   const char * fullName;  // Machine name (e.g MOVWI)
   const char * name;      // Human name   ( e.g MOV )
+  int  nbParam; /* mnemonic number of param */
+  BYTE  p1type;
+  BYTE  p2type;
+  BYTE  p3type;
+  const char * asmpattern; /* assembly coding pattern */
+      /* coding string char, interpret each char by :
+           o : operator code (BYTE)
+           p : operator parameter (BYTE)
+           b : byte immediate (BYTE)
+           w : word immediate / address label (WORD)
+           r : signed byte immediate representing PC relative address, provided by label (SBYTE)
+           R : signed word immediate representing PC relative address, provided by label (SWORD)
+           x : nothing to assemble
+           * : (after b or w) multiple byte or word
+      */  
   int  opeType; 
   int  size;          // from 1 to 4
   int  hasParam;      // 1 or 0
@@ -358,8 +382,10 @@ struct bs3_cpu_instr
 #define BS3_ASM_LINE_SIZE  72
 #define BS3_ASM_LINE_BUFFER  (BS3_ASM_LINE_SIZE + 2)
 
-/* param types : mask 0xF0 for type, mask 0x0F for sub type */
-#define BS3_ASM_PARAM_TYPE_UNKNOWN       0x00
+/* param types: claims by grammar or detected in asm code : mask 0xF0 for type, mask 0x0F for sub type */
+#define BS3_ASM_PARAM_TYPE_STRING        0x00
+#define BS3_ASM_PARAM_TYPE_WORDS         0x01
+#define BS3_ASM_PARAM_TYPE_BYTES         0x02
 #define BS3_ASM_PARAM_TYPE_BYTE          0x10
 #define BS3_ASM_PARAM_TYPE_BYTE_DECIMAL  0x11
 #define BS3_ASM_PARAM_TYPE_BYTE_HEXA     0x12
@@ -373,8 +399,9 @@ struct bs3_cpu_instr
 #define BS3_ASM_PARAM_TYPE_SWORD_DECIMAL 0x24
 #define BS3_ASM_PARAM_TYPE_MISC          0x30
 #define BS3_ASM_PARAM_TYPE_SYMBOL        0x31
-#define BS3_ASM_PARAM_TYPE_STRING        0x32
-#define BS3_ASM_PARAM_TYPE_LABEL         0x33
+#define BS3_ASM_PARAM_TYPE_UNKNOWN       0x3F
+#define BS3_ASM_PARAM_TYPE_ANY           0x3F
+#define BS3_ASM_PARAM_TYPE__             0x3F
 #define BS3_ASM_PARAM_TYPE_REGISTER_B    0x40
 #define BS3_ASM_PARAM_TYPE_REGISTER_W    0x50
 #define BS3_ASM_PARAM_TYPE_REGISTER_SP   0x60
@@ -406,6 +433,7 @@ struct bs3_cpu_instr
 #define BS3_ASM_PARAM_TYPE_M7HEXA        0xE2
 #define BS3_ASM_PARAM_TYPE_M7CHAR        0xE3
 #define BS3_ASM_PARAM_TYPE_M7SYMBOL      0xE4
+#define BS3_ASM_PARAM_TYPE_LABEL         0xF0
 
 /* one asm line pass 1 parsing states */ 
 #define BS3_ASM_PASS1_PARSE_STATE_START        0 
@@ -439,6 +467,11 @@ struct bs3_cpu_instr
 #define BS3_ASM_PASS1_PARSE_ERR_BIGVALUE       15
 #define BS3_ASM_PASS1_PARSE_ERR_NOALIAS        16
 #define BS3_ASM_PASS1_PARSE_ERR_BADHEXA        17
+#define BS3_ASM_PASS1_ERR_BADFILE              18
+#define BS3_ASM_PASS1_PARSE_ILLEGALCHAR        19
+#define BS3_ASM_PASS1_PARSE_ERR_SYMBOLNOTFOUND 20
+#define BS3_ASM_PASS1_PARSE_ERR_SYMBOLTOOBIG   21
+#define BS3_ASM_PASS1_PARSE_ERR_BADOPETYPE     22
 
 /* Symbol type */
 #define BS3_ASM_SYMBOLTYPE_UNKNOWN             0x00
@@ -472,20 +505,28 @@ struct bs3_cpu_instr
 
 struct bs3_asm_line
 {
+  /* source file info */
   WORD linenum;
   char line[BS3_ASM_LINE_BUFFER];
+  /* label info + column place of error info */
   union {
-    SBYTE label;
+    SBYTE label; /* -1 = no label, 0= index at line[] */
     SBYTE column; /* if parsing error, then it indicates the character index in the line where the error has been detected */
   };
   BYTE labelIsAlias; /* =0 if label repesent a place in code, =1 if label represent an alias of a value (like EQU, DIST ...) */
+  /* operation info */
   SBYTE ope; /* operation , index inside line[] */
-  BYTE opeType;
-  WORD opeCode; /* CPU operation indentifier */
+  BYTE opeType; /* one amongst SYMBOL(macro invocation), HUMAN, FULL,META, DIRECTIVE,CPU and ALIAS */
+  WORD opeCode; /* CPU operation indentifier: 0 to 0xFF for CPU, 0x100 and above for META DIRECTIVE and ALIAS */
+  /* operation parameter info */
   BYTE nbParam;
   SBYTE param[40]; /* store the index inside line[] */
   BYTE paramType[40];
   long paramValue[40]; /* meaning depends of paramType, BS3_ASM_PARAM_TYPE...DECIMAL/HEXA/CHAR the value , SYMBOL/LABEL the index in the param... */
+  /* assembly info */
+  WORD assemblyAddress; /* memory address in the code */
+  BYTE assemblyLength;
+  BYTE assembly[BS3_ASM_LINE_BUFFER];
 };
 
 extern const char * bs3_asm_message[];
