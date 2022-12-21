@@ -28,29 +28,95 @@ const char * bs3_asm_message[]=
   [BS3_ASM_PASS1_PARSE_ILLEGALCHAR]        = "Illegal character",
   [BS3_ASM_PASS1_PARSE_ERR_SYMBOLNOTFOUND] = "Symbol not found",
   [BS3_ASM_PASS1_PARSE_ERR_SYMBOLTOOBIG]   = "Symbol value to large",
-  [BS3_ASM_PASS1_PARSE_ERR_BADOPETYPE]     = "Internal error, bad operation type"
+  [BS3_ASM_PASS1_PARSE_ERR_BADOPETYPE]     = "Internal error, bad operation type",
+  [BS3_ASM_PASS1_PARSE_ERR_BADOPESYNTAX]   = "Incorrect instruction parameter",
+  [BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED]     = "Unexpected error"
+  [BS3_ASM_PASS1_PARSE_ERR_BADBYTE]        = "Value not compatible with byte"
 };
 
-struct bs3_asm_line bs3_asm[65536];
+struct bs3_asm_line bs3_asm[65536]; /* to be managed as a sequential third party resource */
+long bs3_asm_nbline = 0; /* curren size of bs3_asm */
 
-void bs3_asm_report(const char * filename, int line, int linecolumn, int message)
+/*
+  reset all asm line contents
+*/
+void bs3_asm_line_reset()
 {
-  if (line > 0)
-  {
-    fprintf(stderr, "In %s at line %d column %d : Error %d : %s\n", filename, line, linecolumn,message, bs3_asm_message[message]);
-  }
-  else
-  {
-    fprintf(stderr, "File %s : Error %d : %s\n", filename, message, bs3_asm_message[message]);
-  }
+  bs3_asm_nbline = 0;
 }
+
+/*
+  return first asm line 
+*/
+struct bs3_asm_line * bs3_asm_line_first()
+{
+  if (bs3_asm_nbline == 0) return ((void *)0);  
+  return bs3_asm;
+}
+
+/*
+ return how many asm line
+*/
+long bs3_asm_line_size() 
+{
+  return bs3_asm_nbline;
+}
+
+/*
+  get thr asm line zeo based index asm line 
+*/
+struct bs3_asm_line * bs3_asm_line_at(long index)
+{
+  if (index > bs3_asm_nbline-1 || index < 0 ) return ((void *)0);
+  return &bs3_asm[index];
+}
+
+/*
+ get the last asm line 
+*/
+struct bs3_asm_line * bs3_asm_line_last()
+{
+  if (bs3_asm_nbline ==0) return ((void *)0);
+  return &bs3_asm[bs3_asm_nbline-1];
+}
+
+/*
+  provide a free asm line to construct
+*/
+struct bs3_asm_line * bs3_asm_line_nextfree()
+{
+  if (bs3_asm_nbline == 65536) return ((void *)0);
+  bs3_asm[bs3_asm_nbline].asmIndex = bs3_asm_nbline;
+  return &bs3_asm[bs3_asm_nbline];
+}
+
+/*
+  add a constructed asm line (line retrieved by a .. nextfree()
+*/
+int bs3_asm_line_commit(struct bs3_asm_line *  bs3line) {
+  int currIndex = (bs3line - bs3_asm);
+  if (currIndex = bs3_asm_nbline) 
+  {
+    /* save new line */
+    bs3_asm_nbline ++;
+    return 1;
+  }
+  if (currIndex < bs3_asm_nbline && currIndex >= 0)
+  {
+    /* update the line: no file then nothing to do .. index in bs3_asm[currIndex].asmIndex */
+    return 1; 
+  } 
+  return 0; /* something wrong happened */
+}
+
 
 /* return NULL pointer if not found, otherwise the pointer to bs3_asm line  */
 struct bs3_asm_line * bs3_asm_getEQU(const char * symbol, struct bs3_asm_line *  curbs3line)
 {
-  int currIndex = (curbs3line - bs3_asm); /* retrieve current index in bs3_asm array */
-  int i;
+  long currIndex = curbs3line->asmIndex; /*(curbs3line - bs3_asm); /* retrieve current index in bs3_asm array */
+  long i;
   long value;
+  struct bs3_asm_line * bs3_line_cursor;
   char symb[BS3_ASM_LINE_BUFFER];
   i = 0;
   while (symbol[i] &&
@@ -65,13 +131,14 @@ struct bs3_asm_line * bs3_asm_getEQU(const char * symbol, struct bs3_asm_line * 
   symb[i]  = 0;/* be sure to null terminate the symbol */
   for (i = currIndex -1; i >=0; i--) /* backward search */
   {
-    if (bs3_asm[i].label != -1 &&  /* has a label */
-        bs3_asm[i].lasbelIsAlias && /* label is an alias */
-        bs3_asm[i].opeCode == BS3_INSTR_EQU && /* operation is a EQU alias operation */
-        strcmp(strcmp(symb, &bs3_asm[i].line[bs3_asm[i].label]) == 0) /* alias name is what we're looking for */
+    bs3_line_cursor = bs3_asm_line_at(i);
+    if (bs3_line_cursor->label != -1 &&  /* has a label */
+        bs3_line_cursor->lasbelIsAlias && /* label is an alias */
+        bs3_line_cursor->opeCode == BS3_INSTR_EQU && /* operation is a EQU alias operation */
+        strcmp(strcmp(symb, &bs3_line_cursor->line[bs3_line_cursor->label]) == 0) /* alias name is what we're looking for */
     {
-      if (bs3_asm[i].nbParam != 1) break; /* we expect one param only */
-      switch (bs3_asm[i].paramtype[0])
+      if (bs3_line_cursor->nbParam != 1) break; /* we expect one param only */
+      switch (bs3_line_cursor->paramtype[0])
       {
         case BS3_ASM_PARAM_TYPE_BYTE:
         case BS3_ASM_PARAM_TYPE_BYTE_DECIMAL:
@@ -83,11 +150,382 @@ struct bs3_asm_line * bs3_asm_getEQU(const char * symbol, struct bs3_asm_line * 
         case BS3_ASM_PARAM_TYPE_WORD_HEXA:
         case BS3_ASM_PARAM_TYPE_SWORD_DECIMAL:
         case  BS3_ASM_PARAM_TYPE_SYMBOL:
-          return &bs3_asm[i];
+          return bs3_line_cursor;
       }
     }
   }
   return 0;
+}
+
+void bs3_asm_report(const char * filename, int line, int linecolumn, int message)
+{
+  if (line > 0)
+  {
+    fprintf(stderr, "In %s at line %d column %d : Error %d : %s\n", filename, line, linecolumn,message, bs3_asm_message[message]);
+  }
+  else
+  {
+    fprintf(stderr, "File %s : Error %d : %s\n", filename, message, bs3_asm_message[message]);
+  }
+}
+
+int bs3_asm_pass1_param_compatible(int destType, int srcType, long srcValue)
+{
+  int isok = 1;                /* by default it is compatible.. we search for incompatibility */
+  destType = destType & 0xF0;  /* looks on type and not on subtype */ 
+  srcType  = srcType  & 0xF0;  /* looks on type and not on subtype */
+  if (destType != srcType)     /* different type, then source of incompatibility */
+  {
+    isok = 0;                  /* by default here , source and destination are not compatible */
+    if  ( 
+          (destType == BS3_ASM_PARAM_TYPE_WORD && srcType == BS3_ASM_PARAM_TYPE_BYTE)  || /* BYTE is compatible WORD */
+          (destType == BS3_ASM_PARAM_TYPE_BYTE && srcValue >=-128 && srcValue <= 255)  || /* WORD is compatible BYTE only if value in range [-128,255] */
+          (destType == BS3_ASM_PARAM_TYPE_MISC && srcType == BS3_ASm_PARAM_TYPE_BYTE)  || /* MISC is compatible with BYTE  */
+          (destType == BS3_ASM_PARAM_TYPE_MISC && srcType == BS3_ASm_PARAM_TYPE_WORD)  || /* MISC is compatible with WORD  */
+          (destType == BS3_ASM_PARAM_TYPE_MISC && srcType == BS3_ASm_PARAM_TYPE_LABEL)    /* MISC is compatible with LABEL */
+        )                                          
+      isok = 1;    
+  }
+  return isok
+}
+
+int bs3_asm_pass1_instructionCheck(struct bs3_asm_line * bs3line)
+{
+  int err = BS3_ASM_PASS1_PARSE_ERR_OK; /* by default it is ok */
+  int i;
+  int j;
+  int found;
+  switch (bs3line->opeType)
+  {
+      case BS3_ASM_OPETYPE_HUMAN: /* need to precise the FULL instruction: search instruction */
+        found = 0; /* by default we did not found the FULL instruction */
+        for (i = 0 ; i <= BS3_ASM_INSTR_LAST) /* search the FULL instruction */
+        {
+          if (bs3Instr[i].opeType != BS3_ASM_OPETYPE_CPU) continue; /* Human instruction concern only CPU instruction (not meta, directive or alias ) */
+          if (strcmp (bs3Instr[i].name, &bs3line->line[bas3line->ope]) == 0) /* found a potential */
+          {
+            if (bs3Instr[i].nbParam == (int)bs3line->nbParam) ) /* found same number of parameter, good start */ 
+            {
+              found = 1; /* by default consider as found full */
+              for (j = 0 ; j < bs3Instr[i].nbParam && j < 3; j++) /* search if each param match in type (param type category) */ 
+              {
+              
+                if (! bs3_asm_pass1_param_compatible(bs3Instr[i].pType[j], bs3line->paramType[j], bs3line->paramValue[j] ) )
+                {
+                  found = 0; /* parameter does not match */
+                  break;
+                }
+              }
+            }
+          }
+          if (found) break;
+        }
+        if (!found) 
+        {
+          err = BS3_ASM_PASS1_PARSE_ERR_BADOPESYNTAX;
+          break;
+        }
+        /* here 'i' is the full instruction to use */
+        bs3line->opeType = BS3_ASM_OPETYPE_FULL;
+        bs3line->opeCode = (WORD)i;
+        break;
+      case BS3_ASM_OPETYPE_DIRECTIVE: /*   MACRO/ENDM/INCLUDE/ORF ...*/
+      case BS3_ASM_OPETYPE_ALIAS: /*   EQU/DIST ...*/
+      case BS3_ASM_OPETYPE_FULL: /* CPU instruction */
+        i =  bs3line->opeCode;
+        found = 0;
+        if (bs3Instr[i].nbParam == (int)bs3line->nbParam) ) /* found same number of parameter */ 
+        {
+          found = 1; /* by default consider as found full */
+          for (j = 0 ; j < bs3Instr[i].nbParam && j < 3; j++) /* search if each param match in type (param type category) */ 
+          {
+            if (! bs3_asm_pass1_param_compatible(bs3Instr[i].pType[j], bs3line->paramType[j], bs3line->paramValue[j] ) )
+            {
+              found = 0;
+              break;
+            }
+          }
+        }
+        if (!found)  err = BS3_ASM_PASS1_PARSE_ERR_BADOPESYNTAX;
+        break;        
+      case BS3_ASM_OPETYPE_META: /* DB or DW, special case to check: variable number of param, param type multiple */
+        i = bs3line->opeCode;
+        found = 0;
+        if (bs3line->nbParam >= 1) { /* one or more parameter */
+          found = 1; /* by default it is ok, we search for the first anomaly : unexpected param type */
+          switch (i)
+          {
+            case BS3_INSTR_DB:
+              for (j = 0 ; j < bs3line->nbParam)
+              { 
+                switch ( bs3line->paramType[j] & 0xF0)
+                {
+                  case BS3_ASM_PARAM_TYPE_WORD:
+                    if (!bs3_asm_pass1_param_compatible( BS3_ASM_PARAM_TYPE_BYTE, BS3_ASM_PARAM_TYPE_WORD, bs3line->paramValue[j]))
+                    {
+                      found = 0;
+                      err = BS3_ASM_PASS1_PARSE_ERR_BADBYTE;
+                    }
+                    break;
+                  case BS3_ASM_PARAM_TYPE_STRING:
+                  case BS3_ASM_PARAM_TYPE_BYTE:
+                    break;
+                  default:
+                    found = 0;
+                    err = BS3_ASM_PASS1_PARSE_ERR_BADPARAM;
+                }
+                if (!found) break;
+              }
+              break;
+            case BS3_INSTR_DW:
+              for (j = 0 ; j < bs3line->nbParam)
+              { 
+                switch ( bs3line->paramType[j] & 0xF0)
+                {
+                  case BS3_ASM_PARAM_TYPE_WORD:
+                  case BS3_ASM_PARAM_TYPE_BYTE: /* BYTE is compatible WORD */
+                    break;
+                  default:
+                    found = 0;
+                    err = BS3_ASM_PASS1_PARSE_ERR_BADPARAM;
+                }
+                if (!found) break;
+              }
+              break;
+            default:
+              err = BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED; /* should never occurs */
+          }
+        }
+        if (!found && err == BS3_ASM_PASS1_PARSE_ERR_OK) err = BS3_ASM_PASS1_PARSE_ERR_BADOPESYNTAX;
+  }
+  return err;  
+}
+/* assemble an asm line  : assume parsing is ok (parse + check )*/
+/* modify the bs3line->assembly[] and bs3line->assemblyLength */
+/* if ok return BS3_ASM_PASS1_PARSE_ERR_OK */
+/* if nothing to do return BS3_ASM_PASS1_PARSE_ERR_NOPE */
+/* otherwise return error */ 
+int bs3_asm_pass1_assemble(struct bs3_asm_line * bs3line)
+{
+  int err = BS3_ASM_PASS1_PARSE_ERR_OK; /* by default all is ok */
+  int ope;
+  union opParam opeParam;
+  int i;
+  int j;
+  int k;
+  BYTE rIdx;
+  bs3line->assemblyLength = 0;
+  ope = bs3line->opeCode;
+  if (ope < 0) return BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED;
+  if (bs3Instr[ope].opeType != BS3_ASM_OPETYPE_CPU &&  bs3Instr[ope].opeType != BS3_ASM_OPETYPE_META)
+    return BS3_ASM_PASS1_PARSE_ERR_NOPE; /* assemble CPU or META. there is nothing to do with other */
+ 
+  switch (bs3Instr[ope].opeType)
+  {
+    case BS3_ASM_OPETYPE_CPU:
+      k = 0;
+      while (bs3Instr[ope].asmpattern[k])
+      {
+        switch (bs3Instr[ope].asmpattern[k]) /* go through the pattern to generate the assembly */
+        {
+          case 'o': /* operation code */
+            bs3line->assembly[bs3line->assemblyLength++] = (BYTE) ope;
+            break;
+          case 'p': /* operation code parameter */
+            j = 0; /* operation code parameter register reference index */
+            opeParam.param = 0;
+            for (i = 0; i < bs3line->nbParam; i++) /* explore each param to extract and transform register index */
+            {
+              if (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_REGISTER_B)
+              {
+                rIdx = (BYTE)bs3line->paramValue[i] & 0x07 ; // bs3line->line[bs3line->param[i] + 1] - '0';
+                j++;
+                switch (j)
+                {
+                  case 1: 
+                    opeParam.x3 = rIdx;
+                    break;
+                  case 2:
+                  case 3:
+                    opeParam.y3 = rIdx;
+                } 
+              } /* end of if param type register B */
+              if (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_REGISTER_W)
+              {
+                rIdx = (BYTE)bs3line->paramValue[i] & 0x03; // bs3line->line[bs3line->param[i] + 1] - '0';
+                j++;
+                switch (j)
+                {
+                  case 1: 
+                    opeParam.x2 = rIdx;
+                    break;
+                  case 2:
+                    opeParam.y2 = rIdx;
+                    break;
+                  case 3:
+                    opeParam.z2 = rIdx;
+                } 
+              } /* end of if param type register W */
+              if ( 
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_M1) || 
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_M2) 
+                 ) 
+              {
+                rIdx = bs3line->line[bs3line->param[i] + 2] - '0';
+                j++;
+                switch (j)
+                {
+                  case 1: 
+                    opeParam.x2 = rIdx;
+                    break;
+                  case 2:
+                    opeParam.y2 = rIdx;
+                    break;
+                  case 3:
+                    opeParam.z2 = rIdx;
+                } 
+              } /* end of if param type M1 or M2 */
+              if ( 
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_M3) || 
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_M6) 
+                 ) 
+              {
+                rIdx = bs3line->line[bs3line->param[i] + 5] - '0';
+                j++;
+                switch (j)
+                {
+                  case 1: 
+                    opeParam.x2 = rIdx;
+                    break;
+                  case 2:
+                    opeParam.y2 = rIdx;
+                    break;
+                  case 3:
+                    opeParam.z2 = rIdx;
+                } 
+              } /* end of if param type M3 or M6 */
+              if ( 
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_M5) || 
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_M7) 
+                 ) 
+              {
+                rIdx = bs3line->line[bs3line->param[i] + 2] - '0';
+                j++;
+                switch (j)
+                {
+                  case 1: 
+                    opeParam.x2 = rIdx;
+                    break;
+                  case 2:
+                    opeParam.y2 = rIdx;
+                    break;
+                  case 3:
+                    opeParam.z2 = rIdx;
+                } 
+                rIdx = bs3line->line[bs3line->param[i] + 5] - '0';
+                j++;
+                switch (j)
+                {
+                  case 1: 
+                    opeParam.x2 = rIdx;
+                    break;
+                  case 2:
+                    opeParam.y2 = rIdx;
+                    break;
+                  case 3:
+                    opeParam.z2 = rIdx;
+                } 
+              } /* end if param type M5 or M7 */
+            } /* end of for each parameter to explore */
+            bs3line->assembly[bs3line->assemblyLength++] = (BYTE) opeParam.param;
+            break;
+          case 'b': /* immediate BYTE */
+            for (i = 0; i < bs3line->nbParam; i++)
+            {
+              if ( 
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_BYTE) ||
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_WORD) ||
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_M2)   ||
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_M4)   ||
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_M6)   ||
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_M7)   
+                 )
+              {
+                bs3line->assembly[bs3line->assemblyLength++] = (BYTE)(s3line->paramValue[i] & 0x00FF);
+                break;
+              }
+            }
+            return BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED; /* should never occur ... meaning bad operation design */
+          case 'r': /* immediate SBYTE representing the offset to a label */ 
+            bs3line->assembly[bs3line->assemblyLength++] = 0; /* temp relative 8 bits address : real value in pass 2 */
+            break;
+          case 'w': /* immediate WORD or label address (address real value in pass 2) */
+            for (i = 0; i < bs3line->nbParam; i++)
+            {
+              if ( 
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_BYTE) ||
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_WORD) ||
+                   (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_M0 /* including M0LABEL case ! */)   
+                )
+              {
+                bs3line->assembly[bs3line->assemblyLength++] = (BYTE)(s3line->paramValue[i] & 0x00FF);
+                bs3line->assembly[bs3line->assemblyLength++] = (BYTE)((s3line->paramValue[i] >> 8) & 0x00FF);
+                break;
+              }
+              if (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_LABEL)
+              {
+                bs3line->assembly[bs3line->assemblyLength++] = 0; /* temp low 8 bits of a 16 bits relative address : real value in pass 2*/
+                bs3line->assembly[bs3line->assemblyLength++] = 0; /* temp high 8 bits of a 16 bits relative address : real value in pass 2 */
+              }
+            }
+            return BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED; /* should never occur ... meaning bad operation design */
+          case 'R': /* immediate SWORD of a label offset */
+            bs3line->assembly[bs3line->assemblyLength++] = 0; /* temp low 8 bits of a 16 bits relative address : real value in pass 2*/
+            bs3line->assembly[bs3line->assemblyLength++] = 0; /* temp high 8 bits of a 16 bits relative address : real value in pass 2 */
+            break;
+          default:
+            return BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED; /* should never occur ... meaning bad operation design */
+        }
+        k++;
+      } /* end of for each asmpattern code */
+      break;
+    case BS3_ASM_OPETYPE_META: /* special case not possible to be expressed by bs3Instr[] */
+      switch (ope)
+      {
+        case BS3_INSTR_DB:
+          for (i = 0; i < bs3line->nbParam; i++)
+          {
+            if (
+                 (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_BYTE) ||
+                 (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_WORD) 
+               )
+            {
+              bs3line->assembly[bs3line->assemblyLength++] = (BYTE)(s3line->paramValue[i] & 0x00FF);
+            }
+            if (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_STRING)
+            {
+              for (j = 1; bs3line->line[bs3line->param[i] + j] != '"'; j++)
+                bs3line->assembly[bs3line->assemblyLength++] = bs3line->line[bs3line->param[i] + j];
+            }
+          }
+          break;
+        case BS3_INSTR_DW:
+          for (i = 0; i < bs3line->nbParam; i++)
+          {
+            if (
+                 (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_BYTE) ||
+                 (bs3line->paramType[i] & 0xF0 == BS3_ASM_PARAM_TYPE_WORD) 
+               )
+            {
+              bs3line->assembly[bs3line->assemblyLength++] = (BYTE)(s3line->paramValue[i] & 0x00FF);
+              bs3line->assembly[bs3line->assemblyLength++] = (BYTE)((s3line->paramValue[i] >> 8) & 0x00FF);
+            }
+          }
+          break;
+      }
+      break;
+  }
+  return err;
 }
 
 int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue)
@@ -275,33 +713,35 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
   struct bs3_asm_line * bs3lineFound;
   int state = BS3_ASM_PASS1_PARSE_STATE_START; 
   int symboltype;
-  long value;
-  int i; /* general index for iteration */
-  int j; /* general index for iteration */
-  int k; /* general index for iteration */
-  int l; /* general index for iteration or length of string */
-  char c; /* a character in the asm line */
-  char isok= 1; /* 1 parsing is ok, 0 there is an error of parsing */
-  char err=BS3_ASM_PASS1_PARSE_ERR_OK; /* by default there is no error */
-  /* initialise the asm line result structure */
-  bs3line->linenum = linenum;  /* init: set the current line in source code         */
-  bs3line->line[0] = 0;        /* init: the asm line in structure is empty          */
-  bs3line->label = -1;         /* init: no label defined in the parsed asm line     */
-  bs3line->ope = -1;           /* init: no operation defined in the parsed asm line */
-  bs3line->nbParam = 0;        /* init: no parameter in the parsed asm line         */
-  int eol; /* 1 end of line , 0 not end of line */
+  long value;                          /* numerical value associated to a operand           */
+  int i;                               /* general index for iteration                       */
+  int j;                               /* general index for iteration                       */
+  int k;                               /* general index for iteration                       */
+  int l;                               /* general index for iteration or length of string   */
+  char c;                              /* a character in the asm line                       */
+  char isok= 1;                        /* 1 parsing is ok, 0 there is an error of parsing   */
+  char err=BS3_ASM_PASS1_PARSE_ERR_OK; /* by default there is no error                      */
+  /* initialise the asm line result structure                                               */
+  bs3line->linenum         = linenum;  /* init: set the current line in source code         */
+  bs3line->line[0]         = 0;        /* init: the asm line in structure is empty          */
+  bs3line->label           = -1;       /* init: no label defined in the parsed asm line     */
+  bs3line->ope             = -1;       /* init: no operation defined in the parsed asm line */
+  bs3line->nbParam         = 0;        /* init: no parameter in the parsed asm line         */
+  bs3line->assemblyLength  = 0;        /* init: no assembly result                          */
+  bs3line->assemblyAddress = address;  /* init: asm line at address                         */
+  int eol;                             /* 1 end of line , 0 not end of line                 */
   /* get the asm line */
   while (oneLine[idxLine] && idxLine < BS3_ASM_LINE_SIZE)
   {
     bs3line->line[idxLine] = oneLine[idxLine];
     idxLine++;
   }
-  bs3line->line[idxLine++] = '\n';
-  bs3line->line[idxLine] = '0'; /* ASCIIZ null terminate string */
+  bs3line->line[idxLine++] = '\n';     /* add an end of line sentinel                       */
+  bs3line->line[idxLine] = '0';        /* ASCIIZ null terminate string                      */
   /* check asm line is not too long */
   if (idxLine >= BS3_ASM_LINE_SIZE && oneLine[idxLine]) 
   {
-     bs3line->column = BS3_ASM_LINE_SIZE;
+    bs3line->column = BS3_ASM_LINE_SIZE;
     return BS3_ASM_PASS1_PARSE_ERR_LINETOOLONG;
   }
   
@@ -310,7 +750,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
   eol = 0;
   while (c = oneLine[idxLine] && isok)
   {
-      if (c == '\n' || c== '\r') 
+      if (c == '\n' || c== '\r')  /* \r should never occur ... already filtered out by the caller function */
       {
         bs3line->line[idxLine] = 0;
         break;
@@ -925,7 +1365,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
              { 
                if ( (bs3lineFound->paramType[0] & 0xF0) == BS3_ASM_PARAM_TYPE_BYTE)
                {
-                 bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M6SYMBOL; /* only alias */
+                 bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M6DECIMAL; /* only alias */
                  bs3line->paramValue[i] = bs3lineFound->paramValue[0]; /* value of the symbol */
                  continue; /* go to next param */
                }
@@ -989,7 +1429,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
              { 
                if ( (bs3lineFound->paramType[0] & 0xF0) == BS3_ASM_PARAM_TYPE_BYTE)
                {
-                 bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M7SYMBOL; /* only alias */
+                 bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M7DECIMAL; /* only alias */
                  bs3line->paramValue[i] = bs3lineFound->paramValue[0]; /* value of the symbol */
                  continue; /* go to next param */
                }
@@ -1076,7 +1516,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
              { 
                if ( (bs3lineFound->paramType[0] & 0xF0) == BS3_ASM_PARAM_TYPE_BYTE)
                {
-                 bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M4SYMBOL; /* only alias */
+                 bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M4DECIMAL; /* only alias */
                  bs3line->paramValue[i] = bs3lineFound->paramValue[0]; /* value of the symbol */
                  continue; /* go to next param */
                }
@@ -1135,7 +1575,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
              { 
                if ( (bs3lineFound->paramType[0] & 0xF0) == BS3_ASM_PARAM_TYPE_BYTE)
                {
-                 bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M2SYMBOL; /* only alias */
+                 bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M2DECIMAL; /* only alias */
                  bs3line->paramValue[i] = bs3lineFound->paramValue[0]; /* value of the symbol */
                  continue; /* go to next param */
                }
@@ -1204,17 +1644,15 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
                       bs3lineFound->paramType[0] == BS3_ASM_PARAM_TYPE_SYMBOL); /* search an alias (SYMbol representing an EQU value) */
              if (bs3lineFound)
              { 
-               bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M0SYMBOL; /* only alias */
+               bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M0DECIMAL; /* only alias */
                bs3line->paramValue[i] = bs3lineFound->paramValue[0]; /* value of the symbol */
-               continue; /* go to next param */
              }
              else 
              {
-               isok = 0;
-               idxLine = j+1;
-               err = BS3_ASM_PASS1_PARSE_ERR_SYMBOLNOTFOUND;
-               continue;
-             }             
+               bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M0LABEL; /* only alias */
+               bs3line->paramValue[i] = 0; /* default value */
+             }
+             continue; /* go to next param */
            }
            isok = 0;
            err = BS3_ASM_PASS1_PARSE_ERR_ADDRMODE;
@@ -1252,7 +1690,14 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
           idxLine = bs3line->ope;
           break;
         }
-        /* TODO assemble the code */
+        /* Assemble the code */
+        err =  bs3_asm_pass1_assemble(bs3line);
+        if (err == BS3_ASM_PASS1_PARSE_ERR_NOPE) err = BS3_ASM_PASS1_PARSE_ERR_OK;
+        if (err != BS3_ASM_PASS1_PARSE_ERR_OK)
+        {
+          isok = 0;
+          idxLine = bs3line->ope;
+        }
         break;
       case BS3_ASM_OPETYPE_META: /* DB or DW */
         if ((err = bs3_asm_pass1_instructionCheck(bs3line)) != BS3_ASM_PASS1_PARSE_ERR_OK)
@@ -1261,9 +1706,17 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
           idxLine = bs3line->ope;
           break;
         }
-        /* TODO assemble the code */
+        /* Assemble the code */
+        err =  bs3_asm_pass1_assemble(bs3line);
+        if (err == BS3_ASM_PASS1_PARSE_ERR_NOPE) err = BS3_ASM_PASS1_PARSE_ERR_OK;
+        if (err != BS3_ASM_PASS1_PARSE_ERR_OK)
+        {
+          isok = 0;
+          idxLine = bs3line->ope;
+        }
         break;
-      case BS3_ASM_OPETYPE_DIRECTIVE: /*  manage by caller of this function : MACRO/ENDM/INCLUDE.. ORG have to fix the assembly address, if a label is defined */
+      case BS3_ASM_OPETYPE_ALIAS:
+      case BS3_ASM_OPETYPE_DIRECTIVE: /*  managed by caller of this function : MACRO/ENDM/INCLUDE.. ORG have to fix the assembly address, if a label is defined */
         if ((err = bs3_asm_pass1_instructionCheck(bs3line)) != BS3_ASM_PASS1_PARSE_ERR_OK)
         {
           isok = 0;
@@ -1271,8 +1724,6 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
           break;
         }
         break;
-      case BS3_ASM_OPETYPE_ALIAS:
-        break:
       default:
         isok = 0
         idxLine = bs3->ope;
@@ -1299,13 +1750,13 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
   
 } 
 
-int bs3_asm_pass1_file( const char * filename, int parsedline, int * parsedlineout)
+int bs3_asm_pass1_file( const char * filename, int parsedline, int * parsedlineout, WORD address)
 {
-  int linenum=0;
-  int achar;
-  int lineidx=0;
+  int linenum = 0;                             /* line number in file        */
+  int achar   = 0;                             /* a character in a file line */
+  int lineidx = 0;                             /* index in file line         */
   int lineerr = BS3_ASM_PASS1_PARSE_ERR_OK;
-  int err = BS3_ASM_PASS1_PARSE_ERR_OK;
+  int err     = BS3_ASM_PASS1_PARSE_ERR_OK;
   FILE * fp;
   char fileline[BS3_ASM_LINE_BUFFER];
   fp = fopen(filename, "rt");
@@ -1327,7 +1778,7 @@ int bs3_asm_pass1_file( const char * filename, int parsedline, int * parsedlineo
         lineidx++;
       } else continue;
       if (achar == '\n') break; /* 'line feed' means 'end of line' */
-      if (achar < ' ' && achar >= 0)
+      if (achar < ' ' && achar >= 0 && achar != '\t')  /* all character below ' ' except \r \n \t are considered as illegal */
       {
         err = BS3_ASM_PASS1_PARSE_ILLEGALCHAR;
         bs3_asm_report(filename, linenum + 1 ,lineidx, err) ;
@@ -1344,8 +1795,8 @@ int bs3_asm_pass1_file( const char * filename, int parsedline, int * parsedlineo
     fileline[lineidx] = 0;/* add  ASCIIZ null terminated string character */
     linenum++; /* line is read, increment the line number */
     
-    /* TODO : process file line */
-    lineerr = bs3_asm_pass1_oneline(&bs3_asm[parsedline], (WORD)linenum, fileline);
+    /* Parse file line */
+    lineerr = bs3_asm_pass1_oneline(&bs3_asm[parsedline], (WORD)linenum, (WORD) address, fileline);
     if (lineerr == BS3_ASM_PASS1_PARSE_ERR_NOPE) continue; /* nothing to parse then carry on on the next file line, but keep current  */
     
     if (lineerr != BS3_ASM_PASS1_PARSE_ERR_OK) /* error during parsing of the line then report the error and stop parsing current file*/
@@ -1369,3 +1820,17 @@ int bs3_asm_file( const char * filename)
 /* TODO : main function to assemble an .asm file */
 return 0;
 }
+/*
+TODO:
+check if a label is already defined (duplicate label)
+local label attached to global label
+local label fully qualified global.local
+directive DIST...
+missing ALIGN directive
+detect if assembly code at adress overlap an existing generated code
+include directive
+macro directive
+pass 2 : complete assembly with label address (abs and relative )
+
+
+*/
