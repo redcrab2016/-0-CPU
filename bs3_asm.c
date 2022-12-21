@@ -30,8 +30,11 @@ const char * bs3_asm_message[]=
   [BS3_ASM_PASS1_PARSE_ERR_SYMBOLTOOBIG]   = "Symbol value to large",
   [BS3_ASM_PASS1_PARSE_ERR_BADOPETYPE]     = "Internal error, bad operation type",
   [BS3_ASM_PASS1_PARSE_ERR_BADOPESYNTAX]   = "Incorrect instruction parameter",
-  [BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED]     = "Unexpected error"
-  [BS3_ASM_PASS1_PARSE_ERR_BADBYTE]        = "Value not compatible with byte"
+  [BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED]     = "Unexpected error",
+  [BS3_ASM_PASS1_PARSE_ERR_BADBYTE]        = "Value not compatible with byte",
+  [BS3_ASM_PASS1_PARSE_ERR_MEMORY]         = "Too big program",
+  [BS3_ASM_PASS1_PARSE_ERR_NOLABEL]        = "Missing mandatory label",
+  [BS3_ASM_PASS1_PARSE_ERR_INCLUDE]        = "Include directive failed"
 };
 
 struct bs3_asm_line bs3_asm[65536]; /* to be managed as a sequential third party resource */
@@ -1750,15 +1753,18 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
   
 } 
 
-int bs3_asm_pass1_file( const char * filename, int parsedline, int * parsedlineout, WORD address)
+int bs3_asm_pass1_file( const char * filename, WORD address)
 {
   int linenum = 0;                             /* line number in file        */
   int achar   = 0;                             /* a character in a file line */
   int lineidx = 0;                             /* index in file line         */
   int lineerr = BS3_ASM_PASS1_PARSE_ERR_OK;
   int err     = BS3_ASM_PASS1_PARSE_ERR_OK;
+  int i;
+  struct bs3_asm_line * pbs3_asm;
   FILE * fp;
   char fileline[BS3_ASM_LINE_BUFFER];
+  char includefilename[BS3_ASM_LINE_BUFFER];
   fp = fopen(filename, "rt");
   if (fp == NULL)
   {
@@ -1796,20 +1802,79 @@ int bs3_asm_pass1_file( const char * filename, int parsedline, int * parsedlineo
     linenum++; /* line is read, increment the line number */
     
     /* Parse file line */
-    lineerr = bs3_asm_pass1_oneline(&bs3_asm[parsedline], (WORD)linenum, (WORD) address, fileline);
+    pbs3_asm = bs3_asm_line_nextfree();
+    if (pbs3_asm == 0) 
+    {
+      err == BS3_ASM_PASS1_PARSE_ERR_MEMORY;
+      bs3_asm_report(filename, linenum, 0, err);
+      break;
+    }
+    lineerr = bs3_asm_pass1_oneline(pbs3_asm, (WORD)linenum, (WORD) address, fileline);
     if (lineerr == BS3_ASM_PASS1_PARSE_ERR_NOPE) continue; /* nothing to parse then carry on on the next file line, but keep current  */
     
     if (lineerr != BS3_ASM_PASS1_PARSE_ERR_OK) /* error during parsing of the line then report the error and stop parsing current file*/
     {
       err = lineerr;
-      bs3_asm_report(filename, linenum , bs3_asm[parsedline].column , err) ;
+      bs3_asm_report(filename, linenum , pbs3_asm->column , err) ;
       break,
     }
-    
-    parsedline++; /* line parsed with something , then carry on with next file line */
+    switch (pbs3_asm->opeType)
+    {
+      case BS3_ASM_OPETYPE_SYMBOL: /* possible macro expansion */
+        /* include the macro with parameters */
+        break;
+      case BS3_ASM_OPETYPE_FULL: /* CPU instruction */
+      case BS3_ASM_OPETYPE_META: /* DB or DW meta instruction */
+        address += pbs3_asm->assemblyLength;
+        bs3_asm_line_commit(pbs3_asm);
+        break;
+      case BS3_ASM_OPETYPE_DIRECTIVE: /* INCLUDE/ MACRO/ENDM/ORG */
+        switch (pbs3_asm->opeCode)
+        {
+          case BS3_INSTR_ORG:
+              address = pbs3_asm->paramValue[0];
+              pbs3_asm->assemblyAddress = address; /* adjust the address , needed if there is a label */
+              bs3_asm_line_commit(pbs3_asm);
+            break;
+          case BS3_INSTR_MACRO:
+            /* TODO : switch to macro recording mode */
+            break;
+          case BS3_INSTR_ENDM:
+            /* TODO : end of macro recording mode */
+            break;
+          case BS3_INSTR_INCLUDE:
+            bs3_asm_line_commit(pbs3_asm);
+            i=0;
+            while (pbs3_asm->line[pbs3_asm->param[0]+i+1] != '"' && i <BS3_ASM_LINE_BUFFER-1)
+            {
+              includefilename[i] = pbs3_asm->line[pbs3_asm->param[0]+i+1];
+            }
+            includefilename[i] = 0;
+            err = bs3_asm_pass1_file(includefilename ,  address);
+            if (err != BS3_ASM_PASS1_PARSE_ERR_OK)
+            {
+              err = BS3_ASM_PASS1_PARSE_ERR_INCLUDE;
+              bs3_asm_report(filename, linenum , pbs3_asm->column , err);
+              break;
+            }
+            break;
+        }
+        break;
+      case BS3_ASM_OPETYPE_ALIAS: /* EQU/DIST */
+        if (pbs3_asm->label == -1) {
+          err = BS3_ASM_PASS1_PARSE_ERR_NOLABEL;
+          bs3_asm_report(filename, linenum , 0 , err) ;
+          break;
+        }
+        bs3_asm_line_commit(pbs3_asm);
+        break;
+      default:
+        break;
+    }
+    if (err != BS3_ASM_PASS1_PARSE_ERR_OK) break;
     
   } /* end while : exiting means end of file, or error during parsing */
-  *parsedlineout = parsedline;
+
   fclose(fp);
   return err;
 }
@@ -1822,7 +1887,7 @@ return 0;
 }
 /*
 TODO:
-check if a label is already defined (duplicate label)
+check if a label is already defined (duplicate label) inside bs3_asm_pass1_oneline
 local label attached to global label
 local label fully qualified global.local
 directive DIST...
