@@ -345,9 +345,14 @@ struct bs3_cpu_instr
   const char * fullName;  // Machine name (e.g MOVWI)
   const char * name;      // Human name   ( e.g MOV )
   int  nbParam; /* mnemonic number of param */
-  BYTE  p1type;
-  BYTE  p2type;
-  BYTE  p3type;
+  union {
+    BYTE ptype[3];
+    struct {
+      BYTE  p1type;
+      BYTE  p2type;
+      BYTE  p3type;
+    };
+  };
   const char * asmpattern; /* assembly coding pattern */
       /* coding string char, interpret each char by :
            o : operator code (BYTE)
@@ -410,6 +415,7 @@ struct bs3_cpu_instr
 #define BS3_ASM_PARAM_TYPE_M0HEXA        0x72
 #define BS3_ASM_PARAM_TYPE_M0CHAR        0x73
 #define BS3_ASM_PARAM_TYPE_M0SYMBOL      0X74
+#define BS3_ASM_PARAM_TYPE_M0LABEL       0X75
 #define BS3_ASM_PARAM_TYPE_M1            0x80
 #define BS3_ASM_PARAM_TYPE_M2            0x90
 #define BS3_ASM_PARAM_TYPE_M2DECIMAL     0x91
@@ -472,6 +478,9 @@ struct bs3_cpu_instr
 #define BS3_ASM_PASS1_PARSE_ERR_SYMBOLNOTFOUND 20
 #define BS3_ASM_PASS1_PARSE_ERR_SYMBOLTOOBIG   21
 #define BS3_ASM_PASS1_PARSE_ERR_BADOPETYPE     22
+#define BS3_ASM_PASS1_PARSE_ERR_BADOPESYNTAX   22
+#define BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED     23
+#define BS3_ASM_PASS1_PARSE_ERR_BADBYTE        24
 
 /* Symbol type */
 #define BS3_ASM_SYMBOLTYPE_UNKNOWN             0x00
@@ -505,6 +514,8 @@ struct bs3_cpu_instr
 
 struct bs3_asm_line
 {
+  /* asm_line_index */
+  long asmIndex;
   /* source file info */
   WORD linenum;
   char line[BS3_ASM_LINE_BUFFER];
