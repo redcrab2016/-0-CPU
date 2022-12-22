@@ -384,8 +384,9 @@ struct bs3_cpu_instr
 };
 
 /*  ASSEMBLER */
-#define BS3_ASM_LINE_SIZE  72
+#define BS3_ASM_LINE_SIZE     72
 #define BS3_ASM_LINE_BUFFER  (BS3_ASM_LINE_SIZE + 2)
+#define BS3_ASM_LINE_MAX      65536
 
 /* param types: claims by grammar or detected in asm code : mask 0xF0 for type, mask 0x0F for sub type */
 #define BS3_ASM_PARAM_TYPE_STRING        0x00
@@ -484,6 +485,13 @@ struct bs3_cpu_instr
 #define BS3_ASM_PASS1_PARSE_ERR_MEMORY         25
 #define BS3_ASM_PASS1_PARSE_ERR_NOLABEL        26
 #define BS3_ASM_PASS1_PARSE_ERR_INCLUDE        27
+#define BS3_ASM_PASS1_PARSE_ERR_BEYOND         28
+#define BS3_ASM_PASS1_FAILURE                  30
+#define BS3_ASM_PASS1_PARSE_ERR_DUPLABEL       31
+#define BS3_ASM_PASS1_PARSE_ERR_EXPMACRO       32
+#define BS3_ASM_PASS1_PARSE_ERR_MACROSYNTAX    33
+#define BS3_ASM_PASS1_PARSE_ERR_MACROREFPARAM  34
+#define BS3_ASM_PASS1_PARSE_ERR_MACROLINE2BIG  35
 
 /* Symbol type */
 #define BS3_ASM_SYMBOLTYPE_UNKNOWN             0x00
@@ -527,6 +535,7 @@ struct bs3_asm_line
     SBYTE label; /* -1 = no label, 0= index at line[] */
     SBYTE column; /* if parsing error, then it indicates the character index in the line where the error has been detected */
   };
+  long asmIndexToGlobalLabel; /* asmIndex of global label, when label is local */
   BYTE labelIsAlias; /* =0 if label repesent a place in code, =1 if label represent an alias of a value (like EQU, DIST ...) */
   /* operation info */
   SBYTE ope; /* operation , index inside line[] */
