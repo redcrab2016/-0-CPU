@@ -71,7 +71,7 @@ void main() {
   printf("N %X\n",reg.N);
   printf("I %X\n",reg.I);
   printf("reserved %X\n",reg.reserved);
-  printf("sizeof cpu %d\n", sizeof(struct bs3_cpu_data));
+  printf("sizeof cpu %d\n", (int)sizeof(struct bs3_cpu_data));
   
     struct termios oldtio, curtio;
     struct sigaction sa;
