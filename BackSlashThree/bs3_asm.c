@@ -4,6 +4,7 @@
 #include <errno.h>
 
 #include "bs3.h"
+#include "bs3_asm.h"
 
 const char * bs3_asm_message[]=
 {
@@ -118,7 +119,8 @@ struct bs3_asm_line * bs3_asm_line_nextfree(struct bs3_asm_line * bs3line)
 /*
   add a constructed asm line (line retrieved by a .. nextfree()
 */
-int bs3_asm_line_commit(struct bs3_asm_line *  bs3line) {
+int bs3_asm_line_commit(struct bs3_asm_line *  bs3line) 
+{
   int currIndex; /* = (bs3line - bs3_asm);*/
   if (bs3line == 0) return 0;
   currIndex = bs3line->asmIndex;

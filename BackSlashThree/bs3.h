@@ -1,3 +1,6 @@
+#ifndef _BS3_H
+#define _BS3_H 1
+
 /* Instruction set */
 #define BS3_INSTR_LAST 0x107
 
@@ -556,8 +559,14 @@ extern const char * bs3_asm_message[];
 
 extern struct bs3_cpu_instr bs3Instr[];
 
+
+
+
+
 WORD bs3_cpu_disassemble(WORD PC, BYTE a, BYTE b, BYTE c, BYTE d, char * result);
 void bs3_cpu_state(struct bs3_cpu_data * pbs3, char * result);
+
+
 void bs3_hyper_timerset(DWORD microseconds);
 void bs3_hyper_timerstop();
 void bs3_cpu_init(struct bs3_cpu_data * pbs3);
@@ -571,3 +580,5 @@ void bs3_hyper_reset_memory(struct bs3_cpu_data * pbs3);
 void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, BYTE * data, long length, WORD address);
 void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3);
 void bs3_hyper_main(BYTE * program, WORD programsize);
+
+#endif

@@ -1,4 +1,4 @@
-CISC 16 bits address, 8/16 bits data   0x5C33
+CISC 16 bits address, 8/16 bits data   0x5C33 "\\3"
 little-endian data access and immediate encoding
 Event/Interruption enabled
 Hypervisor controlled
