@@ -1902,7 +1902,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
   {
     err = lineerr;
     bs3_asm_report(filename, linenum , pbs3_asm->column , err) ;
-    return; 
+    return err; 
   } 
   bs3_asm_line_commit(pbs3_asm); /* validate the addition of the label */
   
