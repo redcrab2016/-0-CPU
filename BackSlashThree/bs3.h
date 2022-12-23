@@ -342,56 +342,6 @@ struct bs3_cpu_data
   BYTE pending_interrupt;
 };
 
-/* BS3 CPU disassemble instruction definition structure */
-struct bs3_cpu_instr
-{
-  const char * fullName;  // Machine name (e.g MOVWI)
-  const char * name;      // Human name   ( e.g MOV )
-  int  nbParam; /* mnemonic number of param */
-  union {
-    BYTE ptype[3];
-    struct {
-      BYTE  p1type;
-      BYTE  p2type;
-      BYTE  p3type;
-    };
-  };
-  const char * asmpattern; /* assembly coding pattern */
-      /* coding string char, interpret each char by :
-           o : operator code (BYTE)
-           p : operator parameter (BYTE)
-           b : byte immediate (BYTE)
-           w : word immediate / address label (WORD)
-           r : signed byte immediate representing PC relative address, provided by label (SBYTE)
-           R : signed word immediate representing PC relative address, provided by label (SWORD)
-           x : nothing to assemble
-           * : (after b or w) multiple byte or word
-      */  
-  int  opeType; 
-  int  size;          // from 1 to 4
-  int  hasParam;      // 1 or 0
-  int  hasImmediate;  // 1 or 0
-  char immType; // 'B' or 'W'
-  const char * operandFormat; // format parameter a b c d x X y Y z @ o
-  //a for byte at PC in 2 hexa characters
-  //b for byte at PC+1 in 2 hexa characters
-  //c for byte at PC+2 in 2 hexa characters
-  //d for byte at PC+3 in 2 hexa characters
-  //x for param x2 in one digit from 0 to 3 
-  //X for param x3 in one digit from 0 to 7
-  //y for param y2 in one digit from 0 to 3
-  //Y for param y3 in one digit from 0 to 7
-  //z for param z2 in one digit from 0 to 3
-  //@ for PC + SimmB/W in 4 hexacharacter
-  //o for instruction name(short) in 5 characters (right space tail padding)
-};
-
-
-extern struct bs3_cpu_instr bs3Instr[];
-
-
-WORD bs3_cpu_disassemble(WORD PC, BYTE a, BYTE b, BYTE c, BYTE d, char * result);
-void bs3_cpu_state(struct bs3_cpu_data * pbs3, char * result);
 
 
 void bs3_hyper_timerset(DWORD microseconds);

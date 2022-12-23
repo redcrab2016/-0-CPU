@@ -1,4 +1,3 @@
-#include "bs3.h"
 #include "bs3_asm.h"
 
 static const char * hexa_digit="0123456789ABCDEF";
