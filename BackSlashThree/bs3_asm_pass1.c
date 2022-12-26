@@ -1,9 +1,8 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
+//#include <stdlib.h>
+//#include <string.h>
+//#include <errno.h>
 
-#include "bs3.h"
 #include "bs3_asm.h"
 
 /* check label in provided bs3line for duplicate, then attach local label to last encounter global label */
