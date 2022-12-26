@@ -1830,16 +1830,17 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
       break;
     }
     fileline[lineidx] = 0;/* add  ASCIIZ null terminated string character */
+    linenum++; /* line is read, increment the line number */
+
     if (isMacroRecording) { /* if recording then save line to macro file */
         lineerr = bs3_asm_pass1_oneline(pbs3_asm, (WORD)linenum, (WORD) address, fileline);
         if (lineerr != BS3_ASM_PASS1_PARSE_ERR_OK || pbs3_asm->opeCode != BS3_INSTR_ENDM)
         {
-          fprintf(macroFile, fileline);
+          fprintf(macroFile, "%s", fileline);
           continue;
         } 
     }
     
-    linenum++; /* line is read, increment the line number */
     
     /* Parse file line */
     if (isMacroExpansion) 
@@ -1981,15 +1982,16 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
               bs3_asm_line_commit(pbs3_asm);
             break;
           case BS3_INSTR_MACRO:
-            /* TODO : switch to macro recording mode */
+            /* switch to macro recording mode */
             isMacroRecording = 1;
             sprintf(includefilename, "%s.macro", &pbs3_asm->line[pbs3_asm->label]);
             macroFile = fopen(includefilename,"wt");
             break;
           case BS3_INSTR_ENDM:
-            /* TODO : end of macro recording mode */
+            /* end of macro recording mode */
             isMacroRecording = 0;  
-            fclose(macroFile);          
+            fclose(macroFile);  
+            macroFile = 0;        
             break;
           case BS3_INSTR_INCLUDE:
             bs3_asm_line_commit(pbs3_asm);
@@ -2023,7 +2025,17 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
     if (err != BS3_ASM_PASS1_PARSE_ERR_OK) break;
     
   } /* end while : exiting means end of file, or error during parsing */
-
+  if ( err == BS3_ASM_PASS1_PARSE_ERR_OK && isMacroRecording) /* End of source file , but unfinished macro recording */ 
+  {
+    isMacroRecording = 0;
+    if (macroFile)
+    {
+        fclose(macroFile);  
+        macroFile = 0;  
+    }
+    err = BS3_ASM_PASS1_PARSE_ERR_ENDMNOTFOUND;
+    bs3_asm_report(filename, linenum ,1, err) ;
+  }
   fclose(fp);
   return err;
 }
