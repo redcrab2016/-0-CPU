@@ -5,7 +5,7 @@ int bs3_asm_file( const char * filename)
   int err;
   err = 0; /* TODO : assign correct default global success */
   bs3_asm_line_reset();
-  err =  bs3_asm_pass1_file(filename, 0,-1);
+  err =  bs3_asm_pass1_file(filename, 0 /* adress 0x0000 by default */,-1 /* not macro expansion mode*/);
   if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
   {
     bs3_asm_report(filename, 0 , 0 , BS3_ASM_PASS1_FAILURE) ;
