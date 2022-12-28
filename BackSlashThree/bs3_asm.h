@@ -113,6 +113,11 @@
 #define BS3_ASM_PASS1_PARSE_ERR_MACROREFPARAM  34
 #define BS3_ASM_PASS1_PARSE_ERR_MACROLINE2BIG  35
 #define BS3_ASM_PASS1_PARSE_ERR_ENDMNOTFOUND   36
+#define BS3_ASM_PASS1_PARSE_ERR_ASMOVERLAP     37
+#define BS3_ASM_PASS2_FAILURE                  38
+#define BS3_ASM_PASS2_ERR_UNEXPECTED           39
+#define BS3_ASM_PASS2_ERR_LABELNOTFOUND        40
+#define BS3_ASM_PASS2_ERR_LABEL2FAR            41
 
 /* Symbol type */
 #define BS3_ASM_SYMBOLTYPE_UNKNOWN             0x00
@@ -173,9 +178,17 @@ struct bs3_asm_line
   BYTE assembly[BS3_ASM_LINE_BUFFER];
 };
 
+struct bs3_asm_code_map
+{
+  BYTE code[65536];
+  BYTE inUse[65536];
+};
+
+extern struct bs3_asm_code_map  bs3_asm_map; 
+
 extern const char * bs3_asm_message[];
 
-extern struct bs3_asm_line bs3_asm[]; /* to be managed as a sequential third party resource */
+extern struct bs3_asm_line bs3_asm[]; /* to be managed as a sequential third party resource ( as a file) */
 extern long bs3_asm_nbline = 0; /* current size of bs3_asm usage */
 
 void bs3_asm_line_reset();
@@ -183,11 +196,13 @@ struct bs3_asm_line *  bs3_asm_line_copy(struct bs3_asm_line * dest, struct bs3_
 struct bs3_asm_line * bs3_asm_line_first(struct bs3_asm_line * bs3line);
 long bs3_asm_line_size();
 struct bs3_asm_line * bs3_asm_line_at(long index, struct bs3_asm_line * bs3line);
+struct bs3_asm_line * bs3_asm_line_atlabel(const char * label, struct bs3_asm_line * bs3line);
 struct bs3_asm_line * bs3_asm_line_last(struct bs3_asm_line * bs3line);
 struct bs3_asm_line * bs3_asm_line_nextfree(struct bs3_asm_line * bs3line);
 int bs3_asm_line_commit(struct bs3_asm_line *  bs3line);
 int bs3_asm_line_checkLabel(struct bs3_asm_line * bs3line);
 struct bs3_asm_line * bs3_asm_getEQU(const char * symbol, struct bs3_asm_line *  curbs3line, struct bs3_asm_line * foundbs3line);
+
 void bs3_asm_report(const char * filename, int line, int linecolumn, int message);
 int bs3_asm_pass1_param_compatible(int destType, int srcType, long srcValue);
 int bs3_asm_pass1_instructionCheck(struct bs3_asm_line * bs3line);
@@ -195,6 +210,7 @@ int bs3_asm_pass1_assemble(struct bs3_asm_line * bs3line);
 int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue);
 int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD address, const char * oneLine);
 int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro);
+int bs3_asm_pass2();
 int bs3_asm_file( const char * filename);
 
 /* BS3 CPU disassemble instruction definition structure */

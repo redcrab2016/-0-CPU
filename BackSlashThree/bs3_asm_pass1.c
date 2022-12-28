@@ -237,6 +237,9 @@ int bs3_asm_pass1_instructionCheck(struct bs3_asm_line * bs3line)
   return err;  
 }
 
+
+
+
 /* assemble an asm line  : assume parsing is ok (parse + check )*/
 /* modify the bs3line->assembly[] and bs3line->assemblyLength */
 /* if ok return BS3_ASM_PASS1_PARSE_ERR_OK */
@@ -1791,8 +1794,14 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
     bs3_asm_report(filename, linenum , pbs3_asm->column , err) ;
     return err; 
   } 
-  bs3_asm_line_commit(pbs3_asm); /* validate the addition of the label */
-  
+  lineerr = bs3_asm_line_commit(pbs3_asm); /* validate the addition of the label */
+  if (lineerr != BS3_ASM_PASS1_PARSE_ERR_OK && lineerr != BS3_ASM_PASS1_PARSE_ERR_NOPE) 
+  {
+    err = lineerr;
+    bs3_asm_report(filename, linenum , pbs3_asm->column , err) ;
+    return err; 
+  } 
+ 
   /* open file */
   fp = fopen(filename, "rt");
   if (fp == NULL)
@@ -1949,9 +1958,12 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
     switch (pbs3_asm->opeType)
     {
       case BS3_ASM_OPETYPE_SYMBOL: /* possible macro expansion */
-        bs3_asm_line_commit(pbs3_asm);
-        sprintf(includefilename, "%s.macro", &pbs3_asm->line[pbs3_asm->ope]);
-        err = bs3_asm_pass1_file(includefilename ,  address, pbs3_asm->asmIndex);
+        err = bs3_asm_line_commit(pbs3_asm);
+        if (err == BS3_ASM_PASS1_PARSE_ERR_OK)
+        {
+            sprintf(includefilename, "%s.macro", &pbs3_asm->line[pbs3_asm->ope]);
+            err = bs3_asm_pass1_file(includefilename ,  address, pbs3_asm->asmIndex);
+        }
         if (err != BS3_ASM_PASS1_PARSE_ERR_OK)
         {
           err = BS3_ASM_PASS1_PARSE_ERR_EXPMACRO;
@@ -1970,15 +1982,23 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
           break;
         }
         address += pbs3_asm->assemblyLength;
-        bs3_asm_line_commit(pbs3_asm);
+        err = bs3_asm_line_commit(pbs3_asm);
+        if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
+        {
+            bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+        }
         break;
       case BS3_ASM_OPETYPE_DIRECTIVE: /* INCLUDE/ MACRO/ENDM/ORG */
         switch (pbs3_asm->opeCode)
         {
           case BS3_INSTR_ORG:
-              address = pbs3_asm->paramValue[0];
-              pbs3_asm->assemblyAddress = address; /* adjust the address , needed if there is a label */
-              bs3_asm_line_commit(pbs3_asm);
+            address = pbs3_asm->paramValue[0];
+            pbs3_asm->assemblyAddress = address; /* adjust the address , needed if there is a label */
+            err = bs3_asm_line_commit(pbs3_asm);
+            if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
+            {
+                bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+            }
             break;
           case BS3_INSTR_MACRO:
             /* switch to macro recording mode */
@@ -1993,7 +2013,12 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
             macroFile = 0;        
             break;
           case BS3_INSTR_INCLUDE:
-            bs3_asm_line_commit(pbs3_asm);
+            err = bs3_asm_line_commit(pbs3_asm);
+            if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
+            {
+                bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+                break;
+            }
             i=0;
             while (pbs3_asm->line[pbs3_asm->param[0]+i+1] != '"' && i <BS3_ASM_LINE_BUFFER-1)
             {
@@ -2016,7 +2041,11 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
           bs3_asm_report(filename, linenum , 0 , err) ;
           break;
         }
-        bs3_asm_line_commit(pbs3_asm);
+        err = bs3_asm_line_commit(pbs3_asm);
+        if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
+        {
+            bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+        }
         break;
       default:
         break;
