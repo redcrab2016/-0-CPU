@@ -695,11 +695,12 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
   eol = 0;
   while ((c = oneLine[idxLine]) && isok)
   {
-      if (c == '\n' || c== '\r')  /* \r should never occur ... already filtered out by the caller function */
+     /* if (c == '\n' || c== '\r')  
       {
         bs3line->line[idxLine] = 0;
         break;
       }
+      */
       switch(state)
       {
         /* start parsing */

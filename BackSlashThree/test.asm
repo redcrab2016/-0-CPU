@@ -1,1 +1,2 @@
-; This is a assembler test for BS3 CPU
+    NOP
+    HLT ; stop CPU

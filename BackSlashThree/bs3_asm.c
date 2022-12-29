@@ -3,15 +3,17 @@
 int bs3_asm_file( const char * filename)
 {
   int err;
-  err = 0; /* TODO : assign correct default global success */
+  err = BS3_ASM_PASS1_PARSE_ERR_OK; 
+  /* Init asm line set */
   bs3_asm_line_reset();
+  /* pass 1 */
   err =  bs3_asm_pass1_file(filename, 0 /* adress 0x0000 by default */,-1 /* not macro expansion mode*/);
   if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
   {
     bs3_asm_report(filename, 0 , 0 , BS3_ASM_PASS1_FAILURE) ;
     return BS3_ASM_PASS1_FAILURE;
   }
-/* invoke pass 2 */
+/* pass 2 */
   err = bs3_asm_pass2();
   if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
   {
@@ -19,7 +21,7 @@ int bs3_asm_file( const char * filename)
     return BS3_ASM_PASS2_FAILURE;
   }
 
-/* TODO : if pass 2 ok, then generate binary file */
+/* TODO : Generate binary file */
 return err;
 }
 /*
@@ -33,6 +35,5 @@ DONE : detect if assembly code at adress overlap an existing generated code
 DONE : macro recording
 DONE : macro expansion
 DONE : pass 2 : complete assembly with label address (abs and relative )
-
-
+Generate binary file
 */
