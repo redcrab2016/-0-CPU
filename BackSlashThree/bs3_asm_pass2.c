@@ -28,7 +28,7 @@ int bs3_asm_pass2()
         if (bs3_asm_line_at(i, pbs3line) == ((void *)0))
         {
             err = BS3_ASM_PASS2_ERR_UNEXPECTED;
-            bs3_asm_report("<PASS 2>", 0 , 0 , err);
+            bs3_asm_report("<PASS 2>",0 ,0 ,err);
             break;
         }
         if (bs3line.assemblyLength == 0 || bs3line.nbParam == 0) continue; /* no code generated or no parameter, then go next asmline*/
@@ -56,7 +56,7 @@ int bs3_asm_pass2()
                     }
                     label[l] = 0;
                     /* Find the address of the label */
-                    if (bs3_asm_line_atlabel(label, pbs3lineLabel) == ((void *)0)) /* label not found */
+                    if (bs3_asm_line_atlabel(label, pbs3line, pbs3lineLabel) == ((void *)0)) /* label not found */
                     {
                         err = BS3_ASM_PASS2_ERR_LABELNOTFOUND; /* not found error */
                         bs3_asm_report(label, bs3line.linenum , bs3line.param[j] , err);

@@ -196,7 +196,7 @@ struct bs3_asm_line *  bs3_asm_line_copy(struct bs3_asm_line * dest, struct bs3_
 struct bs3_asm_line * bs3_asm_line_first(struct bs3_asm_line * bs3line);
 long bs3_asm_line_size();
 struct bs3_asm_line * bs3_asm_line_at(long index, struct bs3_asm_line * bs3line);
-struct bs3_asm_line * bs3_asm_line_atlabel(const char * label, struct bs3_asm_line * bs3line);
+struct bs3_asm_line * bs3_asm_line_atlabel(const char * label, struct bs3_asm_line * bs3line,  struct bs3_asm_line * bs3lineLabel);
 struct bs3_asm_line * bs3_asm_line_last(struct bs3_asm_line * bs3line);
 struct bs3_asm_line * bs3_asm_line_nextfree(struct bs3_asm_line * bs3line);
 int bs3_asm_line_commit(struct bs3_asm_line *  bs3line);

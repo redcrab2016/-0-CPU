@@ -1,3 +1,4 @@
+#include <string.h>
 #include "bs3_asm.h"
 
 struct bs3_asm_line bs3_asm[BS3_ASM_LINE_MAX]; /* to be managed as a sequential third party resource */
@@ -58,9 +59,107 @@ struct bs3_asm_line * bs3_asm_line_at(long index, struct bs3_asm_line * bs3line)
   return bs3_asm_line_copy(bs3line, bs3_asm + index);
 }
 
-struct bs3_asm_line * bs3_asm_line_atlabel(const char * label, struct bs3_asm_line * bs3line)
+struct bs3_asm_line * bs3_asm_line_atgloballabel(const char * label, struct bs3_asm_line * bs3lineLabel)
 {
-  /* TODO : return the bs3_asm_line that is represented by label, in context of parameter bs3line */
+  long i;
+  long l;
+  l = bs3_asm_line_size();
+  for (i = 0; i < l; i++)
+  {
+    if (bs3_asm_line_at(i, bs3lineLabel))
+    {
+      if (bs3lineLabel->label                                     >= 0   && 
+          bs3lineLabel->labelIsAlias                              == 0   && 
+          bs3lineLabel->line[bs3lineLabel->label]                 != '.' &&
+          strcmp(label, &bs3lineLabel->line[bs3lineLabel->label]) == 0)
+        return bs3lineLabel;
+    }
+  }
+  return ((void *)0);
+}
+
+struct bs3_asm_line * bs3_asm_line_atlabel(const char * label, struct bs3_asm_line * bs3line, struct bs3_asm_line * bs3lineLabel)
+{
+  /* determine if it is local(".xxx") / global ("yyyy") or local by global ("yyyy.xxxx")*/
+  char global_label[BS3_ASM_LINE_BUFFER];
+  char local_label[BS3_ASM_LINE_BUFFER];
+  int i;
+  int j;
+  int k;
+  long l;
+  l = bs3_asm_line_size();
+  if (label[0] == '.') 
+  {
+    for (i=0; label[i]; i++) local_label[i] = label[i];
+    local_label[i] = 0;
+    /* search global label at or above bs3line */
+    for (i = bs3line->asmIndex; i >= 0 ; i--)
+    {
+      if (bs3_asm_line_at(i, bs3lineLabel))
+      {
+        if (bs3lineLabel->label                      >= 0 &&
+            bs3lineLabel->labelIsAlias               == 0 &&
+            bs3lineLabel->line[bs3lineLabel->label]  != '.' )
+        {
+          /* then search local label attached to the global label and equals to local_label*/
+          j = bs3lineLabel->asmIndex;
+          for (k = j+1; k < l; k++)
+          {
+            if (bs3_asm_line_at(k, bs3lineLabel))
+            {
+              if (bs3lineLabel->label               >= 0 &&
+                  bs3lineLabel->labelIsAlias        == 0)
+              {    
+                  if (bs3lineLabel->line[bs3lineLabel->label]  != '.') return ((void *)0);
+                  if (strcmp( &bs3lineLabel->line[bs3lineLabel->label], local_label )) return bs3lineLabel;
+              }
+            }
+            else return ((void *)0);
+          }
+        }
+      }
+    }
+    return ((void *)0);
+  } 
+  else /* can be a global label or a local in context of a global */
+  {
+    /* capture the global label */
+    for (i=0; label[i] && label[i] != '.'; i++) global_label[i] = label[i];
+    global_label[i] = 0;
+    if (label[i]) /* there is a local label designation*/
+    {
+      /* capture the local label designation */
+      for (j=0; label[i]; i++, j++) local_label[j] = label[i];
+      local_label[j]=0;
+      /* search global label by global_label */
+      if (bs3_asm_line_atgloballabel(global_label, bs3lineLabel))
+      {
+        /* then search local label attached to the global label and equals to local,_label */
+          /* then search local label attached to the global label and equals to local_label*/
+          j = bs3lineLabel->asmIndex;
+          for (k = j+1; k < l; k++)
+          {
+            if (bs3_asm_line_at(k, bs3lineLabel))
+            {
+              if (bs3lineLabel->label               >= 0 &&
+                  bs3lineLabel->labelIsAlias        == 0)
+              {    
+                  if (bs3lineLabel->line[bs3lineLabel->label]  != '.') return ((void *)0);
+                  if (strcmp( &bs3lineLabel->line[bs3lineLabel->label], local_label )) return bs3lineLabel;
+              }
+            }
+            else return ((void *)0);
+          }
+
+      }
+      return ((void *)0);
+    }
+    else /* simply global label */
+    {
+      /* search global label by global label  */
+      return bs3_asm_line_atgloballabel(global_label, bs3lineLabel);
+    }
+  } 
 }
 
 /*

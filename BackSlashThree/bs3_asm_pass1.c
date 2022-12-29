@@ -745,7 +745,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
             case ' ':
             case '\t':
             case ':':
-              /* check if we have at least one character if it is a local label */
+              /* check if we have at least one character in case of local label */
               if (bs3line->line[bs3line->label] == '.' && bs3line->label == idxLine-1) 
               {
                 isok = 0;
