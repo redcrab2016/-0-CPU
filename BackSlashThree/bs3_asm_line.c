@@ -59,6 +59,49 @@ struct bs3_asm_line * bs3_asm_line_at(long index, struct bs3_asm_line * bs3line)
   return bs3_asm_line_copy(bs3line, bs3_asm + index);
 }
 
+
+char * bs3_asm_line_getFilename(struct bs3_asm_line * bs3line, char * filename)
+{
+  struct bs3_asm_line asmcursor;
+  struct bs3_asm_line * pasmcursor;
+  pasmcursor = &asmcursor;
+  int i;
+  int j;
+  int k;
+  int k2;
+  i = bs3line->asmIndex;
+  strcpy(filename, "<unknown file name>");
+  for (j = i ; j >= 0 ; j--) 
+  {
+    if (bs3_asm_line_at(j, pasmcursor))
+    {
+      if (asmcursor.linenum      != 0) continue;
+      if (asmcursor.label        >= 0 &&
+          asmcursor.labelIsAlias == 0 &&
+          asmcursor.ope          == -1)
+      {
+        for (i = strlen(asmcursor.line)+1; i < BS3_ASM_LINE_SIZE ; i++)
+        {
+          if (asmcursor.line[i] = ';' ) {
+            strcpy(filename, &asmcursor.line[i + 1]);
+            for (k = 0; filename[k]; k++)
+            {
+              if (filename[k] < ' ') 
+              {
+                filename[k] = 0;
+                break;
+              }
+            }
+            return filename;
+          }
+        }
+      }
+      return filename;
+    }
+  }
+  return filename;
+}
+
 struct bs3_asm_line * bs3_asm_line_atgloballabel(const char * label, struct bs3_asm_line * bs3lineLabel)
 {
   long i;

@@ -11,6 +11,7 @@ int bs3_asm_pass2()
     struct bs3_asm_line bs3lineLabel;
     struct bs3_asm_line * pbs3lineLabel;
     char label[BS3_ASM_LINE_BUFFER];
+    char filename[BS3_ASM_LINE_BUFFER];
     char c;
     int length;
     int i;
@@ -59,7 +60,7 @@ int bs3_asm_pass2()
                     if (bs3_asm_line_atlabel(label, pbs3line, pbs3lineLabel) == ((void *)0)) /* label not found */
                     {
                         err = BS3_ASM_PASS2_ERR_LABELNOTFOUND; /* not found error */
-                        bs3_asm_report(label, bs3line.linenum , bs3line.param[j] , err);
+                        bs3_asm_report(bs3_asm_line_getFilename(pbs3line, filename), bs3line.linenum , bs3line.param[j] , err);
                         break;
                     }
                     /* compute address of update thanks to asmpattern */
@@ -81,7 +82,7 @@ int bs3_asm_pass2()
                                     if (addr < -128 || addr > 127) 
                                     {
                                         err = BS3_ASM_PASS2_ERR_LABEL2FAR;
-                                        bs3_asm_report("<PASS 2>", bs3line.linenum , bs3line.param[j] , err);
+                                        bs3_asm_report(bs3_asm_line_getFilename(pbs3line, filename), bs3line.linenum , bs3line.param[j] , err);
                                         break;
                                     }
                                     bs3line.assembly[k] = (BYTE)(addr & 0x00FF);
@@ -91,7 +92,7 @@ int bs3_asm_pass2()
                                     if (addr < -32768 || addr > 32767) 
                                     {
                                         err = BS3_ASM_PASS2_ERR_LABEL2FAR;
-                                        bs3_asm_report("<PASS 2>", bs3line.linenum , bs3line.param[j] , err);
+                                        bs3_asm_report(bs3_asm_line_getFilename(pbs3line, filename), bs3line.linenum , bs3line.param[j] , err);
                                         break;
                                     }
                                     bs3line.assembly[k] = (BYTE)(addr & 0x00FF);
@@ -117,7 +118,7 @@ int bs3_asm_pass2()
         if (err != BS3_ASM_PASS1_PARSE_ERR_OK) break;
         /* write the value in asm_line and in bs3_asm_map */
         err = bs3_asm_line_commit(pbs3line);
-        if (err != BS3_ASM_PASS1_PARSE_ERR_OK) bs3_asm_report("<PASS 2>", bs3line.linenum , 1 , err);
+        if (err != BS3_ASM_PASS1_PARSE_ERR_OK) bs3_asm_report(bs3_asm_line_getFilename(pbs3line, filename), bs3line.linenum , 1 , err);
     } /* end of for each asm line */
     return err;
 }

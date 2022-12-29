@@ -32,7 +32,7 @@ missing ALIGN directive
 DONE : detect if assembly code at adress overlap an existing generated code
 DONE : macro recording
 DONE : macro expansion
-pass 2 : complete assembly with label address (abs and relative )
+DONE : pass 2 : complete assembly with label address (abs and relative )
 
 
 */

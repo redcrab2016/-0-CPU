@@ -11,7 +11,7 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
-#include "bs3.h"
+#include "bs3_asm.h"
 static sig_atomic_t end = 0;
 static sig_atomic_t timer_alarm = 0;
 
@@ -31,6 +31,7 @@ void main() {
   char line[120];
   WORD start = 0x1FFE;
   int i =0;
+  bs3_asm_file("test.asm");
   for (i = 0; i <= 255; i++) 
   {
     start = bs3_cpu_disassemble(start,(BYTE)i, 0xE0, 0x8F, 0xF8, line);

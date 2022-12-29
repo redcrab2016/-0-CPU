@@ -681,19 +681,19 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
     bs3line->line[idxLine] = oneLine[idxLine];
     idxLine++;
   }
-  bs3line->line[idxLine++] = '\n';     /* add an end of line sentinel                       */
-  bs3line->line[idxLine] = '0';        /* ASCIIZ null terminate string                      */
   /* check asm line is not too long */
   if (idxLine >= BS3_ASM_LINE_SIZE && oneLine[idxLine]) 
   {
     bs3line->column = BS3_ASM_LINE_SIZE;
     return BS3_ASM_PASS1_PARSE_ERR_LINETOOLONG;
   }
-  
+  bs3line->line[idxLine++] = '\n';     /* add an end of line sentinel                       */
+  bs3line->line[idxLine] = '0';        /* ASCIIZ null terminate string                      */
+ 
   /* parse the asm line */
   idxLine = 0;
   eol = 0;
-  while (c = oneLine[idxLine] && isok)
+  while ((c = oneLine[idxLine]) && isok)
   {
       if (c == '\n' || c== '\r')  /* \r should never occur ... already filtered out by the caller function */
       {
@@ -727,6 +727,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
               state = BS3_ASM_PASS1_PARSE_STATE_LABEL;
               bs3line->label = (SBYTE)idxLine;
               idxLine++;
+              break;
             default:
               isok = 0;
               err = BS3_ASM_PASS1_PARSE_ERR_BADLABEL;
@@ -1769,11 +1770,12 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
   }
   j++; /* fist character if there is no '/' found, otherwise first char after last '/' */
   while (filename[j] && filename[j] == '.') j++; /* do not take '.' in front of the file name: avoid confusion with local label */
-    sprintf(fileline, "_%s_%d:\n",&filename[j], fileId);
+    sprintf(fileline, "_%s_%d:  ;%s\n",&filename[j], fileId, &filename[j]);
   /* sanitize the label name */
   i = 0;
   while (fileline[i])
   {
+    if (fileline[i] == ':') break;
     switch (fileline[i])
     {
       case 'a' ... 'z':
@@ -1781,6 +1783,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
       case 'A' ... 'Z':
       case '0' ... '9':
       case '_':
+        break;
       default:      
         fileline[i] = '_';
     }
@@ -1809,14 +1812,16 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
     bs3_asm_report(filename, 0,0, BS3_ASM_PASS1_ERR_BADFILE) ;
     return BS3_ASM_PASS1_ERR_BADFILE;
   }
-  /* read a line in file */
-  lineidx = 0;
+ 
   /* explore file line per line */
   while (! feof(fp))
   {
-    while (! feof(fp) && lineidx < (BS3_ASM_LINE_BUFFER - 1))
+    /* read a line in file */
+    lineidx = 0;    
+    while ((! feof(fp)) && lineidx < (BS3_ASM_LINE_BUFFER - 1))
     {
       achar = fgetc(fp);
+      if (achar == -1) break;
       if (achar != '\r') /* take all character except 'carrier return' (CR, \r) */ 
       {
         fileline[lineidx] = (BYTE)achar;
@@ -1825,7 +1830,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
         if (achar < ' ' && achar >= 0 && achar != '\t')  /* all character below ' ' except \r \n \t are considered as illegal */
         {
           err = BS3_ASM_PASS1_PARSE_ILLEGALCHAR;
-          bs3_asm_report(filename, linenum + 1 ,lineidx, err) ;
+          bs3_asm_report(filename, linenum + 1 ,lineidx, err);
           break;
         }
       } else continue;
