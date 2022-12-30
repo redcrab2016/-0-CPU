@@ -1,6 +1,6 @@
 #include <stdio.h>
 //#include <stdlib.h>
-//#include <string.h>
+#include <string.h>
 //#include <errno.h>
 
 #include "bs3_asm.h"
@@ -1745,7 +1745,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro)
   BYTE isMacroRecording=0;
   char fileline[BS3_ASM_LINE_BUFFER];
   char macroline[BS3_ASM_LINE_BUFFER];
-  char includefilename[BS3_ASM_LINE_BUFFER];
+  char includefilename[BS3_ASM_LINE_BUFFER+10];
   /* check file : not null and not empty */
   if (filename == 0 || (filename[0] >= 0 && filename[0] <= ' ') ) 
   {

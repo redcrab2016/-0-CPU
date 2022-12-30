@@ -192,6 +192,7 @@ extern struct bs3_asm_line bs3_asm[]; /* to be managed as a sequential third par
 extern long bs3_asm_nbline; /* current size of bs3_asm usage */
 
 void bs3_asm_line_reset();
+char * bs3_asm_line_getFilename(struct bs3_asm_line * bs3line, char * filename);
 struct bs3_asm_line *  bs3_asm_line_copy(struct bs3_asm_line * dest, struct bs3_asm_line * src);
 struct bs3_asm_line * bs3_asm_line_first(struct bs3_asm_line * bs3line);
 long bs3_asm_line_size();
