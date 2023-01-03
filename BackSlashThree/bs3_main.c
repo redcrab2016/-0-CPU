@@ -31,7 +31,7 @@ void main() {
   char line[120];
   WORD start = 0x1FFE;
   int i =0;
-  bs3_asm_file("test.asm", "test.out",0);
+  bs3_asm_file("test.asm", "test.out.2",1);
   for (i = 0; i <= 255; i++) 
   {
     start = bs3_cpu_disassemble(start,(BYTE)i, 0xE0, 0x8F, 0xF8, line);

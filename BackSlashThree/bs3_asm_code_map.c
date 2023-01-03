@@ -80,7 +80,7 @@ int bs3_asm_code_map_save(const char * filename ,struct bs3_asm_code_map * bs3co
                         for (i = 0 ; bs3_asm_code_map_binsignature[i] ; i++) fputc(bs3_asm_code_map_binsignature[i], outfile);
                         break;
                     case BS3_ASM_CODE_MAP_TYPE_HEXA:
-                        for (i = 0 ; bs3_asm_code_map_hexsignature[i] ; i++) fputc(bs3_asm_code_map_binsignature[i], outfile);
+                        for (i = 0 ; bs3_asm_code_map_hexsignature[i] ; i++) fputc(bs3_asm_code_map_hexsignature[i], outfile);
                         fputc('\n', outfile);
                         break;
                     default:
@@ -128,10 +128,10 @@ int bs3_asm_code_map_save(const char * filename ,struct bs3_asm_code_map * bs3co
                         fputc(hexa_digit[(startBlock >> 4 ) & 0x0F], outfile); /* xxFx hexa address */
                         fputc(hexa_digit[ startBlock        & 0x0F], outfile); /* xxxF hexa address */
                         fputc(',', outfile); /* comma separator */
-                        fputc(hexa_digit[(startBlock >> 12) & 0x0F], outfile); /* Fxxx hexa length */
-                        fputc(hexa_digit[(startBlock >> 8 ) & 0x0F], outfile); /* xFxx hexa length */
-                        fputc(hexa_digit[(startBlock >> 4 ) & 0x0F], outfile); /* xxFx hexa length */
-                        fputc(hexa_digit[ startBlock        & 0x0F], outfile); /* xxxF hexa length */
+                        fputc(hexa_digit[(lenBlock >> 12) & 0x0F], outfile); /* Fxxx hexa length */
+                        fputc(hexa_digit[(lenBlock >> 8 ) & 0x0F], outfile); /* xFxx hexa length */
+                        fputc(hexa_digit[(lenBlock >> 4 ) & 0x0F], outfile); /* xxFx hexa length */
+                        fputc(hexa_digit[ lenBlock        & 0x0F], outfile); /* xxxF hexa length */
                         fputc('\n', outfile); /* line feed separator to hexa byte block */
                         /* write byte block in hexadecimal*/
                         while (startBlock < endBlock)
@@ -142,7 +142,8 @@ int bs3_asm_code_map_save(const char * filename ,struct bs3_asm_code_map * bs3co
                             if (lenBlock % 72 == 0)  fputc('\n', outfile);
                             lenBlock--;
                         }
-                        fputc('\n', outfile); 
+                        fputc('\n', outfile);
+                        state = BS3_ASM_CODE_MAP_SAVE_STATE_SEARCHSTART; 
                         break;
                     default:
                         err = BS3_ASM_CODE_MAP_ERR_UNEXPECTED;
