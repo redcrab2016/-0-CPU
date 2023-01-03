@@ -1,6 +1,6 @@
 #include "bs3_asm.h"
-
-int bs3_asm_file( const char * filename)
+#include "bs3_asm_code_map.h"
+int bs3_asm_file( const char * filename, const char * filenameout, int format)
 {
   int err;
   err = BS3_ASM_PASS1_PARSE_ERR_OK; 
@@ -21,7 +21,8 @@ int bs3_asm_file( const char * filename)
     return BS3_ASM_PASS2_FAILURE;
   }
 
-/* TODO : Generate binary file */
+/* Generate binary file */
+  err = bs3_asm_code_map_save(filenameout ,&bs3_asm_map, format );
 return err;
 }
 /*
