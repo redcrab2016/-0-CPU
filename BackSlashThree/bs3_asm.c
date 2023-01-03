@@ -13,7 +13,7 @@ int bs3_asm_file( const char * filename, const char * filenameout, int format)
     bs3_asm_report(filename, 0 , 0 , BS3_ASM_PASS1_FAILURE) ;
     return BS3_ASM_PASS1_FAILURE;
   }
-/* pass 2 */
+/* pass 2 : not true pass 2 : reuse memory model bs3_asm_line*/
   err = bs3_asm_pass2();
   if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
   {
@@ -36,5 +36,5 @@ DONE : detect if assembly code at adress overlap an existing generated code
 DONE : macro recording
 DONE : macro expansion
 DONE : pass 2 : complete assembly with label address (abs and relative )
-Generate binary file
+DONE : Generate binary file
 */

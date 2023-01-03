@@ -207,8 +207,7 @@ int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue);
 int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD address, const char * oneLine);
 int bs3_asm_pass1_file( const char * filename, WORD address, long asmIndexMacro);
 int bs3_asm_pass2();
-int bs3_asm_file( const char * filename);
-
+int bs3_asm_file( const char * filename, const char * filenameout, int format);
 /* BS3 CPU disassemble instruction definition structure */
 struct bs3_cpu_instr
 {
