@@ -1,5 +1,6 @@
 #include <string.h>
 #include "bs3_asm.h"
+#include "bs3_asm_code_map.h"
 
 struct bs3_asm_line bs3_asm[BS3_ASM_LINE_MAX]; /* to be managed as a sequential third party resource */
 long bs3_asm_nbline = 0; /* current size of bs3_asm usage */
@@ -11,11 +12,7 @@ void bs3_asm_line_reset()
 {
   long i;
   bs3_asm_nbline = 0;
-  for (i = 0; i < 65536; i++)
-  {
-    bs3_asm_map.code[i]=0;
-    bs3_asm_map.inUse[i] = 0;
-  }
+  bs3_asm_code_map_reset(&bs3_asm_map);
 }
 
 struct bs3_asm_line *  bs3_asm_line_copy(struct bs3_asm_line * dest, struct bs3_asm_line * src)

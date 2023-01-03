@@ -178,11 +178,6 @@ struct bs3_asm_line
   BYTE assembly[BS3_ASM_LINE_BUFFER];
 };
 
-struct bs3_asm_code_map
-{
-  BYTE code[65536];
-  BYTE inUse[65536];
-};
 
 extern struct bs3_asm_code_map  bs3_asm_map; 
 

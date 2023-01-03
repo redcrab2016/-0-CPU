@@ -1,3 +1,6 @@
+
+#include "bs3_type.h"
+
 #ifndef _BS3_H
 #define _BS3_H 1
 
@@ -255,15 +258,6 @@
 #define BS3_INT_TIMER       3
 #define BS3_INT_INPUT       4
 #define BS3_INT_DIVZERO     6
-
-/* BS3 internal types */
-#define BYTE    unsigned  char
-#define WORD    unsigned  short
-#define DWORD   unsigned  long
-#define SBYTE   signed    char
-#define SWORD   signed    short
-#define SDWORD  signed    long
-#define BIT     unsigned  short
 
 
 /* BS3 CPU Registers structure */
