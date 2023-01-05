@@ -3,7 +3,7 @@ m1  macro
     mov w{1},{1}
     jnc .loop    
     endm 
-
+label3  ORG     $F000
         ORG     $1000
         NOP
         JUMP    fin
@@ -14,15 +14,17 @@ label0:  OUT2  B0
   OUT   $E0
   OUT2  $E0
 label1:
-  db 12,13,14,"Hello world",0
+  db 12,$13,14,"Hello world",0
   LEAF_W0       fin
   LEAF_W1       label0
   LEAF_W2       label1
   LEAF_W3       label0
   LEAN_W0       label1
-  LEAN_W1       fin
+  LEAN_W1       label0
   LEAN_W2       label2
-  LEAN_W3       fin
+  LEAN_W3       label99
+  DW  0, $FFFF, $AB, 'a', label1,13
+label99  
   m1 0
   m1 1
   include "test.inc"
@@ -63,7 +65,7 @@ label1:
   IRET
   JUMP  fin
   CALL  fin
-  JZ    label2
+  JZ    label1
   JNZ   label2
   JC    label2
   JNC   label2
@@ -77,8 +79,8 @@ label1:
   JL    label2
   JG    label2
   JLE   label2
-  J     fin
-  C     label1
+  J     label2
+  C     label2
 label2:  
 aaaa equ 127
   LD    B0,[62000]

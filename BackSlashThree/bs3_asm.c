@@ -1,9 +1,15 @@
+#include <stdio.h>
 #include "bs3_asm.h"
 #include "bs3_asm_code_map.h"
-int bs3_asm_file( const char * filename, const char * filenameout, int format)
+int bs3_asm_file( const char * filename, const char * filenameout, const char * filenamereport, int format)
 {
   int err;
+  long l;
+  int i;
+  struct bs3_asm_line bs3line;
   WORD addressout;
+  FILE * freport;
+  char reportline[BS3_ASM_LINE_BUFFER*3];
   err = BS3_ASM_PASS1_PARSE_ERR_OK; 
   /* Init asm line set */
   bs3_asm_line_reset();
@@ -24,6 +30,20 @@ int bs3_asm_file( const char * filename, const char * filenameout, int format)
 
 /* Generate binary file */
   err = bs3_asm_code_map_save(filenameout ,&bs3_asm_map, format );
+  if (err == BS3_ASM_CODE_MAP_ERR_OK) /* if ok then  generate the report */
+  {
+    freport = fopen(filenamereport, "wt");
+    l = bs3_asm_line_size();
+    for (i = 0 ; i < l ; i++)
+    {
+      if (bs3_asm_line_at(i, &bs3line))
+      {
+          bs3_asm_line_tostring(&bs3line, reportline);
+          fprintf(freport, "%s\n", reportline);
+      }
+    }
+    fclose(freport);
+  }
 return err;
 }
 /*

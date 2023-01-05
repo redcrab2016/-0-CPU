@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "bs3_asm.h"
 #include "bs3_asm_code_map.h"
@@ -48,7 +49,7 @@ long bs3_asm_line_size()
 }
 
 /*
-  get thr asm line zeo based index asm line 
+  get the asm line zeo based index asm line 
 */
 struct bs3_asm_line * bs3_asm_line_at(long index, struct bs3_asm_line * bs3line)
 {
@@ -56,6 +57,62 @@ struct bs3_asm_line * bs3_asm_line_at(long index, struct bs3_asm_line * bs3line)
   return bs3_asm_line_copy(bs3line, bs3_asm + index);
 }
 
+/*
+ Stringify the parsed asm line
+ filename linenumber [label] ope param,... ; 0000 00 00 00 
+*/
+static const char digit_hexa[]="0123456789ABCDEF";
+
+char * bs3_asm_line_tostring(struct bs3_asm_line * bs3line, char * stringasmline)
+{
+  int i;
+  BYTE assembly;
+  char filename[255];
+  if (stringasmline == ((void *)0)) return ((void *)0);
+  if (bs3line == ((void *)0)) 
+  {
+    *stringasmline = 0;
+    return stringasmline;
+  }
+  /* generate '[filename:linenum:addrhexa] label ope param1,param2 ... ; hexa generated'*/
+  /*      [filename:linenum:addrhexa] label ope ... */
+  sprintf(stringasmline,"[%-14s:%0.5hd:%0.4hX] %s\t%s",
+          bs3_asm_line_getFilename (bs3line, filename),
+          (int)(bs3line->linenum),
+          bs3line->assemblyAddress,
+          ((bs3line->label == -1)?"":&bs3line->line[bs3line->label]),
+          ((bs3line->ope == -1)?"":&bs3line->line[bs3line->ope])
+          );
+  /*      param1,param2 ... */
+  for (i = 0 ; i < bs3line->nbParam ; i++)
+  {
+    if (i == 0)
+    {
+      strcat(stringasmline, "\t");
+    }
+    else
+    {
+      strcat(stringasmline, ", ");
+    }
+    strcat(stringasmline, &bs3line->line[bs3line->param[i]]);
+  } 
+  /* if there is some assembly */
+  for (i = 0 ; i < bs3line->assemblyLength ; i++)
+  {
+    if (i == 0)
+    {
+      strcat(stringasmline, "\t; ");
+    }
+    else
+    {
+      strcat(stringasmline, " ");
+    }
+    strncat(stringasmline,&digit_hexa[(bs3line->assembly[i] >> 4) & 0x0F], 1); 
+    strncat(stringasmline,&digit_hexa[bs3line->assembly[i] & 0x0F], 1); 
+  }
+
+  return stringasmline; 
+}
 
 char * bs3_asm_line_getFilename(struct bs3_asm_line * bs3line, char * filename)
 {
@@ -63,37 +120,30 @@ char * bs3_asm_line_getFilename(struct bs3_asm_line * bs3line, char * filename)
   struct bs3_asm_line * pasmcursor;
   pasmcursor = &asmcursor;
   int i;
-  int j;
   int k;
-  int k2;
   i = bs3line->asmIndex;
   strcpy(filename, "<unknown file name>");
-  for (j = i ; j >= 0 ; j--) 
+
+  if (bs3_asm_line_at(bs3line->fileasmindex, pasmcursor))
   {
-    if (bs3_asm_line_at(j, pasmcursor))
+    if (asmcursor.label        >= 0 &&
+        asmcursor.labelIsAlias == 0 &&
+        asmcursor.ope          == -1)
     {
-      if (asmcursor.linenum      != 0) continue;
-      if (asmcursor.label        >= 0 &&
-          asmcursor.labelIsAlias == 0 &&
-          asmcursor.ope          == -1)
+      for (i = strlen(asmcursor.line)+1; i < BS3_ASM_LINE_SIZE ; i++)
       {
-        for (i = strlen(asmcursor.line)+1; i < BS3_ASM_LINE_SIZE ; i++)
-        {
-          if (asmcursor.line[i] = ';' ) {
-            strcpy(filename, &asmcursor.line[i + 1]);
-            for (k = 0; filename[k]; k++)
+        if (asmcursor.line[i] == ';' ) {
+          strcpy(filename, &asmcursor.line[i + 1]);
+          for (k = 0; filename[k]; k++)
+          {
+            if (filename[k] < ' ') 
             {
-              if (filename[k] < ' ') 
-              {
-                filename[k] = 0;
-                break;
-              }
+              filename[k] = 0;
+              break;
             }
-            return filename;
           }
         }
       }
-      return filename;
     }
   }
   return filename;

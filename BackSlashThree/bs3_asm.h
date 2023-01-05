@@ -153,6 +153,7 @@ struct bs3_asm_line
 {
   /* asm_line_index */
   long asmIndex;
+  long fileasmindex;
   /* source file info */
   WORD linenum;
   char line[BS3_ASM_LINE_BUFFER];
@@ -186,6 +187,7 @@ extern const char * bs3_asm_message[];
 extern struct bs3_asm_line bs3_asm[]; /* to be managed as a sequential third party resource ( as a file) */
 extern long bs3_asm_nbline; /* current size of bs3_asm usage */
 
+char * bs3_asm_line_tostring(struct bs3_asm_line * bs3line, char * stringasmline);
 void bs3_asm_line_reset();
 char * bs3_asm_line_getFilename(struct bs3_asm_line * bs3line, char * filename);
 struct bs3_asm_line *  bs3_asm_line_copy(struct bs3_asm_line * dest, struct bs3_asm_line * src);
@@ -207,7 +209,8 @@ int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue);
 int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD address, const char * oneLine);
 int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, long asmIndexMacro);
 int bs3_asm_pass2();
-int bs3_asm_file( const char * filename, const char * filenameout, int format);
+int bs3_asm_file( const char * filename, const char * filenameout, const char * filenamereport, int format);
+
 /* BS3 CPU disassemble instruction definition structure */
 struct bs3_cpu_instr
 {

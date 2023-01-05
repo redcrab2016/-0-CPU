@@ -220,6 +220,7 @@ int bs3_asm_pass1_instructionCheck(struct bs3_asm_line * bs3line)
                 {
                   case BS3_ASM_PARAM_TYPE_WORD:
                   case BS3_ASM_PARAM_TYPE_BYTE: /* BYTE is compatible WORD */
+                  case BS3_ASM_PARAM_TYPE_LABEL: /* pass 2 will transform label into address (16 bits)*/
                     break;
                   default:
                     found = 0;
@@ -1755,7 +1756,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
   char fileline[BS3_ASM_LINE_BUFFER];
   char macroline[BS3_ASM_LINE_BUFFER];
   char includefilename[BS3_ASM_LINE_BUFFER+10];
-
+  long fileasmindex;
   *addressout = address;
   /* check file : not null and not empty */
   if (filename == 0 || (filename[0] >= 0 && filename[0] <= ' ') ) 
@@ -1809,6 +1810,8 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
     bs3_asm_report(filename, linenum , pbs3_asm->column , err) ;
     return err; 
   } 
+  fileasmindex = pbs3_asm->asmIndex;
+  pbs3_asm->fileasmindex = pbs3_asm->asmIndex;
   lineerr = bs3_asm_line_commit(pbs3_asm); /* validate the addition of the label */
   if (lineerr != BS3_ASM_PASS1_PARSE_ERR_OK && lineerr != BS3_ASM_PASS1_PARSE_ERR_NOPE) 
   {
@@ -1972,6 +1975,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
       bs3_asm_report(filename, linenum , pbs3_asm->column , err) ;
       break;
     }
+    pbs3_asm->fileasmindex = fileasmindex;
     if (pbs3_asm->ope == -1 && pbs3_asm->label>=0) /* we have a lonely label (a label but no operation)*/
     {
         err = bs3_asm_line_commit(pbs3_asm);

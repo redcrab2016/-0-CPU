@@ -64,7 +64,7 @@ int bs3_asm_pass2()
                         break;
                     }
                     /* compute address of update thanks to asmpattern */
-                    if (bs3line.ope == BS3_INSTR_DW)  /* may contains several label designation */
+                    if (bs3line.opeCode == BS3_INSTR_DW)  /* may contains several label designation */
                     {
                         /* address computation is param index * 2 */
                         /* write the label address value in assembly */
@@ -73,7 +73,7 @@ int bs3_asm_pass2()
                     }
                     else /* other instruction with a maximum of 1 label designation */ 
                     {
-                        for (k = 0; c = bs3Instr[bs3line.ope].asmpattern[k]; k++)
+                        for (k = 0; c = bs3Instr[bs3line.opeCode].asmpattern[k]; k++)
                         {
                             switch(c)
                             {
