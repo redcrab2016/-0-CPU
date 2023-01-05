@@ -27,7 +27,7 @@ struct bs3_asm_line *  bs3_asm_line_copy(struct bs3_asm_line * dest, struct bs3_
   {
     pDest[i] = pSrc[i];
   }
-  
+  return dest;
 }
 
 /*
