@@ -151,7 +151,7 @@ struct bs3_asm_line * bs3_asm_line_atlabel(const char * label, struct bs3_asm_li
                   bs3lineLabel->labelIsAlias        == 0)
               {    
                   if (bs3lineLabel->line[bs3lineLabel->label]  != '.') return ((void *)0);
-                  if (strcmp( &bs3lineLabel->line[bs3lineLabel->label], local_label )) return bs3lineLabel;
+                  if (strcmp( &bs3lineLabel->line[bs3lineLabel->label], local_label ) == 0 ) return bs3lineLabel;
               }
             }
             else return ((void *)0);

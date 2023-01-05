@@ -3,11 +3,12 @@
 int bs3_asm_file( const char * filename, const char * filenameout, int format)
 {
   int err;
+  WORD addressout;
   err = BS3_ASM_PASS1_PARSE_ERR_OK; 
   /* Init asm line set */
   bs3_asm_line_reset();
   /* pass 1 */
-  err =  bs3_asm_pass1_file(filename, 0 /* adress 0x0000 by default */,-1 /* not macro expansion mode*/);
+  err =  bs3_asm_pass1_file(filename, 0 /* adress 0x0000 by default */,&addressout, -1 /* not macro expansion mode*/);
   if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
   {
     bs3_asm_report(filename, 0 , 0 , BS3_ASM_PASS1_FAILURE) ;

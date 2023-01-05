@@ -134,15 +134,16 @@ int bs3_asm_code_map_save(const char * filename ,struct bs3_asm_code_map * bs3co
                         fputc(hexa_digit[ lenBlock        & 0x0F], outfile); /* xxxF hexa length */
                         fputc('\n', outfile); /* line feed separator to hexa byte block */
                         /* write byte block in hexadecimal*/
+                        lenBlock = 0;
                         while (startBlock < endBlock)
                         {
                             fputc(hexa_digit[(bs3codemap->code[startBlock] >> 4) & 0x0F ], outfile);
                             fputc(hexa_digit[ bs3codemap->code[startBlock]       & 0x0F ], outfile);
                             startBlock++;
-                            if (lenBlock % 72 == 0)  fputc('\n', outfile);
-                            lenBlock--;
+                            lenBlock++;
+                            if (lenBlock % 40 == 0)  fputc('\n', outfile);
                         }
-                        fputc('\n', outfile);
+                        if (lenBlock % 40 != 0) fputc('\n', outfile);
                         state = BS3_ASM_CODE_MAP_SAVE_STATE_SEARCHSTART; 
                         break;
                     default:

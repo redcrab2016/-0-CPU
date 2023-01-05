@@ -32,6 +32,7 @@ void main() {
   WORD start = 0x1FFE;
   int i =0;
   bs3_asm_file("test.asm", "test.out.2",1);
+  //bs3_asm_file("test.asm", "test.out",0);
   return;
   for (i = 0; i <= 255; i++) 
   {

@@ -1,3 +1,9 @@
+m1  macro
+.loop
+    mov w{1},{1}
+    jnc .loop    
+    endm 
+
         ORG     $1000
         NOP
         JUMP    fin
@@ -17,6 +23,9 @@ label1:
   LEAN_W1       fin
   LEAN_W2       label2
   LEAN_W3       fin
+  m1 0
+  m1 1
+  include "test.inc"
   CLC
   CLZ
   CLV
@@ -72,7 +81,9 @@ label1:
   C     label1
 label2:  
 aaaa equ 127
-  LD    B0,[F88F]
+  LD    B0,[62000]
+  LD    B0,[$F88F]
+  LD    B0,[label2]
   LD    B0,[W2]
   LD    B0,[W2 + $8F]
   LD    B0, [   W2 + $8F]
@@ -90,7 +101,9 @@ aaaa equ 127
   POP_B5
   POP_B6
   POP_B7
-  LD    W0,[F88F]
+  LD    W0,[$F88F]
+  LD    W0,[62000]
+  LD    W0,[label2]
   LD    W0,[W2]
   LD    W0,[W2 + aaaa]
   LD    W0,[SP + W2]
@@ -106,7 +119,9 @@ aaaa equ 127
   POPF
   POPPC
   DROP
-  SR    B0,[F88F]
+  SR    B0,[$F88F]
+  SR    B0,[63432]
+  SR    B0,[label2]
   SR    B0,[W2]
   SR    B0,[W2+80]
   SR    B0,[SP + W2]
