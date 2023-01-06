@@ -3,8 +3,8 @@
 #include "bs3_asm_code_map.h"
 
 
-static const char bs3_asm_code_map_binsignature[] = "BS3BIN01"; 
-static const char bs3_asm_code_map_hexsignature[] = "BS3HEX01"; 
+static const char bs3_asm_code_map_binsignature[] = "CT4CJO12"; /* "BS3BIN01" with next character  */ 
+static const char bs3_asm_code_map_hexsignature[] = "CT4IFY12"; /* "BS3HEX01" with next character  */ 
 static const char * hexa_digit="0123456789ABCDEF";
 
 const char * bs3_asm_code_map_message[]=
@@ -77,10 +77,10 @@ int bs3_asm_code_map_save(const char * filename ,struct bs3_asm_code_map * bs3co
                 switch (codemaptype)
                 {
                     case BS3_ASM_CODE_MAP_TYPE_BINARY:
-                        for (i = 0 ; bs3_asm_code_map_binsignature[i] ; i++) fputc(bs3_asm_code_map_binsignature[i], outfile);
+                        for (i = 0 ; bs3_asm_code_map_binsignature[i] ; i++) fputc(bs3_asm_code_map_binsignature[i]-1, outfile);
                         break;
                     case BS3_ASM_CODE_MAP_TYPE_HEXA:
-                        for (i = 0 ; bs3_asm_code_map_hexsignature[i] ; i++) fputc(bs3_asm_code_map_hexsignature[i], outfile);
+                        for (i = 0 ; bs3_asm_code_map_hexsignature[i] ; i++) fputc(bs3_asm_code_map_hexsignature[i]-1, outfile);
                         fputc('\n', outfile);
                         break;
                     default:
@@ -185,9 +185,192 @@ int bs3_asm_code_map_save(const char * filename ,struct bs3_asm_code_map * bs3co
     return err;
 }
 
+
+static int bs3_asm_code_map_load_(FILE * infile, struct bs3_asm_code_map * bs3codemap, int acceptOverlap)
+{
+    int i;
+    int err = BS3_ASM_CODE_MAP_ERR_OK;
+    int achar;
+    int isBin;
+    int isHex;
+    long address;
+    long length;
+    int abyte;
+    int isok;
+    int state;
+    int foundSignatureOnce;
+    foundSignatureOnce = 0;
+
+    while (!feof(infile)) /* consume the file completly*/
+    {
+        /* check if it is a known file format */
+        isBin = 1;
+        isHex = 1;
+        for (i =0 ; bs3_asm_code_map_binsignature[i] && bs3_asm_code_map_hexsignature[i] ; i++) 
+        {
+            achar = fgetc(infile);
+            if (achar < 0 || (bs3_asm_code_map_binsignature[i] !=  (char)(achar+1) && bs3_asm_code_map_hexsignature[i] != (char)(achar+1))) 
+            {
+                if ((achar < 0) && (!foundSignatureOnce) ) return BS3_ASM_CODE_MAP_ERR_LOADBADFILE;
+                if ((achar < 0) && (foundSignatureOnce) ) return BS3_ASM_CODE_MAP_ERR_OK;
+                isBin = 1;
+                isHex = 1;
+                i = -1;
+            }
+            if (isBin && bs3_asm_code_map_binsignature[i] !=  (char)achar) isBin = 0;
+            if (isHex && bs3_asm_code_map_hexsignature[i] !=  (char)achar) isHex = 0;
+        }
+
+        /* from here the file must be recognised as Binary or Hex : must be one or the other*/
+        if (isBin && isHex) /* must never occu*/
+        {
+            return BS3_ASM_CODE_MAP_ERR_UNEXPECTED;
+        }
+
+        foundSignatureOnce = 1;
+        if (isBin)
+        {
+            isok    = 1;
+            while (isok)
+            {
+                address = 0;
+                length  = 0;
+                /* load address*/
+                achar   = fgetc(infile);
+                isok    = isok && (achar != EOF);
+                if (!isok) break; /* if EOF at address reading then consider it as ok */
+                address = achar & 0x00FF;
+                achar   = fgetc(infile);
+                isok    = isok && (achar != EOF);
+                address = (address << 8) | (achar & 0x00FF);
+                /* load length */
+                achar   = fgetc(infile);
+                isok    = isok && (achar != EOF);
+                length  = achar & 0x00FF;
+                achar   = fgetc(infile);
+                isok    = isok && (achar != EOF);
+                length  = (length << 8) | (achar & 0x00FF);
+                if (!isok) 
+                {   
+                    fclose(infile);
+                    return BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF;
+                }
+                /* load byte block */
+                if (length == 0 ) break; /* detect logical end of file */
+                while (length)
+                {
+                    achar = fgetc(infile);
+                    isok    = isok && (achar != EOF);
+                    if (!isok) 
+                    {   
+                        return BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF;
+                    }
+                    if (bs3codemap->inUse[address] && acceptOverlap == 0) 
+                    {
+                        return BS3_ASM_CODE_MAP_ERR_LOADOVERLAP;
+                    }
+                    bs3codemap->code[address] = (char)achar;
+                    bs3codemap->inUse[address] = 1;
+                    address++;
+                    length--;
+                }
+            }
+            
+        }
+        if (isHex)
+        {
+            i = 0;
+            isok    = 1;
+            state   = BS3_ASM_CODE_MAP_LOAD_STATE_GETADDRESS;
+            while (isok)
+            {
+                /* read a byte en hexa
+                take two hexa digit et get the byte value, other character are ignotred */
+                achar = fgetc(infile);
+                isok = isok && (achar != EOF);
+                if (!isok) break;
+                switch (achar)
+                {   
+                    case '0' ... '9':
+                        achar -= '0';
+                        break;
+                    case 'a' ... 'z':
+                        achar -= 32;
+                    case 'A' ... 'Z':
+                        achar -= 'A' +  10;
+                        break;
+                    default:
+                        achar = 255;
+                        break;
+                }
+                if (achar == 255) continue;
+
+                switch(state)
+                {
+                    case BS3_ASM_CODE_MAP_LOAD_STATE_GETADDRESS:
+                        if (i == 0) 
+                        { 
+                            address = 0;
+                        }
+                        address =  (address << 4) | achar;
+                        i++;
+                        if (i == 4) 
+                        {
+                            i = 0;
+                            state = BS3_ASM_CODE_MAP_LOAD_STATE_GETLENGTH;
+                        }
+                        break;
+                    case BS3_ASM_CODE_MAP_LOAD_STATE_GETLENGTH:
+                        if (i == 0)
+                        {
+                            length = 0;
+                        }
+                        length = (length << 4) | achar;
+                        i++;
+                        if (i == 4)
+                        {
+                            i = 0;
+                            if (length == 0) 
+                            {
+                                state = BS3_ASM_CODE_MAP_LOAD_STATE_END;
+                                isok = 0;
+                                break;
+                            }
+                            state = BS3_ASM_CODE_MAP_LOAD_STATE_GETBLOCK;
+                        }   
+                        break;
+                    case BS3_ASM_CODE_MAP_LOAD_STATE_GETBLOCK:
+                        if (i == 0)
+                        {
+                            abyte = 0;
+                        }
+                        abyte = (abyte << 4) | achar;
+                        i++;
+                        if (i == 2)
+                        {
+                            i = 0;
+                            if (bs3codemap->inUse[address] && acceptOverlap == 0) 
+                            {
+                                return BS3_ASM_CODE_MAP_ERR_LOADOVERLAP;
+                            }                        
+                            bs3codemap->code[address] = (char)(abyte & 0x00FF);
+                            bs3codemap->inUse[address] = 1;
+                            length--;
+                            if (length == 0) state = BS3_ASM_CODE_MAP_LOAD_STATE_GETADDRESS;
+                            address++;
+                        }
+                        break;
+                }
+            }
+            if (feof(infile) && state != BS3_ASM_CODE_MAP_LOAD_STATE_END) err = BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF;
+        }
+    } /* end of of while not EOF */
+    return err;
+}
+
 /**
  * load an hexa or binary bs3 file,
- * multiple load is allowed as long as there is no overlap of memory block
+ * multiple load is allowed as long as there is no overlap of memory block (acceptOverlap)
 */
 int bs3_asm_code_map_load(const char * filename ,struct bs3_asm_code_map * bs3codemap, int acceptOverlap)
 {
@@ -210,167 +393,7 @@ int bs3_asm_code_map_load(const char * filename ,struct bs3_asm_code_map * bs3co
         ) return BS3_ASM_CODE_MAP_ERR_BADLOADCALL;
     infile = fopen(filename, "rb");
     if (infile == ((void *)0)) return BS3_ASM_CODE_MAP_ERR_LOADFILE;
-
-    /* check if it is a known file format */
-    isBin = 1;
-    isHex = 1;
-    for (i =0 ; bs3_asm_code_map_binsignature[i] && bs3_asm_code_map_hexsignature[i] ; i++) 
-    {
-        achar = fgetc(infile);
-        if (achar < 0 || (bs3_asm_code_map_binsignature[i] !=  (char)achar && bs3_asm_code_map_hexsignature[i] != (char)achar)) 
-        {
-            fclose(infile);
-            return BS3_ASM_CODE_MAP_ERR_LOADBADFILE;
-        }
-        if (isBin && bs3_asm_code_map_binsignature[i] !=  (char)achar) isBin = 0;
-        if (isHex && bs3_asm_code_map_hexsignature[i] !=  (char)achar) isHex = 0;
-    }
-
-    /* from here the file must be recognised as Binary or Hex : must be one or the other*/
-    if (isBin && isHex) /* must never occu*/
-    {
-        fclose(infile);
-        return BS3_ASM_CODE_MAP_ERR_UNEXPECTED;
-    }
-    if (isBin)
-    {
-        isok    = 1;
-        while (isok)
-        {
-            address = 0;
-            length  = 0;
-            /* load address*/
-            achar   = fgetc(infile);
-            isok    = isok && (achar != EOF);
-            if (!isok) break; /* if EOF at address reading then consider it as ok */
-            address = achar & 0x00FF;
-            achar   = fgetc(infile);
-            isok    = isok && (achar != EOF);
-            address = (address << 8) | (achar & 0x00FF);
-            /* load length */
-            achar   = fgetc(infile);
-            isok    = isok && (achar != EOF);
-            length  = achar & 0x00FF;
-            achar   = fgetc(infile);
-            isok    = isok && (achar != EOF);
-            length  = (length << 8) | (achar & 0x00FF);
-            if (!isok) 
-            {   
-                fclose(infile);
-                return BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF;
-            }
-            /* load byte block */
-            if (length == 0 ) break; /* detect logical end of file */
-            while (length)
-            {
-                achar = fgetc(infile);
-                isok    = isok && (achar != EOF);
-                if (!isok) 
-                {   
-                    fclose(infile);
-                    return BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF;
-                }
-                if (bs3codemap->inUse[address] && acceptOverlap == 0) 
-                {
-                    fclose(infile);
-                    return BS3_ASM_CODE_MAP_ERR_LOADOVERLAP;
-                }
-                bs3codemap->code[address] = (char)achar;
-                bs3codemap->inUse[address] = 1;
-                address++;
-                length--;
-            }
-        }
-        
-    }
-    if (isHex)
-    {
-        i = 0;
-        isok    = 1;
-        state   = BS3_ASM_CODE_MAP_LOAD_STATE_GETADDRESS;
-        while (isok)
-        {
-            /* read a byte en hexa
-              take two hexa digit et get the byte value, other character are ignotred */
-            achar = fgetc(infile);
-            isok = isok && (achar != EOF);
-            if (!isok) break;
-            switch (achar)
-            {   
-                case '0' ... '9':
-                    achar -= '0';
-                    break;
-                case 'a' ... 'z':
-                    achar -= 32;
-                case 'A' ... 'Z':
-                    achar -= 'A' +  10;
-                    break;
-                default:
-                    achar = 255;
-                    break;
-            }
-            if (achar == 255) continue;
-
-            switch(state)
-            {
-                case BS3_ASM_CODE_MAP_LOAD_STATE_GETADDRESS:
-                    if (i == 0) 
-                    { 
-                        address = 0;
-                    }
-                    address =  (address << 4) | achar;
-                    i++;
-                    if (i == 4) 
-                    {
-                        i = 0;
-                        state = BS3_ASM_CODE_MAP_LOAD_STATE_GETLENGTH;
-                    }
-                    break;
-                case BS3_ASM_CODE_MAP_LOAD_STATE_GETLENGTH:
-                    if (i == 0)
-                    {
-                        length = 0;
-                    }
-                    length = (length << 4) | achar;
-                    i++;
-                    if (i == 4)
-                    {
-                        i = 0;
-                        if (length == 0) 
-                        {
-                            state = BS3_ASM_CODE_MAP_LOAD_STATE_END;
-                            isok = 0;
-                            break;
-                        }
-                        state = BS3_ASM_CODE_MAP_LOAD_STATE_GETBLOCK;
-                    }   
-                    break;
-                case BS3_ASM_CODE_MAP_LOAD_STATE_GETBLOCK:
-                    if (i == 0)
-                    {
-                        abyte = 0;
-                    }
-                    abyte = (abyte << 4) | achar;
-                    i++;
-                    if (i == 2)
-                    {
-                        i = 0;
-                        if (bs3codemap->inUse[address] && acceptOverlap == 0) 
-                        {
-                            fclose(infile);
-                            return BS3_ASM_CODE_MAP_ERR_LOADOVERLAP;
-                        }                        
-                        bs3codemap->code[address] = (char)(abyte & 0x00FF);
-                        bs3codemap->inUse[address] = 1;
-                        length--;
-                        if (length == 0) state = BS3_ASM_CODE_MAP_LOAD_STATE_GETADDRESS;
-                        address++;
-                    }
-                    break;
-            }
-        }
-        if (feof(infile) && state != BS3_ASM_CODE_MAP_LOAD_STATE_END) err = BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF;
-    }
+    err = bs3_asm_code_map_load_(infile, bs3codemap, acceptOverlap);
     fclose(infile);
     return err;
 }
