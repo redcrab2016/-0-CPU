@@ -1,3 +1,4 @@
+; test
 m1  macro
 .loop
     mov w{1},{1}
