@@ -29,9 +29,19 @@ static void sighandler(int signo)
 char linebuffer[1024];
 
 static void debug(struct bs3_cpu_data * pbs3)
-{
-  bs3_cpu_disassemble(pbs3, linebuffer);
+{ 
+  WORD pc;
+  int i;
+  bs3_cpu_state(pbs3, linebuffer);
+  printf("%s",linebuffer);
+  pc = bs3_cpu_disassemble(pbs3, linebuffer);
   printf("%s\n",linebuffer);
+  for (i = 0 ; i < 3 ; i++)
+  {
+    pc = bs3_cpu_disassemble_(pc, pbs3->m[pc], pbs3->m[(pc+1) & 0xFFFF], pbs3->m[(pc+2) & 0xFFFF], pbs3->m[(pc+3) & 0xFFFF], linebuffer);
+    printf("%s\n",linebuffer);
+  }
+  printf("\n");
 }
 
 void main() {
