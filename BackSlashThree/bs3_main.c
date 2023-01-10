@@ -31,7 +31,14 @@ void main() {
   char line[120];
   WORD start = 0x1FFE;
   int i =0;
-  bs3_asm_file("test.asm", "test.out.2","test.report.txt",1);
+  struct bs3_asm_code_map codemap;
+  
+  if (bs3_asm_file("test.asm", "test.out.2","test.report.txt",1) == BS3_ASM_PASS1_PARSE_ERR_OK)
+  {
+    bs3_asm_code_map_reset(&codemap);
+    bs3_asm_code_map_load("test.out.2",&codemap,0);
+    bs3_hyper_main(&codemap);
+  }
   //bs3_asm_file("test.asm", "test.out",0);
   return;
   for (i = 0; i <= 255; i++) 

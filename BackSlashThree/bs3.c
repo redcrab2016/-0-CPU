@@ -13,6 +13,7 @@
 
 #include "bs3.h"
 
+
 /* Signal handling (end process, timer alarm) */
 static sig_atomic_t end = 0;
 static sig_atomic_t timer_alarm = 0;
@@ -1860,10 +1861,13 @@ void bs3_hyper_reset_memory(struct bs3_cpu_data * pbs3)
   for (i=0; i <= 0xFFFF; i++) pbs3->m[i] = 0;
 }
 
-void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, BYTE * data, long length, WORD address)
+void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, struct bs3_asm_code_map * pcodemap)
 {
   long i;
-  for (i=0; i < length; i++) pbs3->m[(address + i) & 0xFFFF] = data[i];
+  for (i=0; i < 65536; i++) 
+  { 
+    if (pcodemap->inUse[i])  pbs3->m[i & 0xFFFF] = pcodemap->code[i];
+  }
 }
 
 /* process core I/O between Hypervisor and bs3 CPU */
@@ -1934,7 +1938,7 @@ void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
 }
 
 
-void bs3_hyper_main(BYTE * program, WORD programsize)
+void bs3_hyper_main(struct bs3_asm_code_map * pcodemap) /* BYTE * program, WORD programsize) */
 {
     struct termios oldtio, curtio;
     struct sigaction sa;
@@ -1967,7 +1971,7 @@ void bs3_hyper_main(BYTE * program, WORD programsize)
     struct bs3_cpu_data cpu;
     /* prepare cpu memory */
     bs3_hyper_reset_memory(&cpu);
-    bs3_hyper_load_memory(&cpu, program, programsize, 0);
+    bs3_hyper_load_memory(&cpu, pcodemap);
     /* initialise cpu */
     bs3_cpu_init(&cpu);
     /* main loop */
@@ -1981,7 +1985,7 @@ void bs3_hyper_main(BYTE * program, WORD programsize)
           break;
         case BS3_STATUS_RESET: /* CPU reset requested */
           bs3_hyper_reset_memory(&cpu);
-          bs3_hyper_load_memory(&cpu, program, programsize, 0);
+          bs3_hyper_load_memory(&cpu, pcodemap); /*program, programsize, 0); */
           break;
         case BS3_STATUS_DEFAULT:
           /* Nothing particular to do for the hypervisor */

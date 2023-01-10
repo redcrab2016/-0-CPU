@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "bs3_asm.h"
-#include "bs3_asm_code_map.h"
+
 int bs3_asm_file( const char * filename, const char * filenameout, const char * filenamereport, int format)
 {
   int err;

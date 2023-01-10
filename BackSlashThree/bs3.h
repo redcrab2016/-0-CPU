@@ -1,6 +1,6 @@
 
 #include "bs3_type.h"
-
+#include "bs3_asm_code_map.h"
 #ifndef _BS3_H
 #define _BS3_H 1
 
@@ -348,8 +348,8 @@ void bs3_cpu_write_word(struct bs3_cpu_data * pbs3, WORD address, WORD data);
 WORD bs3_cpu_read_word(struct bs3_cpu_data * pbs3, WORD address);
 void bs3_cpu_exec(struct bs3_cpu_data * pbs3);
 void bs3_hyper_reset_memory(struct bs3_cpu_data * pbs3);
-void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, BYTE * data, long length, WORD address);
+void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, struct bs3_asm_code_map * pcodemap);
 void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3);
-void bs3_hyper_main(BYTE * program, WORD programsize);
+void bs3_hyper_main(struct bs3_asm_code_map * pcodemap);
 
 #endif
