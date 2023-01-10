@@ -43,7 +43,7 @@ fcntl(socketfd, F_SETFL, fdf | O_NONBLOCK); // add non blocking flag to socket f
         t [count] : execute step 'count' times, or only once if 'count' not provided (with a 'r' trace after each step)
         s : pause cpu execution when running
         r [ register [value]] : if 'r' then show all register value, 'r register' show 'register' value, 'r register value' set 'value' to 'register'
-           register : PC, SP, W0-3, B0-3, I, V, N, Z, C 
+           register : PC, SP, W0-3, B0-7, I, V, N, Z, C 
         e address value : set 'value' byte to address
         E address value : set 'value' word to address (little endian)
         d [address] : dump data at adress, or continue dump from previous dump address
