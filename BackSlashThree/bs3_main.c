@@ -26,6 +26,14 @@ static void sighandler(int signo)
   }
 }
 
+char linebuffer[1024];
+
+static void debug(struct bs3_cpu_data * pbs3)
+{
+  bs3_cpu_disassemble(pbs3, linebuffer);
+  printf("%s\n",linebuffer);
+}
+
 void main() {
   struct bs3_registers reg;
   char line[120];
@@ -37,13 +45,13 @@ void main() {
   {
     bs3_asm_code_map_reset(&codemap);
     bs3_asm_code_map_load("test.out.2",&codemap,0);
-    bs3_hyper_main(&codemap);
+    bs3_hyper_main(&codemap,&debug);
   }
   //bs3_asm_file("test.asm", "test.out",0);
   return;
   for (i = 0; i <= 255; i++) 
   {
-    start = bs3_cpu_disassemble(start,(BYTE)i, 0xE0, 0x8F, 0xF8, line);
+    start = bs3_cpu_disassemble_(start,(BYTE)i, 0xE0, 0x8F, 0xF8, line);
     printf("%s\n",line);
   }
   struct bs3_cpu_data cpu;
