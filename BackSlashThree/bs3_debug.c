@@ -1,4 +1,4 @@
-/* debug of BS3 CPU */
+/* debug of BS3 CPU through telnet socket */
 #include <stdio.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -31,16 +31,16 @@ struct bs3_debug_data
     int n; /* current size of buff */
 };
 
-/*
+/* (NOTE for non blocking filedescriptor)
 int fdf; file descriptor flag
 fdf = fcntl(socketfd ,F_GETFL, 0); // get current flag of socket file descriptor 
 fcntl(socketfd, F_SETFL, fdf | O_NONBLOCK); // add non blocking flag to socket file descriptor
 */
 /*
-     client command : (address always 4 hexa digits, count is decimal )
+     client command : (address always 4 hexa digits, count is decimal, value is 0/1 or 2/4 hexa digits )
         u [address] : unassemble code at 'address' or at PC if 'address' not provided
         g [address] : unpause CPU until 'address' is reached, or continue as long as no pause is requested  ('s' command) if address not provided
-        t [count] : execute step 'count' times, or only once if 'count' not provided (with a 'r' trace after each step)
+        t [count] : execute one step 'count' times, or only once if 'count' not provided (with a 'r' trace after each step)
         s : pause cpu execution when running
         r [ register [value]] : if 'r' then show all register value, 'r register' show 'register' value, 'r register value' set 'value' to 'register'
            register : PC, SP, W0-3, B0-7, I, V, N, Z, C 
@@ -50,7 +50,8 @@ fcntl(socketfd, F_SETFL, fdf | O_NONBLOCK); // add non blocking flag to socket f
         z : CPU reset (with data reset)
         Z : CPU halt (with debugger deconnection)
         q : quit debugger (deconnection but CPU program and state continue )
-
+        h : short help
+  bs3_debug(...) function is the function to provide as debug provider to bs3_hyper_main(....) function 
 */
 void bs3_debug(struct bs3_cpu_data * pbs3)
 {
