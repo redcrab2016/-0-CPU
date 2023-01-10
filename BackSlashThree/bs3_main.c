@@ -38,7 +38,12 @@ static void debug(struct bs3_cpu_data * pbs3)
   printf("%s\n",linebuffer);
   for (i = 0 ; i < 3 ; i++)
   {
-    pc = bs3_cpu_disassemble_(pc, pbs3->m[pc], pbs3->m[(pc+1) & 0xFFFF], pbs3->m[(pc+2) & 0xFFFF], pbs3->m[(pc+3) & 0xFFFF], linebuffer);
+    pc = bs3_cpu_disassemble_(pc,
+                              pbs3->m[pc], 
+                              pbs3->m[(pc+1) & 0xFFFF], 
+                              pbs3->m[(pc+2) & 0xFFFF], 
+                              pbs3->m[(pc+3) & 0xFFFF], 
+                              linebuffer);
     printf("%s\n",linebuffer);
   }
   printf("\n");
