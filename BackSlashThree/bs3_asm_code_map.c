@@ -217,8 +217,8 @@ static int bs3_asm_code_map_load_(FILE * infile, struct bs3_asm_code_map * bs3co
                 isHex = 1;
                 i = -1;
             }
-            if (isBin && bs3_asm_code_map_binsignature[i] !=  (char)achar) isBin = 0;
-            if (isHex && bs3_asm_code_map_hexsignature[i] !=  (char)achar) isHex = 0;
+            if (isBin && (bs3_asm_code_map_binsignature[i] !=  (char)achar+1)) isBin = 0;
+            if (isHex && (bs3_asm_code_map_hexsignature[i] !=  (char)achar+1)) isHex = 0;
         }
 
         /* from here the file must be recognised as Binary or Hex : must be one or the other*/
@@ -297,7 +297,8 @@ static int bs3_asm_code_map_load_(FILE * infile, struct bs3_asm_code_map * bs3co
                     case 'a' ... 'z':
                         achar -= 32;
                     case 'A' ... 'Z':
-                        achar -= 'A' +  10;
+                        achar -= 'A' ;
+                        achar += 10;
                         break;
                     default:
                         achar = 255;

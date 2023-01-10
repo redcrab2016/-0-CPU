@@ -350,6 +350,6 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3);
 void bs3_hyper_reset_memory(struct bs3_cpu_data * pbs3);
 void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, struct bs3_asm_code_map * pcodemap);
 void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3);
-void bs3_hyper_main(struct bs3_asm_code_map * pcodemap);
+void bs3_hyper_main(struct bs3_asm_code_map * pcodemap,void (*debugf)(struct bs3_cpu_data *));
 
 #endif

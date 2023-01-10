@@ -1857,8 +1857,8 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
 /* Hypervisor */
 void bs3_hyper_reset_memory(struct bs3_cpu_data * pbs3)
 {
-  WORD i;
-  for (i=0; i <= 0xFFFF; i++) pbs3->m[i] = 0;
+  long i;
+  for (i=0; i < 65536; i++) pbs3->m[i] = 0;
 }
 
 void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, struct bs3_asm_code_map * pcodemap)
@@ -1938,7 +1938,7 @@ void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
 }
 
 
-void bs3_hyper_main(struct bs3_asm_code_map * pcodemap) /* BYTE * program, WORD programsize) */
+void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs3_cpu_data *)) /* BYTE * program, WORD programsize) */
 {
     struct termios oldtio, curtio;
     struct sigaction sa;
@@ -1977,7 +1977,9 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap) /* BYTE * program, WORD 
     /* main loop */
     while (!end) {
       bs3_hyper_coreIO(&cpu);
+      if (debugf) (*debugf)(&cpu);
       bs3_cpu_exec(&cpu);
+      
       switch (cpu.status)
       {
         case BS3_STATUS_HALT: /* End of CPU, then end of hypervisor */

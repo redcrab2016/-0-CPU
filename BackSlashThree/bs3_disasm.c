@@ -4,7 +4,13 @@ static const char * hexa_digit="0123456789ABCDEF";
  
 /* disassemble instruction thanks to the 4 bytes (a, b, c and d) located at particular PC address */
 /* return the location of the next instruction */  
-WORD bs3_cpu_disassemble(WORD PC, BYTE a, BYTE b, BYTE c, BYTE d, char * result) {
+
+WORD bs3_cpu_disassemble(struct bs3_cpu_data * pbs3, char * result)
+{
+  return bs3_cpu_disassemble_(pbs3->r.PC, pbs3->m[pbs3->r.PC], pbs3->m[(pbs3->r.PC+1) & 0xFFFF], pbs3->m[(pbs3->r.PC+2) & 0xFFFF], pbs3->m[(pbs3->r.PC+3) & 0xFFFF], result);
+}
+
+WORD bs3_cpu_disassemble_(WORD PC, BYTE a, BYTE b, BYTE c, BYTE d, char * result) {
   struct bs3_cpu_instr * instr;
   instr = &bs3Instr[a];
   int idx = 0; /* index in 'result' char array */

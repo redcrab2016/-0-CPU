@@ -1,13 +1,17 @@
 ; test -
+  org $0000
+  DW start
 m1  macro
 .loop
     mov w{1},{1}
     jnc .loop    
     endm 
 label3  ORG     $F000
-        ORG     $1000
+        ORG     $0400
+start:        
         NOP
         JUMP    fin
+        
   NOP
   IN    B0
   OUT   B0
