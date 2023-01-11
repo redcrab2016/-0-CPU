@@ -25,10 +25,12 @@
 
 struct bs3_debug_data
 {
+    struct bs3_cpu_data * pbs3;         /* BS3 cpu object reference             */
     int debug_state;                    /* cpu debug state , running or stopped */
     int comm_state;                     /* socket communication state           */
     int debug_stop_at;                  /* address where the CPU must stop      */
     int debug_step_count;               /* how may step                         */
+    int lastPC;                         /* last final PC at last unassemble cmd */
     /* communication tech data */
     int count;                          /* latency counter                      */
     int port;                           /* listening port                       */
@@ -92,7 +94,7 @@ void bs3_debug_comm_send(struct bs3_debug_data * pbs3debug, const char * msg)
 {
     int isok;
     isok = 0;
-    if ( pbs3debug             == 0                              ||
+    if ( pbs3debug             == ((void *)0)                    ||
          pbs3debug->comm_state != BS3_DEBUG_COMM_STATE_CONNECTED || 
          pbs3debug->connfd     == 0                              ||
          msg                   == ((void *)0)                    ||
@@ -106,9 +108,11 @@ void bs3_debug_comm_send(struct bs3_debug_data * pbs3debug, const char * msg)
             switch (errno)
             {
                 case EAGAIN:
+#if EAGAIN != EWOULDBLOCK                
                 case EWOULDBLOCK:
+#endif                
                 case EINTR:
-                    usleep(100000);
+                    usleep(100000); /* 1/10 of second wait*/
                     break;
                 default:
                     isok = 1;
@@ -145,16 +149,111 @@ void bs3_debug_comm_prompt(struct bs3_debug_data * pbs3debug)
         default:
             bs3_debug_comm_send(pbs3debug,"unknown >");
     }
+    if (pbs3debug->n > 0) {
+        bs3_debug_comm_send(pbs3debug,pbs3debug->buff);
+    }
 }
 
-
+/*
+     client command : (address always 4 hexa digits, count is decimal, value is 0/1 or 2/4 hexa digits )
+        u [address] : unassemble code at 'address' or at PC if 'address' not provided
+        g [address] : unpause CPU until 'address' is reached (PC register value), or continue as long as no pause is requested  ('s' command) if address not provided
+        t [count] : execute one step 'count' times, or only once if 'count' not provided (with a 'r' trace after each step)
+        s : pause cpu execution when running
+        r [ register [value]] : if 'r' then show all register value, 'r register' show 'register' value, 'r register value' set 'value' to 'register'
+           register : PC, SP, W0-3, B0-7, I, V, N, Z, C 
+        e address value : set 'value' byte to address
+        E address value : set 'value' word to address (little endian)
+        d [address] : dump data at adress, or continue dump from previous dump address
+        z : CPU reset (with data reset)
+        Z : CPU halt (with debugger deconnection)
+        q : quit debugger (deconnection but CPU program and state continue )
+        h : short help
+  bs3_debug(...) function is the function to provide as debug provider to bs3_hyper_main(....) function 
+*/
 void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug) 
 {
-    if (pbs3debug == ((void *)0)) return;
+    WORD address;
+    int count;
+    int value;
+    char linebuffer[1024];
+    WORD pc;
+    int i;
+
+    if (pbs3debug == ((void *)0) || pbs3debug->n == 0 || pbs3debug->buff[0] == '\n')
+    {
+        bs3_debug_comm_prompt(pbs3debug);
+        pbs3debug->n = 0;
+        return;
+    }
+    switch (pbs3debug->buff[0])
+    {
+        case 'u':
+            pc = bs3_cpu_disassemble(pbs3debug->pbs3, linebuffer);
+            strcat(linebuffer, "\n");
+            bs3_debug_comm_send(pbs3debug,linebuffer);
+            for (i = 0 ; i < 3 ; i++)
+            {
+                pc = bs3_cpu_disassemble_(pc,
+                                        pbs3debug->pbs3->m[pc], 
+                                        pbs3debug->pbs3->m[(pc+1) & 0xFFFF], 
+                                        pbs3debug->pbs3->m[(pc+2) & 0xFFFF], 
+                                        pbs3debug->pbs3->m[(pc+3) & 0xFFFF], 
+                                        linebuffer);
+                strcat(linebuffer, "\n");
+                bs3_debug_comm_send(pbs3debug,linebuffer);
+            }
+            break;
+        case 'g':
+            pbs3debug->debug_step_count = 0;
+            pbs3debug->debug_state = BS3_DEBUG_STATE_RUNNING;
+            break;
+        case 't':
+            pbs3debug->debug_step_count = 1;
+            pbs3debug->debug_state = BS3_DEBUG_STATE_RUNNING;
+            break;
+        case 's':
+            break;
+        case 'r':
+            bs3_cpu_state(pbs3debug->pbs3, linebuffer);
+            bs3_debug_comm_send(pbs3debug,linebuffer);
+            break;
+        case 'e':
+            break;
+        case 'E':
+            break;
+        case 'd':
+            break;
+        case 'z':
+            break;
+        case 'Z':
+            break;
+        case 'q':
+            break;
+        case 'h':
+            bs3_debug_comm_send(pbs3debug,"     Debuggger commands (address always 4 hexa digits, count is decimal, value is 0/1 or 2/4 hexa digits )\n");
+            bs3_debug_comm_send(pbs3debug,"        u [address]        : unassemble code at 'address' or at PC if 'address' not provided\n");
+            bs3_debug_comm_send(pbs3debug,"        g [address]        : unpause CPU until 'address' is reached (PC register value),\n");
+            bs3_debug_comm_send(pbs3debug,"                             or continue as long as no pause is requested  ('s' command) if no 'address'\n");
+            bs3_debug_comm_send(pbs3debug,"        t [count]          : execute one step 'count' times, \n");
+            bs3_debug_comm_send(pbs3debug,"                             or only once if 'count' not provided \n");
+            bs3_debug_comm_send(pbs3debug,"        s                  : pause cpu execution when running\n");
+            bs3_debug_comm_send(pbs3debug,"        r [register value] : 'r' then show all register values\n");
+            bs3_debug_comm_send(pbs3debug,"                             'r register value' set 'value' to 'register'\n");
+            bs3_debug_comm_send(pbs3debug,"                             register amongst PC, SP, W0-3, B0-7, I, V, N, Z, C \n");
+            bs3_debug_comm_send(pbs3debug,"        e address value    : set 'value' byte to address\n");
+            bs3_debug_comm_send(pbs3debug,"        E address value    : set 'value' word to address (little endian)\n");
+            bs3_debug_comm_send(pbs3debug,"        d [address]        : dump data at adress, or continue dump from previous dump address\n");
+            bs3_debug_comm_send(pbs3debug,"        z                  : CPU reset (with data reset)\n");
+            bs3_debug_comm_send(pbs3debug,"        Z                  : CPU halt (with debugger deconnection)\n");
+            bs3_debug_comm_send(pbs3debug,"        q                  : quit debugger (deconnection but CPU program and state continue )\n");
+            bs3_debug_comm_send(pbs3debug,"        h                  : this help\n");
+            break;
+        default:
+            bs3_debug_comm_send(pbs3debug,"Unknown command. type 'h' for help\n")
+    }
     pbs3debug->n = 0; /* command treated */
-    
-
-
+    bs3_debug_comm_prompt(pbs3debug);
 }
 
 
@@ -296,23 +395,7 @@ int fdf; file descriptor flag
 fdf = fcntl(socketfd ,F_GETFL, 0); // get current flag of socket file descriptor 
 fcntl(socketfd, F_SETFL, fdf | O_NONBLOCK); // add non blocking flag to socket file descriptor
 */
-/*
-     client command : (address always 4 hexa digits, count is decimal, value is 0/1 or 2/4 hexa digits )
-        u [address] : unassemble code at 'address' or at PC if 'address' not provided
-        g [address] : unpause CPU until 'address' is reached (PC register value), or continue as long as no pause is requested  ('s' command) if address not provided
-        t [count] : execute one step 'count' times, or only once if 'count' not provided (with a 'r' trace after each step)
-        s : pause cpu execution when running
-        r [ register [value]] : if 'r' then show all register value, 'r register' show 'register' value, 'r register value' set 'value' to 'register'
-           register : PC, SP, W0-3, B0-7, I, V, N, Z, C 
-        e address value : set 'value' byte to address
-        E address value : set 'value' word to address (little endian)
-        d [address] : dump data at adress, or continue dump from previous dump address
-        z : CPU reset (with data reset)
-        Z : CPU halt (with debugger deconnection)
-        q : quit debugger (deconnection but CPU program and state continue )
-        h : short help
-  bs3_debug(...) function is the function to provide as debug provider to bs3_hyper_main(....) function 
-*/
+
 void bs3_debug(struct bs3_cpu_data * pbs3)
 {
     if (pbs3 == ((void *)0))
@@ -320,11 +403,40 @@ void bs3_debug(struct bs3_cpu_data * pbs3)
         bs3_debug_finish(&bs3debug);
         return; /* no debug to do, but possibly close debug connection*/
     }
+        bs3debug.pbs3 = pbs3;
     do 
     {
       if (bs3debug.debug_state == BS3_DEBUG_STATE_RUNNING) 
       {
         /* should we have to stop */
+        if (((WORD)bs3debug.debug_stop_at) == pbs3->r.PC ) {
+            bs3debug.debug_state = BS3_DEBUG_STATE_STOPPED;
+            bs3_debug_comm_send(&bs3debug,"\n");
+            strcpy(bs3debug.buff, "r");
+            bs3_debug_comm_cmd(&bs3debug);
+            strcpy(bs3debug.buff, "u");
+            bs3_debug_comm_cmd(&bs3debug);
+            bs3_debug_comm_prompt(&bs3debug);
+            /* bs3debug.n = 0;  */
+            bs3debug.debug_step_count = 0;
+        } 
+        else
+        {
+            if (bs3debug.debug_step_count > 0) {
+                bs3debug.debug_step_count--;
+                if (bs3debug.debug_step_count == 0) 
+                {
+                    bs3debug.debug_state = BS3_DEBUG_STATE_STOPPED;
+                    bs3_debug_comm_send(&bs3debug,"\n");
+                    strcpy(bs3debug.buff, "r");
+                    bs3_debug_comm_cmd(&bs3debug);
+                    strcpy(bs3debug.buff, "u");
+                    bs3_debug_comm_cmd(&bs3debug);
+                    bs3_debug_comm_prompt(&bs3debug);
+                     /*bs3debug.n = 0; */
+                }
+            }
+        }
       }
       bs3_debug_comm(&bs3debug);
     } while(bs3debug.debug_state == BS3_DEBUG_STATE_STOPPED)
