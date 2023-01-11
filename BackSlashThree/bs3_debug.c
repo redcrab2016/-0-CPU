@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h> // read(), write(), close()
 #include <errno.h>
+#include <fcntl.h>
 
 #include "bs3_asm.h"
 #include "bs3_debug.h"
@@ -250,7 +251,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
             bs3_debug_comm_send(pbs3debug,"        h                  : this help\n");
             break;
         default:
-            bs3_debug_comm_send(pbs3debug,"Unknown command. type 'h' for help\n")
+            bs3_debug_comm_send(pbs3debug,"Unknown command. type 'h' for help\n");
     }
     pbs3debug->n = 0; /* command treated */
     bs3_debug_comm_prompt(pbs3debug);
@@ -286,7 +287,9 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
                     switch (errno)
                     {
                         case EAGAIN:
+#if EAGAIN != EWOULDBLOCK
                         case EWOULDBLOCK:
+#endif                        
                         case EINTR:
                             break;
                         default:
@@ -301,7 +304,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
                             pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_NOCONNECTION;
                     break;
                 default: /* something is read */
-                    i = 0
+                    i = 0;
                     while ((i < len) && 
                            (pbs3debug->n < (BS3_DEBUG_COMM_MAXSIZE-1)) && 
                            buff[i] && 
@@ -335,7 +338,9 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
                 switch(errno)
                 {
                     case EAGAIN:
+#if EAGAIN != EWOULDBLOCK                    
                     case EWOULDBLOCK:
+#endif                    
                         break;
                     default:
                         pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_NOSERVICE;
@@ -366,11 +371,11 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
             /* assign IP, PORT */
             pbs3debug->servaddr.sin_family = AF_INET;
              /* pbs3debug->servaddr.sin_addr.s_addr = htonl(INADDR_ANY); */
-            pbs3debug->servaddr.sin_addr.s_addr = inet_addr("127.0.0.1")
+            pbs3debug->servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
             pbs3debug->servaddr.sin_port = htons(pbs3debug->port);
         
             /* Binding newly created socket to given IP and verification */
-            if ((bind(sockfd, (SA*)&pbs3debug->servaddr, sizeof(pbs3debug->servaddr))) != 0) {
+            if ((bind(pbs3debug->sockfd, (SA*)&pbs3debug->servaddr, sizeof(pbs3debug->servaddr))) != 0) {
                 printf("Debug socket bind failed...\n");
                 exit(0);
             }
@@ -439,7 +444,7 @@ void bs3_debug(struct bs3_cpu_data * pbs3)
         }
       }
       bs3_debug_comm(&bs3debug);
-    } while(bs3debug.debug_state == BS3_DEBUG_STATE_STOPPED)
+    } while(bs3debug.debug_state == BS3_DEBUG_STATE_STOPPED);
 
 }
 
@@ -448,17 +453,17 @@ void bs3_debug(struct bs3_cpu_data * pbs3)
 // Function designed for chat between client and server.
 void func(int connfd)
 {
-    char buff[MAX];
+    char buff[/*MAX*/ 80];
     int n;
     // infinite loop for chat
     for (;;) {
-        bzero(buff, MAX);
+        bzero(buff, /*MAX*/ 80);
    
         // read the message from client and copy it in buffer
         read(connfd, buff, sizeof(buff));
         // print buffer which contains the client contents
         printf("From client: %s\t To client : ", buff);
-        bzero(buff, MAX);
+        bzero(buff, /*MAX*/ 80);
         n = 0;
         // copy server message in the buffer
         while ((buff[n++] = getchar()) != '\n')
@@ -494,7 +499,7 @@ int fakemain()
     // assign IP, PORT
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(PORT);
+    servaddr.sin_port = htons(8080 /*PORT*/);
    
     // Binding newly created socket to given IP and verification
     if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) {
