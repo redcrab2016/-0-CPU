@@ -190,10 +190,9 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
     switch (pbs3debug->buff[0])
     {
         case 'u':
-            pc = bs3_cpu_disassemble(pbs3debug->pbs3, linebuffer);
-            strcat(linebuffer, "\n");
-            bs3_debug_comm_send(pbs3debug,linebuffer);
-            for (i = 0 ; i < 3 ; i++)
+            if (pbs3debug->lastPC == 0) pbs3debug->lastPC = pbs3debug->pbs3->r.PC;
+            pc = pbs3debug->lastPC;
+            for (i = 0 ; i < 4 ; i++)
             {
                 pc = bs3_cpu_disassemble_(pc,
                                         pbs3debug->pbs3->m[pc], 
@@ -204,6 +203,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                 strcat(linebuffer, "\n");
                 bs3_debug_comm_send(pbs3debug,linebuffer);
             }
+            pbs3debug->lastPC = pc;
             break;
         case 'g':
             pbs3debug->debug_step_count = 0;
@@ -214,6 +214,8 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
             pbs3debug->debug_state = BS3_DEBUG_STATE_RUNNING;
             break;
         case 's':
+            pbs3debug->debug_step_count = 0;
+            pbs3debug->debug_state = BS3_DEBUG_STATE_STOPPED;
             break;
         case 'r':
             bs3_cpu_state(pbs3debug->pbs3, linebuffer);
@@ -226,10 +228,18 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
         case 'd':
             break;
         case 'z':
+            pbs3debug->pbs3->status =  BS3_STATUS_RESET;
+            pbs3debug->debug_step_count = 1;
+            pbs3debug->debug_state = BS3_DEBUG_STATE_RUNNING;
             break;
         case 'Z':
+            pbs3debug->pbs3->status =  BS3_STATUS_HALT;
+            pbs3debug->debug_step_count = 1;
+            pbs3debug->debug_state = BS3_DEBUG_STATE_RUNNING;
             break;
         case 'q':
+            close(pbs3debug->connfd);
+            pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_NOCONNECTION;
             break;
         case 'h':
             bs3_debug_comm_send(pbs3debug,"     Debuggger commands (address always 4 hexa digits, count is decimal, value is 0/1 or 2/4 hexa digits )\n");
@@ -262,18 +272,21 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
 {
     int len;
     int i;
+    struct sockaddr_in cli;
     int newco;
     const char * reject = "Sorry but BS3 debugger is already attached\n";
     char buff[BS3_DEBUG_COMM_MAXSIZE];
     int fdf;  /* file descriptor flag */
     if (pbs3debug == ((void *) 0)) return;
-    if (((pbs3debug->count++) & 0x0FF) != 0 ) return; /* consider socket reading , once every 256 call to this function : latency */
+    if (((pbs3debug->count++) & 0x0FF) != 0 && pbs3debug->debug_state == BS3_DEBUG_STATE_RUNNING) return; /* consider socket reading , once every 256 call to this function : latency */
+    if (pbs3debug->debug_state == BS3_DEBUG_STATE_STOPPED) usleep(100000);
     switch (pbs3debug->comm_state) 
     {
         case BS3_DEBUG_COMM_STATE_CONNECTED:
             if ((pbs3debug->count & 0xFFF) == 0)
             {
-               newco = accept(pbs3debug->sockfd, (SA*)&pbs3debug->cli, &len); 
+               len = sizeof(pbs3debug->cli); 
+               newco = accept(pbs3debug->sockfd, (SA*)&cli, &len); 
                if (newco > 0) {
                     write(newco,reject, strlen(reject) );
                     close(newco);
@@ -351,7 +364,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
                 break;
             }
             /* set non blocking connection file descriptor */
-            fdf = fcntl(pbs3debug->connfd ,F_GETFL, 0); /* get current flag of socket file descriptor */
+            fdf = fcntl(pbs3debug->connfd, F_GETFL, 0); /* get current flag of socket file descriptor */
             fcntl(pbs3debug->connfd, F_SETFL, fdf | O_NONBLOCK); /* add non blocking flag to socket file descriptor */
             bs3_debug_comm_welcome(pbs3debug);
             bs3_debug_comm_prompt(pbs3debug); 
@@ -376,7 +389,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
         
             /* Binding newly created socket to given IP and verification */
             if ((bind(pbs3debug->sockfd, (SA*)&pbs3debug->servaddr, sizeof(pbs3debug->servaddr))) != 0) {
-                printf("Debug socket bind failed...\n");
+                printf("Debug socket bind failed... errno:%d\n",errno);
                 exit(0);
             }
 
@@ -390,7 +403,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
             
             fdf = fcntl(pbs3debug->sockfd ,F_GETFL, 0); /* get current flag of socket file descriptor */
             fcntl(pbs3debug->sockfd, F_SETFL, fdf | O_NONBLOCK); /* add non blocking flag to socket file descriptor */
-
+            pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_NOCONNECTION;
             break;
     }
 }
@@ -416,6 +429,7 @@ void bs3_debug(struct bs3_cpu_data * pbs3)
         /* should we have to stop */
         if (((WORD)bs3debug.debug_stop_at) == pbs3->r.PC ) {
             bs3debug.debug_state = BS3_DEBUG_STATE_STOPPED;
+            bs3debug.lastPC = bs3debug.pbs3->r.PC;
             bs3_debug_comm_send(&bs3debug,"\n");
             strcpy(bs3debug.buff, "r");
             bs3_debug_comm_cmd(&bs3debug);
@@ -432,6 +446,7 @@ void bs3_debug(struct bs3_cpu_data * pbs3)
                 if (bs3debug.debug_step_count == 0) 
                 {
                     bs3debug.debug_state = BS3_DEBUG_STATE_STOPPED;
+                    bs3debug.lastPC = bs3debug.pbs3->r.PC;
                     bs3_debug_comm_send(&bs3debug,"\n");
                     strcpy(bs3debug.buff, "r");
                     bs3_debug_comm_cmd(&bs3debug);
