@@ -104,7 +104,7 @@ void bs3_debug_comm_send(struct bs3_debug_data * pbs3debug, const char * msg)
     
 
     {
-        if (write(pbs3debug->connfd, msg, strlen(msg)) < 0)
+        if (write(pbs3debug->connfd, msg, strlen(msg)) < 0) 
         {
             switch (errno)
             {
