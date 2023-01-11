@@ -94,17 +94,32 @@ void bs3_debug_end()
 void bs3_debug_comm_send(struct bs3_debug_data * pbs3debug, const char * msg)
 {
     int isok;
-    isok = 0;
+    int i,j;
+    char linebuffer[1024];
     if ( pbs3debug             == ((void *)0)                    ||
          pbs3debug->comm_state != BS3_DEBUG_COMM_STATE_CONNECTED || 
          pbs3debug->connfd     == 0                              ||
          msg                   == ((void *)0)                    ||
          msg[0]                == 0) return;
-    do
-    
 
+
+    for (i = 0,j = 0 ; i < strlen(msg); i++,j++)
     {
-        if (write(pbs3debug->connfd, msg, strlen(msg)) < 0) 
+        switch(msg[i])
+        {
+            case '\n':
+                linebuffer[j++] = '\r';
+                linebuffer[j] = '\n';
+            default:
+                linebuffer[j] = msg[i];                
+        }
+    }
+    linebuffer[j] = 0;
+
+    isok = 0;
+    do
+    {
+        if (write(pbs3debug->connfd, linebuffer, strlen(linebuffer)) < 0) 
         {
             switch (errno)
             {
@@ -347,7 +362,8 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
             /* Accept the data packet from client and verification */
             len = sizeof(pbs3debug->cli);
             pbs3debug->connfd = accept(pbs3debug->sockfd, (SA*)&pbs3debug->cli, &len);
-            if (pbs3debug->connfd < 0) {
+            if (pbs3debug->connfd < 0) 
+            {
                 switch(errno)
                 {
                     case EAGAIN:
@@ -366,9 +382,9 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
             /* set non blocking connection file descriptor */
             fdf = fcntl(pbs3debug->connfd, F_GETFL, 0); /* get current flag of socket file descriptor */
             fcntl(pbs3debug->connfd, F_SETFL, fdf | O_NONBLOCK); /* add non blocking flag to socket file descriptor */
+            pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_CONNECTED;
             bs3_debug_comm_welcome(pbs3debug);
             bs3_debug_comm_prompt(pbs3debug); 
-            pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_CONNECTED;
             break;
 
         case BS3_DEBUG_COMM_STATE_NOSERVICE:
@@ -376,7 +392,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
             /* socket create and verification */
             pbs3debug->sockfd = socket(AF_INET, SOCK_STREAM, 0);
             if (pbs3debug->sockfd == -1) {
-                printf("Debug socket creation failed...\n");
+                printf("Debug socket creation failed...errno:%d\n",errno);
                 exit(0);
             }
             bzero(&pbs3debug->servaddr, sizeof(pbs3debug->servaddr));
@@ -395,7 +411,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
 
             /* Now server is ready to listen and verification */
             if ((listen(pbs3debug->sockfd, 5)) != 0) {
-                printf("Debug socket listen failed...\n");
+                printf("Debug socket listen failed...errno:%d\n",errno);
                 exit(0);
             }
 
