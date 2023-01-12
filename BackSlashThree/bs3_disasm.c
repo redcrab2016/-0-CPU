@@ -2,6 +2,37 @@
 
 static const char * hexa_digit="0123456789ABCDEF";
  
+const char * bs3_cpu_memory_dump_template = "0000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  ................";
+
+void bs3_cpu_memory_dump(struct bs3_cpu_data * pbs3, WORD addr, char * result)
+{
+  int i;
+  BYTE value;
+  int stridx;
+  /* check if it is ok to continue */
+  if (pbs3 == ((void *)0) || result == ((void *)0)) return;
+  /* get the template into the result*/
+  for (i = 0; bs3_cpu_memory_dump_template[i]; i++ ) result[i] = bs3_cpu_memory_dump_template[i];
+  result[i] = 0; /* be sure that return result is ASCIIZ */
+  /* fill the address */
+  result[0] = hexa_digit[((addr >> 12) & 0x0F)];
+  result[1] = hexa_digit[((addr >> 8 ) & 0x0F)];
+  result[2] = hexa_digit[((addr >> 4 ) & 0x0F)];
+  result[3] = hexa_digit[( addr        & 0x0F)];
+  /* dump 16 bytes from addr to addr + 15 */ 
+  for (i = 0; i < 16; i++)
+  {
+    value = pbs3->m[addr + i];
+    /* set hexa byte value at right location */
+    stridx = i * 3 + 6 + ((i<8)?0:1);
+    result[stridx + 0] = hexa_digit[ (value >> 4) & 0x0F];
+    result[stridx + 1] = hexa_digit[  value       & 0x0F];
+    /* set character glyph */
+    if (value > 31 ) result[56 + i] = value;
+  }
+
+}
+
 /* disassemble instruction thanks to the 4 bytes (a, b, c and d) located at particular PC address */
 /* return the location of the next instruction */  
 

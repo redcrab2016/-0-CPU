@@ -261,6 +261,6 @@ extern struct bs3_cpu_instr bs3Instr[];
 WORD bs3_cpu_disassemble_(WORD PC, BYTE a, BYTE b, BYTE c, BYTE d, char * result);
 WORD bs3_cpu_disassemble(struct bs3_cpu_data * pbs3, char * result);
 void bs3_cpu_state(struct bs3_cpu_data * pbs3, char * result);
-
+void bs3_cpu_memory_dump(struct bs3_cpu_data * pbs3, WORD addr, char * result);
 
 #endif
