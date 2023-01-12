@@ -190,6 +190,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
         pbs3debug->n = 0;
         return;
     }
+    if (pbs3debug->buff[1] != 0 && pbs3debug->buff[1] != ' ') pbs3debug->buff[0] = 0;
     switch (pbs3debug->buff[0])
     {
         case 'u':
@@ -435,11 +436,15 @@ void bs3_debug(struct bs3_cpu_data * pbs3)
     if (pbs3->status == BS3_STATUS_HALT)
     {
         pbs3->status = (bs3debug.canQuit)?pbs3->status:BS3_STATUS_DEFAULT;
-        bs3debug.debug_state = BS3_DEBUG_STATE_STOPPED;
+        bs3debug.debug_state = BS3_DEBUG_STATE_TOSTOP;
         bs3debug.lastPC = 0;
         return;
     }
-    if (bs3debug.debug_state == BS3_DEBUG_STATE_TOSTOP) bs3debug.debug_state = BS3_DEBUG_STATE_STOPPED;
+    if (bs3debug.debug_state == BS3_DEBUG_STATE_TOSTOP) 
+    {
+        bs3debug.debug_state = BS3_DEBUG_STATE_RUNNING;
+        bs3debug.debug_step_count = 1;
+    }
     do 
     {
       
