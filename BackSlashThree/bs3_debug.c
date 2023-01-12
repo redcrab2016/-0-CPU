@@ -174,6 +174,30 @@ void bs3_debug_comm_prompt(struct bs3_debug_data * pbs3debug)
     }
 }
 
+long bs3_debug_util_getaddress(const char * address)
+{
+    long value = 0;
+    int i;
+    for (i=0; i < 4; i++)
+    {
+        switch (address[i])
+        {
+            case '0' ... '9':
+                value = (value << 4) + (address[i]-'0');
+                break;
+            case 'a' ... 'f':
+                value = (value << 4) + (address[i]-'a'+10);
+                break;
+            case 'A' ... 'F':
+                value = (value << 4) + (address[i]-'A'+10);
+                break;
+            default:
+                return -1;
+        }
+    }
+    if (address[i] != 0 && address[i] != ' ') return -1;
+    return value;
+}
 
 void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug) 
 {
@@ -183,6 +207,8 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
     char linebuffer[1024];
     WORD pc;
     int i;
+    long addr;
+    int len;
 
     if (pbs3debug == ((void *)0) || pbs3debug->n == 0 || pbs3debug->buff[0] == '\n')
     {
@@ -191,10 +217,27 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
         return;
     }
     if (pbs3debug->buff[1] != 0 && pbs3debug->buff[1] != ' ') pbs3debug->buff[0] = 0;
+    
+    len = strlen(pbs3debug->buff);
     switch (pbs3debug->buff[0])
     {
         case 'u':
-            if (pbs3debug->lastPC == 0) pbs3debug->lastPC = pbs3debug->pbs3->r.PC;
+            if (len >2 && len < 6)
+            {
+                bs3_debug_comm_send(pbs3debug,"Incorrect 'u' command\n");
+                break;
+            }
+            if (len >=6)
+            {
+                addr = bs3_debug_util_getaddress(pbs3debug->buff+2);
+                if (addr < 0)
+                {
+                    bs3_debug_comm_send(pbs3debug,"Incorrect 'u' command\n");
+                    break;
+                }
+                pbs3debug->lastPC = (WORD)addr;
+            }
+            else  pbs3debug->lastPC = (pbs3debug->lastPC == 0)?pbs3debug->pbs3->r.PC:pbs3debug->lastPC;
             pc = pbs3debug->lastPC;
             for (i = 0 ; i < 4 ; i++)
             {
@@ -210,6 +253,22 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
             pbs3debug->lastPC = pc;
             break;
         case 'g':
+            if (len >2 && len < 6)
+            {
+                bs3_debug_comm_send(pbs3debug,"Incorrect 'g' command\n");
+                break;
+            }
+            if (len >=6)
+            {
+                addr = bs3_debug_util_getaddress(pbs3debug->buff+2);
+                if (addr < 0)
+                {
+                    bs3_debug_comm_send(pbs3debug,"Incorrect 'g' command\n");
+                    break;
+                }
+                pbs3debug->debug_stop_at = (WORD)addr;
+            }
+            else   pbs3debug->debug_stop_at = 0;
             pbs3debug->debug_step_count = 0;
             pbs3debug->debug_state = BS3_DEBUG_STATE_RUNNING;
             break;
