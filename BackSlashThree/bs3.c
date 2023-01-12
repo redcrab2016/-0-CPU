@@ -227,6 +227,7 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
   if (pbs3->status == BS3_STATUS_RESET) 
   {
     bs3_cpu_init(pbs3);
+    return;
   }
   /* is there pending interrupt, with interrupt enabled?*/
   if (pbs3->r.I == 1 && pbs3->pending_interrupt != BS3_INT_NOPENDING) {
