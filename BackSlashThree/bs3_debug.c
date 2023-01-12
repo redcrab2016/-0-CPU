@@ -174,6 +174,134 @@ void bs3_debug_comm_prompt(struct bs3_debug_data * pbs3debug)
     }
 }
 
+/* return -1 : error 
+   return 8  : Flag register, reg[0] == 'I', 'N', 'V', 'Z' or 'C'
+   return 0 .. 7 : register number , reg[0] == 'W' or 'B'
+ */
+int bs3_debug_util_getregister(const char * source, char * reg)
+{
+    int i,j;
+    int value;
+    if (word == ((void *)0)) return 0;
+    if (source == ((void *)0)) return 0;
+    i = 0;
+    j = 0;
+    value = -1;
+    while (source[i] == ' ') i++;
+    if (source[i] == 0) return 0;
+    while (source[i] != ' ' && source[i] != 0)
+    {
+        switch (j)
+        {
+            case 0: /* first character Wx, Bx or flag register */
+                switch (source[i])
+                {
+                    case 'i':
+                    case 'n':
+                    case 'v':
+                    case 'z':
+                    case 'c':
+                        value = 8;
+                    case 'b':
+                    case 'w':
+                        reg[j++] = source[i++] - 32;
+                        break;
+                    case 'I':
+                    case 'N':
+                    case 'V':
+                    case 'Z':
+                    case 'C':
+                        value = 8;
+                    case 'B':
+                    case 'W':
+                        reg[j++] = source[i++];
+                        break;
+                    default:
+                        return -1;
+                }
+                break;
+            case 1: /* second character valid only for Wx and Bx registers */
+                switch (reg[0])
+                {
+                    case 'W':
+                        switch (source[i])
+                        {
+                            case '0' ... '3':
+                                value = source[i] - '0';
+                                reg[j++] = source[i++];
+                                break;
+                            default:
+                                return -1;
+                        }
+                        break;
+                    case 'B':
+                        switch (source[i])
+                        {
+                            case '0' ... '7':
+                                value = source[i] - '0';
+                                reg[j++] = source[i++];
+                                break;
+                            default:
+                                return -1;
+                        }
+                        break;
+                    default:
+                        return -1;
+                }
+            default: /* more than 2 character is not register */
+                return -1;
+        }
+    }
+    reg[j] = 0;
+    if (source[i] != 0 && source[i] != ' ') return -1;
+    return j;
+}
+
+int bs3_debug_util_getbyte(const char * address)
+{
+    int value = 0;
+    int i;
+    for (i=0; i < 2; i++)
+    {
+        switch (address[i])
+        {
+            case '0' ... '9':
+                value = (value << 4) + (address[i]-'0');
+                break;
+            case 'a' ... 'f':
+                value = (value << 4) + (address[i]-'a'+10);
+                break;
+            case 'A' ... 'F':
+                value = (value << 4) + (address[i]-'A'+10);
+                break;
+            default:
+                return -1;
+        }
+    }
+    if (address[i] != 0 && address[i] != ' ') return -1;
+    return value;
+}
+
+int bs3_debug_util_getbit(const char * address)
+{
+    int value = 0;
+    int i;
+    for (i=0; i < 1; i++)
+    {
+        switch (address[i])
+        {
+            case '0' ... '1':
+                value = (value << 4) + (address[i]-'0');
+                break;
+            default:
+                return -1;
+        }
+    }
+    if (address[i] != 0 && address[i] != ' ') return -1;
+    return value;
+}
+
+
 long bs3_debug_util_getaddress(const char * address)
 {
     long value = 0;
@@ -281,6 +409,93 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
             pbs3debug->debug_state = BS3_DEBUG_STATE_STOPPED;
             break;
         case 'r':
+            if (pbs3debug->debug_state == BS3_DEBUG_STATE_RUNNING)
+            {
+                bs3_debug_comm_send(pbs3debug,"Can't execute 'r' command while CPU is running\n");
+                break;
+            }
+            if (len > 2)
+            {
+                i = bs3_debug_util_getregister(pbs3debug->buff+2, linebuffer);
+                if (i < 0) /* not a register nor a flag*/
+                {
+                    bs3_debug_comm_send(pbs3debug,"Inccorect 'r' command\n");
+                    break;
+                }
+                if (i<8) /* check value existance for register*/
+                {
+                    if (pbs3debug->buff[5] != ' ')
+                    {
+                        bs3_debug_comm_send(pbs3debug,"Missing register value\n");
+                        break;
+                    }
+                }
+                else /* check value existance for flag */
+                {
+                    if (pbs3debug->buff[4] != ' ')
+                    {
+                        bs3_debug_comm_send(pbs3debug,"Missing flag value\n");
+                        break;
+                    }
+                }
+                switch (i) /* get and store value */
+                {
+                    case 0 ... 7:
+                        switch (linebuffer[0])
+                        {
+                            case 'W':
+                                /* get address like value (4 hexa digits )*/
+                                addr = bs3_debug_util_getaddress(pbs3debug->buff+6);
+                                if (addr < 0)
+                                {
+                                    i = -1;
+                                    break;
+                                }
+                                pbs3debug->pbs3->r.W[i] =  (WORD)(addr & 0xFFFF);
+                                break;
+                            case 'B':
+                                /* get byte value (2 hexa digits )*/
+                                addr = bs3_debug_util_getbyte(pbs3debug->buff+6);
+                                if (addr< 0)
+                                {
+                                    i = -1;
+                                    break;
+                                } 
+                                pbs3debug->pbs3->r.B[i] =  (BYTE)(addr & 0xFF);
+                                break;
+                        }
+                        break;
+                    case 8:
+                        /* get bit (1 or 0 value)*/
+                        i = bs3_debug_util_getbit(pbs3debug->buff+5);
+                        if (i >= 0)
+                        {
+                            switch (linebuffer[0]) /* Flag register, reg[0] == 'I', 'N', 'V', 'Z' or 'C' */
+                            {
+                                case 'I':
+                                    pbs3debug->pbs3->r.I = (BIT)i;
+                                    break;
+                                case 'N':
+                                    pbs3debug->pbs3->r.N = (BIT)i;
+                                    break;
+                                case 'V':
+                                    pbs3debug->pbs3->r.V = (BIT)i;
+                                    break;
+                                case 'Z':
+                                    pbs3debug->pbs3->r.Z = (BIT)i;
+                                    break;
+                                case 'C':
+                                    pbs3debug->pbs3->r.C = (BIT)i;
+                                    break;
+                            }
+                        }
+                        break;
+                }
+                if (i < 0 ) {
+                        bs3_debug_comm_send(pbs3debug,"Incorrect register or flag value\n");
+                        break;
+                }
+            }
             bs3_cpu_state(pbs3debug->pbs3, linebuffer);
             bs3_debug_comm_send(pbs3debug,linebuffer);
             break;
