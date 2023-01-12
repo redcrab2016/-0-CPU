@@ -31,7 +31,7 @@ struct bs3_debug_data
     int debug_state;                    /* cpu debug state , running or stopped             */
     int comm_state;                     /* socket communication state                       */
     int debug_stop_at;                  /* address where the CPU must stop                  */
-    int debug_step_count;               /* how may step                                     */
+    int debug_step_count;               /* how many step to execute                         */
     int lastPC;                         /* last final PC at last unassemble cmd             */
     int canQuit;                        /* when CPU HALT status, can we quit the debugger   */
     /* communication tech data */
@@ -184,13 +184,13 @@ int bs3_debug_util_getregister(const char * source, char * reg)
 {
     int i,j;
     int value;
-    if (reg == ((void *)0)) return 0;
-    if (source == ((void *)0)) return 0;
+    if (reg == ((void *)0)) return -1;
+    if (source == ((void *)0)) return -1;
     i = 0;
     j = 0;
     value = -1;
     while (source[i] == ' ') i++;
-    if (source[i] == 0) return 0;
+    if (source[i] == 0) return -1;
     while (source[i] != ' ' && source[i] != 0)
     {
         switch (j)
@@ -232,6 +232,10 @@ int bs3_debug_util_getregister(const char * source, char * reg)
                     case 'P':
                         switch (source[i])
                         {
+                            case 'c':
+                                value = 9;
+                                reg[j++] = source[i++] - 32;
+                                break;
                             case 'C':
                                 value = 9;
                                 reg[j++] = source[i++];
@@ -243,6 +247,10 @@ int bs3_debug_util_getregister(const char * source, char * reg)
                     case 'S':
                         switch (source[i])
                         {
+                            case 'p':
+                                value = 10;
+                                reg[j++] = source[i++] - 32;
+                                break;
                             case 'P':
                                 value = 10;
                                 reg[j++] = source[i++];
@@ -276,13 +284,14 @@ int bs3_debug_util_getregister(const char * source, char * reg)
                     default:
                         return -1;
                 }
-            default: /* more than 2 character is not register */
+                break;
+            default: /* more than 2 characters is not register */
                 return -1;
         }
     }
     reg[j] = 0;
     if (source[i] != 0 && source[i] != ' ') return -1;
-    return j;
+    return value;
 }
 
 int bs3_debug_util_getbyte(const char * address)
@@ -294,13 +303,13 @@ int bs3_debug_util_getbyte(const char * address)
         switch (address[i])
         {
             case '0' ... '9':
-                value = (value << 4) + (address[i]-'0');
+                value = (value << 4) + (address[i] - '0');
                 break;
             case 'a' ... 'f':
-                value = (value << 4) + (address[i]-'a'+10);
+                value = (value << 4) + (address[i] - 'a' + 10);
                 break;
             case 'A' ... 'F':
-                value = (value << 4) + (address[i]-'A'+10);
+                value = (value << 4) + (address[i] - 'A' + 10);
                 break;
             default:
                 return -1;
@@ -349,6 +358,24 @@ long bs3_debug_util_getaddress(const char * address)
                 break;
             default:
                 return -1;
+        }
+    }
+    if (address[i] != 0 && address[i] != ' ') return -1;
+    return value;
+}
+
+long bs3_debug_util_getinteger(const char * address)
+{
+    long value = 0;
+    int i;
+    for (i=0; address[i] >= '0' && address[i] <= '9'; i++)
+    {
+        switch (address[i])
+        {
+            case '0' ... '9':
+                value = (value * 10) + (address[i]-'0');
+                if (value > 65535) value = 65535;
+                break;
         }
     }
     if (address[i] != 0 && address[i] != ' ') return -1;
@@ -429,7 +456,13 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
             pbs3debug->debug_state = BS3_DEBUG_STATE_RUNNING;
             break;
         case 't':
-            pbs3debug->debug_step_count = 1;
+            addr = bs3_debug_util_getinteger(pbs3debug->buff+2);
+            if (addr < 1)
+            {
+                bs3_debug_comm_send(pbs3debug,"Incorrect 't' command\n");
+                break;
+            } 
+            pbs3debug->debug_step_count = (int)(addr & 0xFFFF);
             pbs3debug->debug_state = BS3_DEBUG_STATE_RUNNING;
             break;
         case 's':
@@ -447,12 +480,12 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                 i = bs3_debug_util_getregister(pbs3debug->buff+2, linebuffer);
                 if (i < 0) /* not a register nor a flag*/
                 {
-                    bs3_debug_comm_send(pbs3debug,"Inccorect 'r' command\n");
+                    bs3_debug_comm_send(pbs3debug,"Incorrect 'r' command\n");
                     break;
                 }
-                if (i<11) /* check value existance for register*/
+                if (i != 8) /* check value existance for register*/
                 {
-                    if (pbs3debug->buff[5] != ' ')
+                    if (pbs3debug->buff[4] != ' ')
                     {
                         bs3_debug_comm_send(pbs3debug,"Missing register value\n");
                         break;
@@ -460,7 +493,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                 }
                 else /* check value existance for flag */
                 {
-                    if (pbs3debug->buff[4] != ' ')
+                    if (pbs3debug->buff[3] != ' ')
                     {
                         bs3_debug_comm_send(pbs3debug,"Missing flag value\n");
                         break;
@@ -474,7 +507,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                         {
                             case 'P':
                                 /* get address like value (4 hexa digits )*/
-                                addr = bs3_debug_util_getaddress(pbs3debug->buff+6);
+                                addr = bs3_debug_util_getaddress(pbs3debug->buff+5);
                                 if (addr < 0)
                                 {
                                     i = -1;
@@ -484,7 +517,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                                 break;
                             case 'S':
                                 /* get address like value (4 hexa digits )*/
-                                addr = bs3_debug_util_getaddress(pbs3debug->buff+6);
+                                addr = bs3_debug_util_getaddress(pbs3debug->buff+5);
                                 if (addr < 0)
                                 {
                                     i = -1;
@@ -494,7 +527,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                                 break;
                             case 'W':
                                 /* get address like value (4 hexa digits )*/
-                                addr = bs3_debug_util_getaddress(pbs3debug->buff+6);
+                                addr = bs3_debug_util_getaddress(pbs3debug->buff+5);
                                 if (addr < 0)
                                 {
                                     i = -1;
@@ -504,7 +537,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                                 break;
                             case 'B':
                                 /* get byte value (2 hexa digits )*/
-                                addr = bs3_debug_util_getbyte(pbs3debug->buff+6);
+                                addr = bs3_debug_util_getbyte(pbs3debug->buff+5);
                                 if (addr< 0)
                                 {
                                     i = -1;
@@ -516,7 +549,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                         break;
                     case 8:
                         /* get bit (1 or 0 value)*/
-                        i = bs3_debug_util_getbit(pbs3debug->buff+5);
+                        i = bs3_debug_util_getbit(pbs3debug->buff+4);
                         if (i >= 0)
                         {
                             switch (linebuffer[0]) /* Flag register, reg[0] == 'I', 'N', 'V', 'Z' or 'C' */
@@ -726,7 +759,12 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
              /* pbs3debug->servaddr.sin_addr.s_addr = htonl(INADDR_ANY); */
             pbs3debug->servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
             pbs3debug->servaddr.sin_port = htons(pbs3debug->port);
-        
+            int yes = 1;
+            if (setsockopt(pbs3debug->sockfd, SOL_SOCKET, SO_REUSEADDR, (void*)&yes, sizeof(yes)) < 0) 
+            {
+                printf("setsockopt() failed. Error: %d\n", errno);
+                exit(0);
+            }
             /* Binding newly created socket to given IP and verification */
             if ((bind(pbs3debug->sockfd, (SA*)&pbs3debug->servaddr, sizeof(pbs3debug->servaddr))) != 0) {
                 printf("Debug socket bind failed... errno:%d\n",errno);
