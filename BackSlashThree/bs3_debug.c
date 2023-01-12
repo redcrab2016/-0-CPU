@@ -176,13 +176,15 @@ void bs3_debug_comm_prompt(struct bs3_debug_data * pbs3debug)
 
 /* return -1 : error 
    return 8  : Flag register, reg[0] == 'I', 'N', 'V', 'Z' or 'C'
+   return 9  : PC register
+   return 10 : SP register
    return 0 .. 7 : register number , reg[0] == 'W' or 'B'
  */
 int bs3_debug_util_getregister(const char * source, char * reg)
 {
     int i,j;
     int value;
-    if (word == ((void *)0)) return 0;
+    if (reg == ((void *)0)) return 0;
     if (source == ((void *)0)) return 0;
     i = 0;
     j = 0;
@@ -193,7 +195,7 @@ int bs3_debug_util_getregister(const char * source, char * reg)
     {
         switch (j)
         {
-            case 0: /* first character Wx, Bx or flag register */
+            case 0: /* first character PC, SP, Wx, Bx or flag registers */
                 switch (source[i])
                 {
                     case 'i':
@@ -204,6 +206,8 @@ int bs3_debug_util_getregister(const char * source, char * reg)
                         value = 8;
                     case 'b':
                     case 'w':
+                    case 'p':
+                    case 's':
                         reg[j++] = source[i++] - 32;
                         break;
                     case 'I':
@@ -214,6 +218,8 @@ int bs3_debug_util_getregister(const char * source, char * reg)
                         value = 8;
                     case 'B':
                     case 'W':
+                    case 'P':
+                    case 'S':
                         reg[j++] = source[i++];
                         break;
                     default:
@@ -223,6 +229,28 @@ int bs3_debug_util_getregister(const char * source, char * reg)
             case 1: /* second character valid only for Wx and Bx registers */
                 switch (reg[0])
                 {
+                    case 'P':
+                        switch (source[i])
+                        {
+                            case 'C':
+                                value = 9;
+                                reg[j++] = source[i++];
+                                break;
+                            default:
+                                return -1;
+                        }
+                        break;
+                    case 'S':
+                        switch (source[i])
+                        {
+                            case 'P':
+                                value = 10;
+                                reg[j++] = source[i++];
+                                break;
+                            default:
+                                return -1;
+                        }
+                        break;
                     case 'W':
                         switch (source[i])
                         {
@@ -422,7 +450,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                     bs3_debug_comm_send(pbs3debug,"Inccorect 'r' command\n");
                     break;
                 }
-                if (i<8) /* check value existance for register*/
+                if (i<11) /* check value existance for register*/
                 {
                     if (pbs3debug->buff[5] != ' ')
                     {
@@ -441,8 +469,29 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                 switch (i) /* get and store value */
                 {
                     case 0 ... 7:
+                    case 9 ... 10:
                         switch (linebuffer[0])
                         {
+                            case 'P':
+                                /* get address like value (4 hexa digits )*/
+                                addr = bs3_debug_util_getaddress(pbs3debug->buff+6);
+                                if (addr < 0)
+                                {
+                                    i = -1;
+                                    break;
+                                }
+                                pbs3debug->pbs3->r.PC =  (WORD)(addr & 0xFFFF);
+                                break;
+                            case 'S':
+                                /* get address like value (4 hexa digits )*/
+                                addr = bs3_debug_util_getaddress(pbs3debug->buff+6);
+                                if (addr < 0)
+                                {
+                                    i = -1;
+                                    break;
+                                }
+                                pbs3debug->pbs3->r.SP =  (WORD)(addr & 0xFFFF);
+                                break;
                             case 'W':
                                 /* get address like value (4 hexa digits )*/
                                 addr = bs3_debug_util_getaddress(pbs3debug->buff+6);
