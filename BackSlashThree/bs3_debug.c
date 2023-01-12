@@ -27,22 +27,23 @@
 
 struct bs3_debug_data
 {
-    struct bs3_cpu_data * pbs3;         /* BS3 cpu object reference             */
-    int debug_state;                    /* cpu debug state , running or stopped */
-    int comm_state;                     /* socket communication state           */
-    int debug_stop_at;                  /* address where the CPU must stop      */
-    int debug_step_count;               /* how may step                         */
-    int lastPC;                         /* last final PC at last unassemble cmd */
+    struct bs3_cpu_data * pbs3;         /* BS3 cpu object reference                         */
+    int debug_state;                    /* cpu debug state , running or stopped             */
+    int comm_state;                     /* socket communication state                       */
+    int debug_stop_at;                  /* address where the CPU must stop                  */
+    int debug_step_count;               /* how may step                                     */
+    int lastPC;                         /* last final PC at last unassemble cmd             */
+    int canQuit;                        /* when CPU HALT status, can we quit the debugger   */
     /* communication tech data */
-    int count;                          /* latency counter                      */
-    int port;                           /* listening port                       */
-    int connfd;                         /* connection descriptor                */
-    int sockfd;                         /* listening socket descriptor          */
-    struct sockaddr_in servaddr;        /* listening bind address               */
-    struct sockaddr_in cli;             /* client address                       */
+    int count;                          /* latency counter                                  */
+    int port;                           /* listening port                                   */
+    int connfd;                         /* connection descriptor                            */
+    int sockfd;                         /* listening socket descriptor                      */
+    struct sockaddr_in servaddr;        /* listening bind address                           */
+    struct sockaddr_in cli;             /* client address                                   */
     /* client command */
-    char buff[BS3_DEBUG_COMM_MAXSIZE];  /* input string from client             */
-    int n;                              /* current size of buff                 */
+    char buff[BS3_DEBUG_COMM_MAXSIZE];  /* input string from client                         */
+    int n;                              /* current size of buff                             */
 };
 
 struct bs3_debug_data bs3debug;
@@ -79,6 +80,7 @@ void bs3_debug_init(struct bs3_debug_data * pbs3debug, int port)
     pbs3debug->port = (port == 0)?BS3_DEBUG_COMM_DEFAULTPORT:port;/* if port is 0 then take default port */
     pbs3debug->debug_state = BS3_DEBUG_STATE_STOPPED;
     pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_NOSERVICE;
+    pbs3debug->canQuit = 0;
 }
 
 void bs3_debug_prepare(int port)
@@ -237,6 +239,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
         case 'Z':
             pbs3debug->pbs3->status =  BS3_STATUS_HALT;
             pbs3debug->debug_step_count = 1;
+            pbs3debug->canQuit = 1;
             pbs3debug->debug_state = BS3_DEBUG_STATE_RUNNING;
             break;
         case 'q':
@@ -286,7 +289,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
     switch (pbs3debug->comm_state) 
     {
         case BS3_DEBUG_COMM_STATE_CONNECTED:
-            if ((pbs3debug->count & 0xFFF) == 0)
+            if ((pbs3debug->count & 0xFFF) == 0 || (((pbs3debug->count & 0x0F) == 0) && (pbs3debug->debug_state == BS3_DEBUG_STATE_STOPPED)))
             {
                len = sizeof(pbs3debug->cli); 
                newco = accept(pbs3debug->sockfd, (SA*)&cli, &len); 
@@ -429,6 +432,12 @@ void bs3_debug(struct bs3_cpu_data * pbs3)
         return; /* no debug to do, but possibly close debug connection*/
     }
     bs3debug.pbs3 = pbs3;
+    if (pbs3->status == BS3_STATUS_HALT)
+    {
+        pbs3->status = (bs3debug.canQuit)?pbs3->status:BS3_STATUS_DEFAULT;
+        bs3debug.debug_state = BS3_DEBUG_STATE_STOPPED;
+        return;
+    }
     if (bs3debug.debug_state == BS3_DEBUG_STATE_TOSTOP) bs3debug.debug_state = BS3_DEBUG_STATE_STOPPED;
     do 
     {
