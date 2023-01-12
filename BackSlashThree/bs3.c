@@ -1987,7 +1987,7 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
           if (debugf)
           {
             (*debugf)(&cpu);
-            if (cpu.status != BS3_STATUS_HALT) end = 1;
+            if (cpu.status == BS3_STATUS_HALT) end = 1;
           }
           else
             end = 1;

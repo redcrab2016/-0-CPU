@@ -436,6 +436,7 @@ void bs3_debug(struct bs3_cpu_data * pbs3)
     {
         pbs3->status = (bs3debug.canQuit)?pbs3->status:BS3_STATUS_DEFAULT;
         bs3debug.debug_state = BS3_DEBUG_STATE_STOPPED;
+        bs3debug.lastPC = 0;
         return;
     }
     if (bs3debug.debug_state == BS3_DEBUG_STATE_TOSTOP) bs3debug.debug_state = BS3_DEBUG_STATE_STOPPED;
