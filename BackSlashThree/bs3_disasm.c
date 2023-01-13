@@ -28,7 +28,7 @@ void bs3_cpu_memory_dump(struct bs3_cpu_data * pbs3, WORD addr, char * result)
     result[stridx + 0] = hexa_digit[ (value >> 4) & 0x0F];
     result[stridx + 1] = hexa_digit[  value       & 0x0F];
     /* set character glyph */
-    if (value > 31 ) result[56 + i] = value;
+    if (value > 31 && value < 127) result[56 + i] = value;/* print out ASCII non-contol chacracters and avoid UTF misunderstanding */
   }
 
 }

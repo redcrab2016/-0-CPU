@@ -46,16 +46,3 @@ int bs3_asm_file( const char * filename, const char * filenameout, const char * 
   }
 return err;
 }
-/*
-TODO:
-DONE : check if a label is already defined (duplicate label) inside bs3_asm_pass1_oneline
-DONE : local label attached to global label
-DONE : accept local label fully qualified global.local in parameter 
-directive DIST...
-missing ALIGN directive
-DONE : detect if assembly code at adress overlap an existing generated code
-DONE : macro recording
-DONE : macro expansion
-DONE : pass 2 : complete assembly with label address (abs and relative )
-DONE : Generate binary file
-*/

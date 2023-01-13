@@ -114,11 +114,13 @@ int bs3_asm_pass1_param_compatible(int destType, int srcType, long srcValue)
   {
     isok = 0;                  /* by default here , source and destination are not compatible */
     if  ( 
-          (destType == BS3_ASM_PARAM_TYPE_WORD && srcType == BS3_ASM_PARAM_TYPE_BYTE)  || /* BYTE is compatible WORD */
-          (destType == BS3_ASM_PARAM_TYPE_BYTE && srcValue >=-128 && srcValue <= 255)  || /* WORD is compatible BYTE only if value in range [-128,255] */
-          (destType == BS3_ASM_PARAM_TYPE_MISC && srcType == BS3_ASM_PARAM_TYPE_BYTE)  || /* MISC is compatible with BYTE  */
-          (destType == BS3_ASM_PARAM_TYPE_MISC && srcType == BS3_ASM_PARAM_TYPE_WORD)  || /* MISC is compatible with WORD  */
-          (destType == BS3_ASM_PARAM_TYPE_MISC && srcType == BS3_ASM_PARAM_TYPE_LABEL)    /* MISC is compatible with LABEL */
+          (destType == BS3_ASM_PARAM_TYPE_WORD  && srcType == BS3_ASM_PARAM_TYPE_BYTE)  || /* BYTE is compatible WORD */
+          (destType == BS3_ASM_PARAM_TYPE_BYTE  && srcValue >=-128 && srcValue <= 255)  || /* WORD is compatible BYTE only if value in range [-128,255] */
+          (destType == BS3_ASM_PARAM_TYPE_MISC  && srcType == BS3_ASM_PARAM_TYPE_BYTE)  || /* MISC is compatible with BYTE  */
+          (destType == BS3_ASM_PARAM_TYPE_MISC  && srcType == BS3_ASM_PARAM_TYPE_WORD)  || /* MISC is compatible with WORD  */
+          (destType == BS3_ASM_PARAM_TYPE_MISC  && srcType == BS3_ASM_PARAM_TYPE_LABEL) || /* MISC is compatible with LABEL */
+          (destType == BS3_ASM_PARAM_TYPE_LABEL && srcType == BS3_ASM_PARAM_TYPE_WORD)  || /* where a label is used a WORD (as abs address )*/
+          (destType == BS3_ASM_PARAM_TYPE_LABEL && srcType == BS3_ASM_PARAM_TYPE_BYTE)     /* where a label is used a BYTE (as abs address )*/
         )                                          
       isok = 1;    
   }
@@ -400,8 +402,30 @@ int bs3_asm_pass1_assemble(struct bs3_asm_line * bs3line)
             if (i == -1) break;
             return BS3_ASM_PASS1_PARSE_ERR_BADBYTE; /* Expected a byte but this is not */
           case 'r': /* immediate SBYTE representing the offset to a label */ 
-            bs3line->assembly[bs3line->assemblyLength++] = 0; /* temp relative 8 bits address : real value in pass 2 */
-            break;
+            for (i = 0; i < bs3line->nbParam; i++)
+            {
+              if ( 
+                   ((bs3line->paramType[i] & 0xF0) == BS3_ASM_PARAM_TYPE_BYTE) ||
+                   ((bs3line->paramType[i] & 0xF0) == BS3_ASM_PARAM_TYPE_WORD)    
+                 )
+              {
+                /* compute SBYTE offset from address*/
+                j = bs3line->paramValue[i] - (bs3line->assemblyAddress + bs3Instr[bs3line->opeCode].size);
+                if ( j < -128 || j > 127) break;
+                bs3line->assembly[bs3line->assemblyLength++] = (BYTE)(j & 0x00FF);
+                i = -1;
+                break;
+              }
+              if ( ((bs3line->paramType[i] & 0xF0) == BS3_ASM_PARAM_TYPE_LABEL) )
+              {
+                bs3line->assembly[bs3line->assemblyLength++] = 0; /* temp relative 8 bits address : real value in pass 2 */
+                if (bs3line->linenum == 0) break; /* no CPU instruction with label parameter authorize at prolog of assembling */
+                i = -1;
+                break;
+              }
+            }
+            if (i == -1) break; /* it is ok */
+            return BS3_ASM_PASS1_PARSE_ERR_BADBYTE; /* Expected a byte but this is not */
           case 'w': /* immediate WORD or label address (address real value in pass 2) */
             for (i = 0; i < bs3line->nbParam; i++)
             {
@@ -427,11 +451,35 @@ int bs3_asm_pass1_assemble(struct bs3_asm_line * bs3line)
             if (i == -1) break;
             return BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED; /* should never occur ... meaning bad operation design */
           case 'R': /* immediate SWORD of a label offset */
-            bs3line->assembly[bs3line->assemblyLength++] = 0; /* temp low 8 bits of a 16 bits relative address : real value in pass 2*/
-            bs3line->assembly[bs3line->assemblyLength++] = 0; /* temp high 8 bits of a 16 bits relative address : real value in pass 2 */
+            for (i = 0; i < bs3line->nbParam; i++)
+            {
+              if ( 
+                   ((bs3line->paramType[i] & 0xF0) == BS3_ASM_PARAM_TYPE_BYTE) ||
+                   ((bs3line->paramType[i] & 0xF0) == BS3_ASM_PARAM_TYPE_WORD)    
+                 )
+              {
+                /* compute SBYTE offset from address*/
+                j = bs3line->paramValue[i] - (bs3line->assemblyAddress + bs3Instr[bs3line->opeCode].size);
+                if ( j < -32768 || j > 32767) break;
+                bs3line->assembly[bs3line->assemblyLength++] = (BYTE)(j & 0x00FF);
+                bs3line->assembly[bs3line->assemblyLength++] = (BYTE)((j >> 8) & 0x00FF);
+                i = -1;
+                break;
+              }
+              if ( ((bs3line->paramType[i] & 0xF0) == BS3_ASM_PARAM_TYPE_LABEL) )
+              {
+                bs3line->assembly[bs3line->assemblyLength++] = 0; /* temp low 8 bits of a 16 bits relative address : real value in pass 2*/
+                bs3line->assembly[bs3line->assemblyLength++] = 0; /* temp high 8 bits of a 16 bits relative address : real value in pass 2 */
+                if (bs3line->linenum == 0) break; /* no CPU instruction with label parameter authorize at prolog of assembling */
+                i = -1;
+                break;
+              }
+            }
+            if (i == -1) break; /* it is ok */
+            return BS3_ASM_PASS1_PARSE_ERR_BADNUMBER; /* Expected a valid SWORD but this is not */
             break;
           default:
-            return BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED; /* should never occur ... meaning bad operation design */
+            return BS3_ASM_PASS1_PARSE_ERR_UNEXPECTED; /* should never occur ... meaning bad CPU operation design */
         }
         k++;
       } /* end of for each asmpattern code */
@@ -1662,6 +1710,12 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
     switch (bs3line->opeType)
     {
       case BS3_ASM_OPETYPE_SYMBOL: /* macro invocation : managed by caller of this function */
+        if (bs3line->linenum == 0 )
+        {
+          err = BS3_ASM_PASS1_PARSE_ERR_BADOPESYNTAX;
+          isok = 0;
+          idxLine = bs3line->ope;
+        }
         break;
       case BS3_ASM_OPETYPE_HUMAN: /* need to precise the FULL instruction */
       case BS3_ASM_OPETYPE_FULL: /* check if the parameter is ok , then assemble the code */
@@ -1703,6 +1757,12 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
           isok = 0;
           idxLine = bs3line->ope;
           break;
+        }
+        if (bs3line->linenum == 0 )
+        {
+          err = BS3_ASM_PASS1_PARSE_ERR_BADOPESYNTAX;
+          isok = 0;
+          idxLine = bs3line->ope;
         }
         break;
       default:
