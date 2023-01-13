@@ -588,9 +588,47 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
             bs3_debug_comm_send(pbs3debug,linebuffer);
             break;
         case 'e':
-            //break;
+            if (len < 9)
+            {
+                bs3_debug_comm_send(pbs3debug,"Incorrect 'e' command\n");
+                break;
+            }
+            addr = bs3_debug_util_getaddress(pbs3debug->buff+2);
+            if (addr < 0)
+            {
+                bs3_debug_comm_send(pbs3debug,"Incorrect address provided in 'e' command\n");
+                break;
+            }
+            i = bs3_debug_util_getbyte(pbs3debug->buff+7);
+            if (i < 0)
+            {
+                bs3_debug_comm_send(pbs3debug,"Incorrect byte values provided in 'e' command\n");
+                break;
+            }
+            pbs3debug->pbs3->m[(WORD)(addr & 0xFFFF)] = (BYTE)(i & 0xFF);
+            bs3_debug_comm_send(pbs3debug,"Byte value is set to memory\n");
+            break;
         case 'E':
-            bs3_debug_comm_send(pbs3debug,"Not yet implemented\n");
+            if (len < 11)
+            {
+                bs3_debug_comm_send(pbs3debug,"Incorrect 'E' command\n");
+                break;
+            }
+            addr = bs3_debug_util_getaddress(pbs3debug->buff+2);
+            if (addr < 0)
+            {
+                bs3_debug_comm_send(pbs3debug,"Incorrect address provided in 'E' command\n");
+                break;
+            }
+            i = (int)bs3_debug_util_getaddress(pbs3debug->buff+7);
+            if (i < 0)
+            {
+                bs3_debug_comm_send(pbs3debug,"Incorrect word values provided in 'E' command\n");
+                break;
+            }
+            pbs3debug->pbs3->m[(WORD)(addr & 0xFFFF)] = (BYTE)(i & 0xFF);
+            pbs3debug->pbs3->m[(WORD)((addr + 1) & 0xFFFF)] = (BYTE)((i >> 8) & 0xFF);
+            bs3_debug_comm_send(pbs3debug,"Word value is set to memory\n");
             break;
         case 'd':
             if (len >2 && len < 6)
@@ -634,23 +672,29 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
             pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_NOCONNECTION;
             break;
         case 'h':
-            bs3_debug_comm_send(pbs3debug,"     Debuggger commands (address always 4 hexa digits, count is decimal, value is 0/1 or 2/4 hexa digits )\n");
-            bs3_debug_comm_send(pbs3debug,"        u [address]        : unassemble code at 'address' or at PC if 'address' not provided\n");
-            bs3_debug_comm_send(pbs3debug,"        g [address]        : unpause CPU until 'address' is reached (PC register value),\n");
-            bs3_debug_comm_send(pbs3debug,"                             or continue as long as no pause is requested  ('s' command) if no 'address'\n");
-            bs3_debug_comm_send(pbs3debug,"        t [count]          : execute one step 'count' times, \n");
-            bs3_debug_comm_send(pbs3debug,"                             or only once if 'count' not provided \n");
-            bs3_debug_comm_send(pbs3debug,"        s                  : pause cpu execution when running\n");
-            bs3_debug_comm_send(pbs3debug,"        r [register value] : 'r' then show all register values\n");
-            bs3_debug_comm_send(pbs3debug,"                             'r register value' set 'value' to 'register'\n");
-            bs3_debug_comm_send(pbs3debug,"                             register amongst PC, SP, W0-3, B0-7, I, V, N, Z, C \n");
-            bs3_debug_comm_send(pbs3debug,"        e address value    : set 'value' byte to address\n");
-            bs3_debug_comm_send(pbs3debug,"        E address value    : set 'value' word to address (little endian)\n");
-            bs3_debug_comm_send(pbs3debug,"        d [address]        : dump data at adress, or continue dump from previous dump address\n");
-            bs3_debug_comm_send(pbs3debug,"        z                  : CPU reset (with data reset)\n");
-            bs3_debug_comm_send(pbs3debug,"        Z                  : CPU halt (with debugger deconnection)\n");
-            bs3_debug_comm_send(pbs3debug,"        q                  : quit debugger (deconnection but CPU program and state continue )\n");
-            bs3_debug_comm_send(pbs3debug,"        h                  : this help\n");
+            bs3_debug_comm_send(pbs3debug," Debuggger commands\n");
+            bs3_debug_comm_send(pbs3debug,"   parameter is optional if showed between square brackets\n");
+            bs3_debug_comm_send(pbs3debug,"   parameter 'address' : 4 hexa digits\n");
+            bs3_debug_comm_send(pbs3debug,"   parameter 'count'   : decimal (1 to 65535)\n");
+            bs3_debug_comm_send(pbs3debug,"   parameter 'value'   : 0 or 1 for flags,\n");
+            bs3_debug_comm_send(pbs3debug,"                         2 hexa digits for byte (Bx registers or memory entry)\n");
+            bs3_debug_comm_send(pbs3debug,"                         4 hexa digits for word (Wx registers or memory entry)\n\n");
+            bs3_debug_comm_send(pbs3debug,"   u [address]        : unassemble code at 'address' or at PC if 'address' not provided\n");
+            bs3_debug_comm_send(pbs3debug,"   g [address]        : unpause CPU until 'address' is reached\n");
+            bs3_debug_comm_send(pbs3debug,"                        or continue until pause ('s' command or 'HLT' CPU instruction)\n");
+            bs3_debug_comm_send(pbs3debug,"   t [count]          : execute one step 'count' times, \n");
+            bs3_debug_comm_send(pbs3debug,"                        or only once if 'count' not provided \n");
+            bs3_debug_comm_send(pbs3debug,"   s                  : pause cpu execution when running\n");
+            bs3_debug_comm_send(pbs3debug,"   r [register value] : 'r' then show all register values\n");
+            bs3_debug_comm_send(pbs3debug,"                        'r register value' set 'value' to 'register'\n");
+            bs3_debug_comm_send(pbs3debug,"                        register amongst PC, SP, W0-3, B0-7, I, V, N, Z, C \n");
+            bs3_debug_comm_send(pbs3debug,"   e address value    : set 'value' byte to address\n");
+            bs3_debug_comm_send(pbs3debug,"   E address value    : set 'value' word to address (little endian)\n");
+            bs3_debug_comm_send(pbs3debug,"   d [address]        : dump data at adress, or continue dump from previous dump address\n");
+            bs3_debug_comm_send(pbs3debug,"   z                  : CPU reset (with data reset)\n");
+            bs3_debug_comm_send(pbs3debug,"   Z                  : CPU halt (with debugger deconnection)\n");
+            bs3_debug_comm_send(pbs3debug,"   q                  : quit debugger (deconnection but CPU program and state continue )\n");
+            bs3_debug_comm_send(pbs3debug,"   h                  : this help\n");
             break;
         default:
             bs3_debug_comm_send(pbs3debug,"Unknown command. type 'h' for help\n");
