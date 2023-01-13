@@ -3,6 +3,7 @@
 
 #ifndef _BS3_ASM_CODE_MAP_H
 #define _BS3_ASM_CODE_MAP_H 1
+
 #define BS3_ASM_CODE_MAP_TYPE_BINARY            0x00
 #define BS3_ASM_CODE_MAP_TYPE_HEXA              0x01
 

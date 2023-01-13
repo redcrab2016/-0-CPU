@@ -111,7 +111,7 @@ void bs3_cpu_write_byte(struct bs3_cpu_data * pbs3, WORD address, BYTE data)
       case 0x0102:
         if (pbs3->m[0x0103] == 0x00) /* if ok to write on output */ 
         {
-          pbs3->m[0x0103] == 0x01; /* output is waiting to be consummed */
+          pbs3->m[0x0103]  = 0x01; /* output is waiting to be consummed */
           pbs3->m[address] = data; /* output data available */
         }
         break;
@@ -120,7 +120,7 @@ void bs3_cpu_write_byte(struct bs3_cpu_data * pbs3, WORD address, BYTE data)
       case 0x0104:
         if (pbs3->m[0x0105] == 0x00) /* if ok to write on auxiliary output */
         {
-          pbs3->m[0x0106] == 0x01; /* output is waiting to be consummed */
+          pbs3->m[0x0105]  = 0x01; /* output is waiting to be consummed */
           pbs3->m[address] = data; /* output data available */
         }
         break;
@@ -1893,7 +1893,7 @@ void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
     } 
     else
     {
-      pbs3->output_ready == 0x00; /* data sent to output , ouput is ready for another sending*/
+      pbs3->output_ready = 0x00; /* data sent to output , ouput is ready for another sending*/
     }
   }
   /* process auxiliary output */
@@ -1913,7 +1913,7 @@ void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
     } 
     else
     {
-      pbs3->output2_ready == 0x00; /* data sent to auxiliary output , auxiliary ouput is ready for another sending*/
+      pbs3->output2_ready = 0x00; /* data sent to auxiliary output , auxiliary ouput is ready for another sending*/
     }
   }
   /* process input */
@@ -1931,7 +1931,7 @@ void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
     if (ret > 0 && ((pfds[0].revents & 1) == 1)) {
       read(0, &c, 1);
       pbs3->input_data = (BYTE)c;
-      pbs3->input_ready == 0x00;
+      pbs3->input_ready = 0x00;
       bs3_cpu_interrupt(pbs3, BS3_INT_INPUT);
     }
   

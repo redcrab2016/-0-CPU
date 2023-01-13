@@ -255,6 +255,18 @@ aaaa equ 127
   HEVT
   WAIT
   RESET
-        
+msg:
+  db "Hello world.",10,0        
 fin:
+    LEAN_W0 msg
+loop:
+    LD  B3,[w0]
+    CMP b3,0
+    JZ  bye
+retry:
+    out b3
+    jz retry
+    inc w0
+    j loop
+bye:    
     HLT     ; stop CPU
