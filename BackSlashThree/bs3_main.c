@@ -11,7 +11,6 @@ void main() {
     bs3_debug_prepare(0); /* 0 for default port 35853*/
     bs3_hyper_main(&codemap,&bs3_debug);
     bs3_debug_end();
-
   }
   return;
  
