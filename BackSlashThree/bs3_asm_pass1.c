@@ -1791,6 +1791,8 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
   
 } 
 
+
+
 int fileId = 0;
 
 int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, long asmIndexMacro)
@@ -2100,6 +2102,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
                 isMacroRecording = 1;
                 sprintf(includefilename, "%s.macro", &pbs3_asm->line[pbs3_asm->label]);
                 macroFile = fopen(includefilename,"wt");
+                bs3_asm_pass1_addmacro(includefilename);
                 break;
             case BS3_INSTR_ENDM:
                 /* end of macro recording mode */

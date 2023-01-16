@@ -1894,6 +1894,7 @@ void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
     else
     {
       pbs3->output_ready = 0x00; /* data sent to output , ouput is ready for another sending*/
+      fflush(stdout);
     }
   }
   /* process auxiliary output */

@@ -257,7 +257,7 @@ aaaa equ 127
   RESET
 msg:
   db "Hello world.",10,0        
-fin:
+welcome:
     LEAN_W0 msg
 loop:
     LD  B3,[w0]
@@ -268,5 +268,9 @@ retry:
     jz retry
     inc w0
     j loop
-bye:    
+bye:
+    ret
+fin:  
+    call welcome
+    c welcome      
     HLT     ; stop CPU

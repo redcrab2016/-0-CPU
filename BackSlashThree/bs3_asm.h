@@ -187,6 +187,9 @@ extern const char * bs3_asm_message[];
 extern struct bs3_asm_line bs3_asm[]; /* to be managed as a sequential third party resource ( as a file) */
 extern long bs3_asm_nbline; /* current size of bs3_asm usage */
 
+int bs3_asm_pass1_addmacro(const char * macrofilename);
+void bs3_asm_pass1_removemacrofiles();
+
 char * bs3_asm_line_tostring(struct bs3_asm_line * bs3line, char * stringasmline);
 void bs3_asm_line_reset();
 char * bs3_asm_line_getFilename(struct bs3_asm_line * bs3line, char * filename);

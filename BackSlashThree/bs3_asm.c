@@ -15,6 +15,7 @@ int bs3_asm_file( const char * filename, const char * filenameout, const char * 
   bs3_asm_line_reset();
   /* pass 1 */
   err =  bs3_asm_pass1_file(filename, 0 /* adress 0x0000 by default */,&addressout, -1 /* not macro expansion mode*/);
+  bs3_asm_pass1_removemacrofiles();
   if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
   {
     bs3_asm_report(filename, 0 , 0 , BS3_ASM_PASS1_FAILURE) ;

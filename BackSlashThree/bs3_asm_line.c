@@ -1,11 +1,81 @@
 #include <stdio.h>
+#include <sys/stat.h>
 #include <string.h>
+#include <errno.h>
 #include "bs3_asm.h"
 #include "bs3_asm_code_map.h"
+
+
+#define BS3_MAX_MACROFILE 1024
+#define BS3_FILENAME_LENGTH 256
+
+struct bs3_asm_pass1_macrofile {
+  char filename[BS3_FILENAME_LENGTH];
+};
+struct bs3_asm_pass1_macrofile bs3macrofiles[BS3_MAX_MACROFILE];
+int bs3_asm_pass1_nbmacrofiles = 0;
 
 struct bs3_asm_line bs3_asm[BS3_ASM_LINE_MAX]; /* to be managed as a sequential third party resource */
 long bs3_asm_nbline = 0; /* current size of bs3_asm usage */
 struct bs3_asm_code_map  bs3_asm_map; /* assembling memory map*/
+
+
+/*
+  search existing macrofile
+*/
+int  bs3_asm_pass1_getindex(const char * macrofilename)
+{
+  int result = -1;
+  int i = 0;
+  if (macrofilename == ((void *)0)) return result;
+  if (macrofilename[0] == 0) return result;
+  for (i = 0; i < bs3_asm_pass1_nbmacrofiles ; i++)
+  {
+    if (strcmp(macrofilename,bs3macrofiles[i].filename ) == 0)
+    {
+      result = i;
+      break;
+    }
+  }
+  return result;
+}
+
+/* add a macro filename in our list of macro filename*/
+/* return index in macro filename list */
+/* return -1 if macro filename list is full */
+int bs3_asm_pass1_addmacro(const char * macrofilename)
+{
+  int result;
+  result = bs3_asm_pass1_getindex(macrofilename);
+  if (result >=0 ) return result; /* already exist */
+  if (bs3_asm_pass1_nbmacrofiles >= BS3_MAX_MACROFILE) return -1; /* macro filename list is full */
+  strcpy(bs3macrofiles[bs3_asm_pass1_nbmacrofiles++].filename, macrofilename);
+  result = bs3_asm_pass1_nbmacrofiles-1;
+  return result;
+}
+
+/* remove all macro files */
+void bs3_asm_pass1_removemacrofiles()
+{
+  int i;
+  struct stat buffer;
+  for (i = 0 ; i < bs3_asm_pass1_nbmacrofiles; i++)
+  {
+    /* if file exist */
+    if (stat(bs3macrofiles[i].filename, &buffer) != 0) 
+    {
+      fprintf(stderr, "Macro file %s does not exist anymore\n", bs3macrofiles[i].filename);
+      continue;
+    }
+    /* file does exist then remove it */
+    if (remove(bs3macrofiles[i].filename) != 0)
+    {
+      fprintf(stderr, "Failed to remove macro file %s\n errno:%d", bs3macrofiles[i].filename, errno);
+    }
+  }
+  bs3_asm_pass1_nbmacrofiles = 0;
+}
+
 /*
   reset all asm line contents
 */
@@ -13,6 +83,7 @@ void bs3_asm_line_reset()
 {
   long i;
   bs3_asm_nbline = 0;
+  bs3_asm_pass1_removemacrofiles();
   bs3_asm_code_map_reset(&bs3_asm_map);
 }
 
