@@ -7,19 +7,18 @@
 CC = gcc      # compiler to use
 
 LINKERFLAG = -lm
-
-SRCS := $(wildcard *.c)
-OBJS := $(SRCS:%.c=%.o)
+#DEBUG = -Os
+DEBUG = -g
 BINS := bs3asm bs3rt
 
 all: ${BINS}
 
-bs3rt: bs3m bs3.o bs3_asm_code_map.o
+bs3rt: bs3_mainrt.o bs3.o bs3_asm_code_map.o
 	@echo "BS3 Runtime link"
-	${CC} -s bs3_main.o bs3.o bs3_asm_code_map.o -o $@ ${LINKERFLAG}
+	${CC} bs3_mainrt.o bs3.o bs3_asm_code_map.o -o $@ ${LINKERFLAG}
 
 
-bs3asm: ${OBJS}
+bs3asm: bs3_asm_code_map.o  bs3_asm_line.o  bs3_asm_message.o  bs3_asm.o  bs3_asm_pass1.o  bs3_asm_pass2.o  bs3_debug.o  bs3_disasm.o  bs3_instr.o  bs3_main.o bs3.o
 	@echo "BS3 Assembler/Debugger link"
 	${CC}  $^ -o $@ ${LINKERFLAG}
 
@@ -28,9 +27,13 @@ bs3m:
 	rm -rvf bs3_main.o
 	${CC} -D BS3RUNTIME -c bs3_main.c
 
+bs3_mainrt.o : bs3_main.c
+	@echo "Creating bs3_mainrt.o"
+	${CC} ${DEBUG} -D BS3RUNTIME -c bs3_main.c -o bs3_mainrt.o
+
 %.o: %.c
 	@echo "Creating object.." $@
-	${CC} -Os -c $<
+	${CC} ${DEBUG} -c $<
 
 clean:
 	@echo "Cleaning up..."

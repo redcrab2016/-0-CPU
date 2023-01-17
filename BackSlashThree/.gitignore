@@ -1,0 +1,7 @@
+*.o
+bs3rt
+bs3asm
+bs3_main
+test.*
+!test.asm
+!test.inc

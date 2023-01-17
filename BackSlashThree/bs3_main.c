@@ -1,4 +1,4 @@
-#ifdef BS3RUNTIME
+#if defined(BS3RUNTIME)
 
 #include <stdlib.h>
 #include <stdio.h>
