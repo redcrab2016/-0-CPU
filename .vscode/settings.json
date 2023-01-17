@@ -4,5 +4,13 @@
         "typeinfo": "c",
         "*.tcc": "c",
         "cstdio": "c"
-    }
+    },
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
+            "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
+            "binaryArgs": ["test.asm","paramother"]
+        }
+    ],
+    "C_Cpp.dimInactiveRegions": false
 }
