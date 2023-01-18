@@ -7,8 +7,8 @@
 CC = @gcc
 
 LINKERFLAG = -lm
-#DEBUG = -Os
-DEBUG = -g
+DEBUG = -Os
+#DEBUG = -g  # for gdb debugging 
 BINS := bs3asm bs3rt
 
 all: ${BINS} distribute
@@ -16,7 +16,7 @@ all: ${BINS} distribute
 distribute: ${BINS}
 	@echo ">>> Distribute into dist folder."
 	@mkdir -p dist/include
-	@mkdir -p examples
+	@mkdir -p dist/examples
 	@mkdir -p include
 	@cp -pv bs3asm dist/.
 	@cp -pv bs3rt dist/.
