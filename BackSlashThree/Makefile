@@ -16,10 +16,12 @@ all: ${BINS} distribute
 distribute: ${BINS}
 	@echo ">>> Distribute into dist folder."
 	@mkdir -p dist/include
+	@mkdir -p examples
 	@mkdir -p include
 	@cp -pv bs3asm dist/.
 	@cp -pv bs3rt dist/.
 	@cp -prv include/* dist/include/.
+	@cp -prv examples/* dist/examples/.
 
 bs3rt: bs3_mainrt.o bs3.o bs3_asm_code_map.o
 	@echo ">>> Creating" $@
@@ -43,3 +45,4 @@ clean:
 	@rm -rvf *.o ${BINS}
 	@rm -fv dist/bs3*
 	@rm -fv dist/include/*
+	@rm -rfv dist/examples/*

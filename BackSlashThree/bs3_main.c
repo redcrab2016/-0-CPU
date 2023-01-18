@@ -44,7 +44,8 @@ void bs3_usage(const char * prgname )
     printf("  -e, --output-elf ELFFILE   Assembling result executable in ELFFILE           \n");
     printf("                             by default it is FILE without extension           \n");
     printf("  -h, --help                 This current help message.                        \n");
-    printf("  -i, --include-path         Path to search for include directive              \n");
+    printf("  -i, --include-path  PATH   Path to search for include directive              \n");
+    printf("                             multiple -i argument is allowed                   \n");
     printf("  -n, --debug-bindip         IP address to bind the debug listening socket,    \n");
     printf("                             127.0.0.1 is by default.                          \n");
     printf("  -o, --output-bs3 BS3FILE   Assembling BS3 result in BS3FILE                  \n");
@@ -58,13 +59,14 @@ void bs3_usage(const char * prgname )
     printf("If FILE has an .s, .asm, .S or .ASM extension, it assembles FILE, otherwise it \n");
     printf("load it for debug.                                                             \n");
     printf("After successful assembling, you can debug it right awway by using argument -d.\n");
-    printf("Debugging port is localhost (127.0.0.1) on TCP port 35853 by default.          \n");
+    printf("Debug service is reachable at localhost (127.0.0.1) with port 35853 by default.\n");
     printf("Use a telnet alike program to interract with the debugger:                     \n");
     printf("       >telnet localhost 35853                                                 \n");
     printf("                                                                               \n");
-    printf("Example:                                                                       \n");
+    printf("Examples:                                                                      \n");
     printf("   >bs3asm myprog.asm                                                          \n");
-    printf("     locally generates 'myprog.bs3' binary file, and 'myprog.rpt' text report. \n");
+    printf("     Generates 'myprog.bs3' binary file, 'myprog.rpt' text report,             \n");
+    printf("     and 'myprog' ELF executable file.                                         \n");
     printf("                                                                               \n");
     printf("   >bs3asm -d -p 2300 myprog.asm                                               \n");
     printf("     If assembling completed successfully,                                     \n");
@@ -119,7 +121,7 @@ int main(int argc, char *argv[])
   strcpy(outputReport,"");
   strcpy(outputELF,"");
   strcpy(bindaddr,"127.0.0.1");
-  port = 0;
+  port = 0; /* 0 = use default 35853 */
   nbIncludePath = 1;
   toDebug = 0;
   toCompile = 0;
