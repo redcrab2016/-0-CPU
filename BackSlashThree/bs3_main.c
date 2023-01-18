@@ -248,7 +248,11 @@ int main(int argc, char *argv[])
           i = i - 4;
         }
       }
-      if (!toCompile) toDebug = 1;
+      if (!toCompile) 
+      {
+        toDebug = 1;
+        strcpy(outputBS3, inputFile);
+      }
       if (toCompile && outputBS3[0] == 0 ) /* manage default parameter if '-o' argument is not provided */
       {
           strcpy(outputBS3, inputFile);
