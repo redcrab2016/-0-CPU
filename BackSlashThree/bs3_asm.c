@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "bs3_asm.h"
 
+struct bs3_asm_include_paths * bs3_asm_includepaths = 0;
+
 int bs3_asm_file( const char * filename, const char * filenameout, const char * filenamereport, int format)
 {
   int err;

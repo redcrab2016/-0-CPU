@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <errno.h>
+#include <libgen.h>
 #include "bs3_asm.h"
 #include "bs3_asm_code_map.h"
 
@@ -148,7 +149,7 @@ char * bs3_asm_line_tostring(struct bs3_asm_line * bs3line, char * stringasmline
   /* generate '[filename:linenum:addrhexa] label ope param1,param2 ... ; hexa generated'*/
   /*      [filename:linenum:addrhexa] label ope ... */
   sprintf(stringasmline,"[%-14s:%0.5hd:%0.4hX] %s\t%s",
-          bs3_asm_line_getFilename (bs3line, filename),
+          basename(bs3_asm_line_getFilename (bs3line, filename)),
           (int)(bs3line->linenum),
           bs3line->assemblyAddress,
           ((bs3line->label == -1)?"":&bs3line->line[bs3line->label]),

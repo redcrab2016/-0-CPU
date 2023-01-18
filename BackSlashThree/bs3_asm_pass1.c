@@ -1,9 +1,53 @@
 #include <stdio.h>
-//#include <stdlib.h>
+#include <stdlib.h>
 #include <string.h>
-//#include <errno.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <libgen.h>
 
 #include "bs3_asm.h"
+
+
+/* get effective name based on current file name , wish file name and list of include path */
+int bs3_asm_effectivefilename(const char * currfilename, const char * wishfilename, char * finalFilename)
+{
+  int i ;
+  struct stat fs;
+  char * curIncludePath;
+  char filename[BS3_MAX_FILENAME_SIZE];
+  char currDirname[BS3_MAX_FILENAME_SIZE];
+  if (wishfilename && finalFilename)
+  {
+    for (i = 0; i < BS3_MAX_INCLUDEPATH ; i++)
+    {
+      char * curIncludePath = bs3_asm_includepaths->includePath[i];
+      if (*curIncludePath == 0xFF) 
+      {
+        if (currfilename)
+        {
+          strcpy(currDirname,currfilename);
+          strcpy(filename,dirname(currDirname));
+          strcat(filename,"/");
+        } else break;
+      } 
+      else  strcpy(filename, curIncludePath);
+      strcat(filename, wishfilename);
+      /*  stat curFilename for test existance */
+      i = stat(filename,&fs);
+      if (i == -1) 
+      {
+        if (*curIncludePath == 0xFF) break;
+        continue;
+      }
+      /* it does exist then take it */
+      strcpy(finalFilename,filename);
+      return 1;
+    }
+  }
+  /* stcpy wishfilename to finalFilename !!! handle if same address */
+  if (finalFilename != wishfilename && finalFilename && wishfilename) strcpy(finalFilename, wishfilename);
+  return 0;
+}
 
 /* check label in provided bs3line for duplicate, then attach local label to last encounter global label */
 int bs3_asm_line_checkLabel(struct bs3_asm_line * bs3line)
@@ -2124,6 +2168,8 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
                     i++;
                 }
                 includefilename[i] = 0;
+                /* effective includefilename */
+                bs3_asm_effectivefilename(filename, includefilename, includefilename);
                 err = bs3_asm_pass1_file(includefilename,  address, addressout, -1);
                 address = *addressout;
                 if (err != BS3_ASM_PASS1_PARSE_ERR_OK)

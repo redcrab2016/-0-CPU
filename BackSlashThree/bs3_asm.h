@@ -149,6 +149,11 @@
 #define BS3_ASM_OPETYPE_CPU                    0x05
 #define BS3_ASM_OPETYPE_ALIAS                  0x06
 
+#define BS3_MAX_FILENAME_SIZE 256
+#define BS3_MAX_INCLUDEPATH 32
+#define BS3_BUFFER_SIZE 4096
+
+
 struct bs3_asm_line
 {
   /* asm_line_index */
@@ -179,9 +184,14 @@ struct bs3_asm_line
   BYTE assembly[BS3_ASM_LINE_BUFFER];
 };
 
+struct bs3_asm_include_paths
+{
+  char includePath[BS3_MAX_INCLUDEPATH][BS3_MAX_FILENAME_SIZE];
+  int size;
+};
 
 extern struct bs3_asm_code_map  bs3_asm_map; 
-
+extern struct bs3_asm_include_paths * bs3_asm_includepaths;
 extern const char * bs3_asm_message[];
 
 extern struct bs3_asm_line bs3_asm[]; /* to be managed as a sequential third party resource ( as a file) */
@@ -202,6 +212,7 @@ struct bs3_asm_line * bs3_asm_line_last(struct bs3_asm_line * bs3line);
 struct bs3_asm_line * bs3_asm_line_nextfree(struct bs3_asm_line * bs3line);
 int bs3_asm_line_commit(struct bs3_asm_line *  bs3line);
 int bs3_asm_line_checkLabel(struct bs3_asm_line * bs3line);
+int bs3_asm_effectivefilename(const char * currfilename, const char * wishfilename, char * finalFilename);
 struct bs3_asm_line * bs3_asm_getEQU(const char * symbol, struct bs3_asm_line *  curbs3line, struct bs3_asm_line * foundbs3line);
 
 void bs3_asm_report(const char * filename, int line, int linecolumn, int message);

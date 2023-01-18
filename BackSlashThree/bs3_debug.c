@@ -36,6 +36,7 @@ struct bs3_debug_data
     int lastDumpAddr;                   /* last dump address for 'd' cmd                    */
     int canQuit;                        /* when CPU HALT status, can we quit the debugger   */
     /* communication tech data */
+    char bindaddr[256];                 /* Debug listening address */
     int count;                          /* latency counter                                  */
     int port;                           /* listening port                                   */
     int connfd;                         /* connection descriptor                            */
@@ -74,7 +75,7 @@ void bs3_debug_finish(struct bs3_debug_data * pbs3debug)
     pbs3debug->n = 0;
 }
 
-void bs3_debug_init(struct bs3_debug_data * pbs3debug, int port)
+void bs3_debug_init(struct bs3_debug_data * pbs3debug,const char * bindaddr, int port)
 {
     bs3_debug_finish(pbs3debug);
     memset(pbs3debug, 0, sizeof(struct bs3_debug_data));
@@ -82,11 +83,12 @@ void bs3_debug_init(struct bs3_debug_data * pbs3debug, int port)
     pbs3debug->debug_state = BS3_DEBUG_STATE_STOPPED;
     pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_NOSERVICE;
     pbs3debug->canQuit = 0;
+    strcpy(pbs3debug->bindaddr, bindaddr);
 }
 
-void bs3_debug_prepare(int port)
+void bs3_debug_prepare(const char * bindaddr, int port)
 {
-    bs3_debug_init(&bs3debug, port);
+    bs3_debug_init(&bs3debug, bindaddr, port);
 }
 
 void bs3_debug_end()
@@ -870,7 +872,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
             /* assign IP, PORT */
             pbs3debug->servaddr.sin_family = AF_INET;
              /* pbs3debug->servaddr.sin_addr.s_addr = htonl(INADDR_ANY); */
-            pbs3debug->servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+            pbs3debug->servaddr.sin_addr.s_addr = inet_addr(pbs3debug->bindaddr);
             pbs3debug->servaddr.sin_port = htons(pbs3debug->port);
             int yes = 1;
             if (setsockopt(pbs3debug->sockfd, SOL_SOCKET, SO_REUSEADDR, (void*)&yes, sizeof(yes)) < 0) 
