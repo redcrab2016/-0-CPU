@@ -261,9 +261,10 @@ int main(int argc, char *argv[])
       }
       if (toCompile && outputELF[0] == 0 ) /* manage default parameter if '-r' argument is not provided */
       {
-          strcpy(outputReport, inputFile);
+          strcpy(outputELF, inputFile);
           outputELF[i] = 0;
-          strcpy(bs3rtFile,dirname(argv[0]));
+          strcpy(buffer,argv[0]);
+          strcpy(bs3rtFile,dirname(buffer));
           strcat(bs3rtFile, "/bs3rt");
       }
       if (toCompile)   /* add include path where source file reside and where this binary path reside concatenated with "/include" */
@@ -281,7 +282,7 @@ int main(int argc, char *argv[])
         /* be sure we have a trailing '/' at the end of each includePath */
         for (i =0; i < BS3_MAX_INCLUDEPATH; i++ )
         {
-          if (inc.includePath[i][0] == 0xFF) break;
+          if (inc.includePath[i][0] == (signed char)0xFF) break;
           if (inc.includePath[i][0] == 0) continue;
           if (inc.includePath[i][strlen(inc.includePath[i]) - 1] != '/') strcat(inc.includePath[i],"/");
         }

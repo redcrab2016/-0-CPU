@@ -9,7 +9,12 @@
         {
             "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
             "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
-            "binaryArgs": ["test.asm","paramother"]
+            "binaryArgs": ["test.asm"]
+        },
+        {
+            "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
+            "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
+            "binaryArgs": ["-d","test.asm"]
         }
     ],
     "C_Cpp.dimInactiveRegions": false

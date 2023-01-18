@@ -11,7 +11,7 @@
 /* get effective name based on current file name , wish file name and list of include path */
 int bs3_asm_effectivefilename(const char * currfilename, const char * wishfilename, char * finalFilename)
 {
-  int i ;
+  int i ,j;
   struct stat fs;
   char * curIncludePath;
   char filename[BS3_MAX_FILENAME_SIZE];
@@ -21,7 +21,7 @@ int bs3_asm_effectivefilename(const char * currfilename, const char * wishfilena
     for (i = 0; i < BS3_MAX_INCLUDEPATH ; i++)
     {
       char * curIncludePath = bs3_asm_includepaths->includePath[i];
-      if (*curIncludePath == 0xFF) 
+      if (*curIncludePath == (signed char)0xFF) 
       {
         if (currfilename)
         {
@@ -33,10 +33,10 @@ int bs3_asm_effectivefilename(const char * currfilename, const char * wishfilena
       else  strcpy(filename, curIncludePath);
       strcat(filename, wishfilename);
       /*  stat curFilename for test existance */
-      i = stat(filename,&fs);
-      if (i == -1) 
+      j = stat(filename,&fs);
+      if (j == -1) 
       {
-        if (*curIncludePath == 0xFF) break;
+        if (*curIncludePath == (signed char)0xFF) break;
         continue;
       }
       /* it does exist then take it */

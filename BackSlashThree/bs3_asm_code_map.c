@@ -243,14 +243,14 @@ static int bs3_asm_code_map_load_(FILE * infile, struct bs3_asm_code_map * bs3co
                 address = achar & 0x00FF;
                 achar   = fgetc(infile);
                 isok    = isok && (achar != EOF);
-                address = (address << 8) | (achar & 0x00FF);
+                address = address |(((WORD)(achar & 0x00FF)) << 8);
                 /* load length */
                 achar   = fgetc(infile);
                 isok    = isok && (achar != EOF);
                 length  = achar & 0x00FF;
                 achar   = fgetc(infile);
                 isok    = isok && (achar != EOF);
-                length  = (length << 8) | (achar & 0x00FF);
+                length  = length | (((WORD)(achar & 0x00FF)) << 8);
                 if (!isok) 
                 {   
                     fclose(infile);
