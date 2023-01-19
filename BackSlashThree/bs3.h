@@ -327,6 +327,8 @@ struct bs3_cpu_data
       BYTE output_ready; /* core I/O output status */
       BYTE output2_data; /* core I/O auxiliary output */
       BYTE output2_ready; /* core I/O auxilairy output status */
+      BYTE reserved_1;
+      BYTE reserved_2;
       DWORD timer;        /* system timer */ 
       BYTE msortick; /* microsecond(0) or cpu clock(1) */ 
     };

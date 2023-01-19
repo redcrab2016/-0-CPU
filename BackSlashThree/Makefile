@@ -7,8 +7,8 @@
 CC = @gcc
 
 LINKERFLAG = -lm
-DEBUG = -Os
-#DEBUG = -g  # for gdb debugging 
+#DEBUG = -Os
+DEBUG = -g  # for gdb debugging 
 BINS := bs3asm bs3rt
 
 all: ${BINS} distribute

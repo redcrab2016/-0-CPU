@@ -116,10 +116,12 @@ MEMORY MAP
 		0103 : output data ready (==0 , 0102 is ready for a write operation, ==FF no output available, ==01 wait(about to come))
 		0104 : byte secondary output data
 		0105 : secondary output data ready (==0, 0104 is ready for write operation, ==FF no output available, ==01 wait(about to come))
-		0106 : Timer clock count low  (32 bits counters, set here from 0106 0109, the tick delay)
-		0108 : Timer clock count high (a word write operation at this address will restart the timer counter)
-		010A : Timer msseconds(0) or cpu tick(1)
-		010B - 01FF : other system I/O
+		0106 : reserved byte I/O
+		0107 ; reserved byte I/O
+		0108 : Timer clock count low  (32 bits counters, set here from 0106 0109, the tick delay)
+		010A : Timer clock count high (a word write operation at this address will restart the timer counter)
+		010C : Timer microseconds(0) or cpu ticks(1)
+		010D - 01FF : other system I/O
 	0200 - 03FF : Default Stack(grow downward, SP initial value to 0400) / possible Data / possible Code		
 	0400 - FFFF : Code / Data(ROM, RAM System or shared with device) / possible stack
 

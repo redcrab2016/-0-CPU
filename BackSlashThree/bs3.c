@@ -126,13 +126,13 @@ void bs3_cpu_write_byte(struct bs3_cpu_data * pbs3, WORD address, BYTE data)
         break;
       case 0x0105: /* write on auxiliary output status is ignored */ 
         break;
-      case 0x0106: /* low byte of the low 16 bits of the 32 bits timer */
-      case 0x0107: /* high byte of the low 16 bits of the 32 bits timer */
-      case 0x0108: /* low byte of the high 16 bits of the 32 bits timer */
-      case 0x010A: /* ms(0) or tick timer(1) */
+      case 0x0108: /* low byte of the low 16 bits of the 32 bits timer */
+      case 0x0109: /* high byte of the low 16 bits of the 32 bits timer */
+      case 0x010A: /* low byte of the high 16 bits of the 32 bits timer */
+      case 0x010C: /* ms(0) or tick timer(1) */
         pbs3->m[address] = data;
         break;
-      case 0x0109: /* high byte of the high 16 bits of the 3é bits timer : at this write, timer is restarted */
+      case 0x010B: /* high byte of the high 16 bits of the 3é bits timer : at this write, timer is restarted */
         pbs3->m[address] = data;
         
         if (pbs3->msortick == 0) /* microseconds */ 
@@ -176,11 +176,13 @@ BYTE bs3_cpu_read_byte(struct bs3_cpu_data * pbs3, WORD address) {
       case 0x0103: /* core output status */
       case 0x0104: /* core auxiliary output */
       case 0x0105: /* core auxliiary output status */
-      case 0x0106: /* timer 32 low, 16 bits low */
-      case 0x0107: /* timer 32 low, 1§ bit high */
-      case 0x0108: /* timer 32 high, 16 bits low */
-      case 0x0109: /* timer 32 high, 16 bits high */
-      case 0x010A: /* msortick */
+      case 0x0106: 
+      case 0x0107:
+      case 0x0108: /* timer 32 low, 16 bits low */
+      case 0x0109: /* timer 32 low, 16 bit high */
+      case 0x010A: /* timer 32 high, 16 bits low */
+      case 0x010B: /* timer 32 high, 16 bits high */ 
+      case 0x010C: /* msortick */
         return pbs3->m[address];
         break;
       default:
@@ -1944,7 +1946,7 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
 {
     struct termios oldtio, curtio;
     struct sigaction sa;
-
+    BYTE prevBS3status;
     /* Save stdin terminal attributes */
     tcgetattr(0, &oldtio);
 
@@ -1979,7 +1981,16 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
     /* main loop */
     while (!end) {
       bs3_hyper_coreIO(&cpu);
-      if (debugf) (*debugf)(&cpu);
+      if (debugf)
+      {
+        prevBS3status = cpu.status;
+        (*debugf)(&cpu);
+        if (cpu.status == BS3_STATUS_RESET && prevBS3status != cpu.status) /* CPU reset requested by debuuger */
+        {
+          bs3_hyper_reset_memory(&cpu);
+          bs3_hyper_load_memory(&cpu, pcodemap); /*program, programsize, 0); */
+        }
+      } 
       bs3_cpu_exec(&cpu);
       
       switch (cpu.status)
@@ -1993,7 +2004,7 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
           else
             end = 1;
           break;
-        case BS3_STATUS_RESET: /* CPU reset requested */
+        case BS3_STATUS_RESET: /* CPU reset requested by program */
           bs3_hyper_reset_memory(&cpu);
           bs3_hyper_load_memory(&cpu, pcodemap); /*program, programsize, 0); */
           break;

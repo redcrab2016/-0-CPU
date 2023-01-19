@@ -75,20 +75,20 @@ void bs3_debug_finish(struct bs3_debug_data * pbs3debug)
     pbs3debug->n = 0;
 }
 
-void bs3_debug_init(struct bs3_debug_data * pbs3debug,const char * bindaddr, int port)
+void bs3_debug_init(struct bs3_debug_data * pbs3debug,const char * bindaddr, int port, int debugStop)
 {
     bs3_debug_finish(pbs3debug);
     memset(pbs3debug, 0, sizeof(struct bs3_debug_data));
     pbs3debug->port = (port == 0)?BS3_DEBUG_COMM_DEFAULTPORT:port;/* if port is 0 then take default port */
-    pbs3debug->debug_state = BS3_DEBUG_STATE_STOPPED;
+    pbs3debug->debug_state = (debugStop)?BS3_DEBUG_STATE_STOPPED:BS3_DEBUG_STATE_RUNNING;
     pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_NOSERVICE;
-    pbs3debug->canQuit = 0;
+    pbs3debug->canQuit = (debugStop)?0:1;
     strcpy(pbs3debug->bindaddr, bindaddr);
 }
 
-void bs3_debug_prepare(const char * bindaddr, int port)
+void bs3_debug_prepare(const char * bindaddr, int port, int debugStop)
 {
-    bs3_debug_init(&bs3debug, bindaddr, port);
+    bs3_debug_init(&bs3debug, bindaddr, port, debugStop);
 }
 
 void bs3_debug_end()

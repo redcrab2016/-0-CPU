@@ -40,7 +40,10 @@ void bs3_usage(const char * prgname )
     printf("Assembler / Debugger of BackSlashThree (BS3) CPU program.                      \n");
     printf("                                                                               \n");
     printf("  -b, --output-type-bin      BS3 result file in binary format (default)        \n");
-    printf("  -d, --debug                Debug result program after successful assembling  \n");
+    printf("  -d, --debug-stop           Debug result program after successful assembling  \n");
+    printf("                             program is loaded stopped at first operation      \n");
+    printf("  -D, --debug-run            Debug result program after successful assembling  \n");
+    printf("                             load and run program                              \n");
     printf("  -e, --output-elf ELFFILE   Assembling result executable in ELFFILE           \n");
     printf("                             by default it is FILE without extension           \n");
     printf("  -h, --help                 This current help message.                        \n");
@@ -73,11 +76,13 @@ void bs3_usage(const char * prgname )
     printf("     then generates 'myprog.bs3' binary file, and 'myprog.rpt' text report.    \n");
     printf("     Starts debug on port 2300 of execution of 'myprog.bs3'                    \n");
     printf("                                                                               \n");
-    printf("   >bs3asm --debug -p 2300 myprog.bs3                                          \n");
+    printf("   >bs3asm --debug-run -p 2300 myprog.bs3                                      \n");
     printf("     Starts debug on port 2300 of execution of 'myprog.bs3'                    \n");
+    printf("     Program is runnning (not stopped at first instruction)                    \n");
     printf("                                                                               \n");
-    printf("   >bs3asm --debug -p 2300 myprog                                              \n");
+    printf("   >bs3asm --debug-stop -p 2300 myprog                                         \n");
     printf("     Starts debug on port 2300 of execution of 'myprog' ELF program            \n");
+    printf("     Program is stopped at first instruction                                   \n");
     printf("                                                                               \n");
   }
 
@@ -87,6 +92,7 @@ int main(int argc, char *argv[])
   struct bs3_asm_include_paths inc;
   int nbIncludePath;
   int toDebug;
+  int debugStop;
   int toCompile;
   char outputBS3[BS3_MAX_FILENAME_SIZE];
   char bindaddr[BS3_MAX_FILENAME_SIZE];
@@ -111,7 +117,8 @@ int main(int argc, char *argv[])
     {"output-report",     1, 0, 'r'},
     {"output-elf",        1, 0, 'e'},
     {"debug-bindip",      1, 0, 'n'},
-    {"debug",             0, 0, 'd'},
+    {"debug-stop",        0, 0, 'd'},
+    {"debug-run",         0, 0, 'D'},
     {"debug-port",        1, 0, 'p'},
     {"help",              0, 0, 'h'},
     {0, 0, 0, 0}
@@ -132,7 +139,7 @@ int main(int argc, char *argv[])
   while (1)
   {
     option_index = 0;
-    c = getopt_long (argc, argv, ":i:o:r:n:e:p:hbxd",
+    c = getopt_long (argc, argv, ":i:o:r:n:e:p:hbxdD",
                       long_options, &option_index);
 
     /* Detect the end of the options. */
@@ -148,6 +155,12 @@ int main(int argc, char *argv[])
 
       case 'd':
         toDebug = 1;
+        debugStop = 1;
+        break;
+
+      case 'D':
+        toDebug = 1;
+        debugStop = 0;
         break;
 
       case 'h':
@@ -356,8 +369,13 @@ int main(int argc, char *argv[])
   if (toDebug)
   {
     bs3_asm_code_map_reset(&codemap);
-    bs3_asm_code_map_load(outputBS3, &codemap,0);
-    bs3_debug_prepare(bindaddr, port); /* 0 for default port 35853*/
+    i = bs3_asm_code_map_load(outputBS3, &codemap,0);
+    if ( i != BS3_ASM_CODE_MAP_ERR_OK) 
+    {
+      fprintf(stderr,"Error on loading %s : %s\n",outputBS3,bs3_asm_code_map_message[i]);
+      return 1;
+    }
+    bs3_debug_prepare(bindaddr, port, debugStop); /* 0 for default port 35853*/
     bs3_hyper_main(&codemap,&bs3_debug);
     bs3_debug_end();
   }
