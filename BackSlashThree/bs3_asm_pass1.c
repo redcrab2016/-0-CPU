@@ -56,6 +56,8 @@ int bs3_asm_line_checkLabel(struct bs3_asm_line * bs3line)
   char * curLabel;
   struct bs3_asm_line bs3_asm_tmp;
   int i;
+  char currFilename[BS3_ASM_LINE_SIZE];
+  char parentFilename[BS3_ASM_LINE_SIZE];
   if (bs3line->label == -1) return err;
   curLabel = &bs3line->line[bs3line->label];
   for (i = bs3line->asmIndex -1; i >=0 ; i--)
@@ -72,9 +74,16 @@ int bs3_asm_line_checkLabel(struct bs3_asm_line * bs3line)
     {
       if (bs3_asm_tmp.line[bs3_asm_tmp.label] != '.') /* if found a global label */
       {
-        /* attached to global label */
-        bs3line->asmIndexToGlobalLabel = i;
-        break;
+        /* if global name is in same filename then attach it*/
+        //bs3_asm_line_getFilename(struct bs3_asm_line * bs3line, char * filename)
+        bs3_asm_line_getFilename(bs3line, currFilename);
+        bs3_asm_line_getFilename(&bs3_asm_tmp, parentFilename);
+        if (strcmp(currFilename, parentFilename) == 0)
+        {
+          /* attached to global label */
+          bs3line->asmIndexToGlobalLabel = i;
+          break;
+        }
       }
     }
   }
@@ -159,6 +168,7 @@ int bs3_asm_pass1_param_compatible(int destType, int srcType, long srcValue)
     isok = 0;                  /* by default here , source and destination are not compatible */
     if  ( 
           (destType == BS3_ASM_PARAM_TYPE_WORD  && srcType == BS3_ASM_PARAM_TYPE_BYTE)  || /* BYTE is compatible WORD */
+          (destType == BS3_ASM_PARAM_TYPE_WORD  && srcType == BS3_ASM_PARAM_TYPE_LABEL) || /* LABEL is compatible WORD */
           (destType == BS3_ASM_PARAM_TYPE_BYTE  && srcValue >=-128 && srcValue <= 255)  || /* WORD is compatible BYTE only if value in range [-128,255] */
           (destType == BS3_ASM_PARAM_TYPE_MISC  && srcType == BS3_ASM_PARAM_TYPE_BYTE)  || /* MISC is compatible with BYTE  */
           (destType == BS3_ASM_PARAM_TYPE_MISC  && srcType == BS3_ASM_PARAM_TYPE_WORD)  || /* MISC is compatible with WORD  */
@@ -750,7 +760,7 @@ int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue)
 }
 
 
-int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD address, const char * oneLine)
+int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD address, const char * oneLine, int ignoreLabelCheck)
 {
   int idxLine = 0;
   struct bs3_asm_line * pbs3lineFound;
@@ -871,7 +881,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
               if (!isok) break;
               /* check duplicate label, and attach local label to first previous global label */
               err = bs3_asm_line_checkLabel(bs3line);
-              if (err != BS3_ASM_PASS1_PARSE_ERR_OK)
+              if (err != BS3_ASM_PASS1_PARSE_ERR_OK && !ignoreLabelCheck)
               {
                 isok = 0;
                 idxLine = bs3line->label;
@@ -1909,7 +1919,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
     i++;
   }
   /* add a global label of the file : parse the label */
-  lineerr = bs3_asm_pass1_oneline(pbs3_asm, (WORD)linenum, (WORD) address, fileline);
+  lineerr = bs3_asm_pass1_oneline(pbs3_asm, (WORD)linenum, (WORD) address, fileline, 0);
   if (lineerr != BS3_ASM_PASS1_PARSE_ERR_OK && lineerr != BS3_ASM_PASS1_PARSE_ERR_NOPE) 
   {
     err = lineerr;
@@ -1967,7 +1977,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
     linenum++; /* line is read, increment the line number */
 
     if (isMacroRecording) { /* if recording then save line to macro file */
-        lineerr = bs3_asm_pass1_oneline(pbs3_asm, (WORD)linenum, (WORD) address, fileline);
+        lineerr = bs3_asm_pass1_oneline(pbs3_asm, (WORD)linenum, (WORD) address, fileline, 1);
         if (lineerr != BS3_ASM_PASS1_PARSE_ERR_OK || pbs3_asm->opeCode != BS3_INSTR_ENDM)
         {
           fprintf(macroFile, "%s", fileline);
@@ -2022,16 +2032,17 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
                 }
                 /* get the param index */
                 fileline[i] = 0;
-                m = sscanf(&fileline[m+1],"%d",&m);
+                k = sscanf(&fileline[m+1],"%d",&m);
                 fileline[i] = '}';
                 /* if param index is too large */
-                if (m > macrobs3_asm.nbParam || m == 0) /* one based index */
+                if (k > macrobs3_asm.nbParam || k == 0 || k == EOF) /* one based index */
                 {
                   err = BS3_ASM_PASS1_PARSE_ERR_MACROREFPARAM;
                   bs3_asm_report(filename, linenum ,i, err) ;
                   
                   break;
                 }
+                k = 0;
                 /* get the param content then append it to macroline */
                 n = 0;
                 while (macrobs3_asm.line[macrobs3_asm.param[m-1]+n])
@@ -2072,7 +2083,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
       bs3_asm_report(filename, linenum, 0, err);
       break;
     }
-    lineerr = bs3_asm_pass1_oneline(pbs3_asm, (WORD)linenum, (WORD) address, fileline);
+    lineerr = bs3_asm_pass1_oneline(pbs3_asm, (WORD)linenum, (WORD) address, fileline, 0);
     if (lineerr == BS3_ASM_PASS1_PARSE_ERR_NOPE) continue; /* nothing to parse then carry on on the next file line, but keep current  */
     
     if (lineerr != BS3_ASM_PASS1_PARSE_ERR_OK) /* error during parsing of the line then report the error and stop parsing current file*/

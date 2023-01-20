@@ -1,34 +1,20 @@
-; Timer , display a counter incrementing with one second period
+; Timer2 , display a counter incrementing with one second period
 ; demonstrate timer and input interrupt
 ; stop program when 'space' character input
-        org     $0000
-        dw      start
-sysclk  org     $0006
-sysinp  org     $0008
-clkl32  org     $0108
-clkh32  org     $010A
-clkmode org     $010C
+; this code do the same thing as timer.asm, but use bs3core.inc
+        include                     "bs3core.inc"
+        mbs3_bootat                 start
 
-start   org     $0400
-        cli                 ; disable interrupt
-        ; setup clock handler
-        lean_w0 clock
-        sr      w0, [sysclk]
-        ; configure the timer
-        mov     w0, $4240     ; 1000 000 micro second low 16 bits
-        sr      w0, [clkl32]
-        eor     b0, b0
-        sr      b0, [clkmode] ; timer in time mode (not cpu tick mode)
-        mov     w0, $000F     ; 1000 000 micro second high 16 bits
-        sr      w0, [clkh32]
-        ; setup input handler
-        lean_w0 input
-        sr      w0, [sysinp]
-        ; welcome message and start receiving interrupt
-        c       welcome
-        sti                 ; enable interrupt
-        ; Idle loop
-.idle:  wait                ; wait for an interrupt
+start   org                         $0400
+        cli
+        mbs3_set_interrupt_handler  int_timer, clock
+        mbs3_set_timer_mode         ebs3_timer_mode_time
+        mbs3_start_timer            $000F, $4240
+        mbs3_set_interrupt_handler  int_byteinput, input
+        mbs3_println_static         "Type space character to stop"
+        sti
+        ; idle loop        
+.idle:  wait
         ld      b0, [isover]
         cmp     b0, 1
         jnz     .idle       ; loop on idle as long as it is not over
@@ -68,35 +54,16 @@ clock:
         dec     w2          ; browse back the digit buffer
         ld      b0, [w2]    ; get the character
         cmp     b0, 0       ; is it the last character
-        jz      .endigit    ; if yes then finish display
-.retry:        
-        out     b0          ; print out the character
-        jz      .retry      ; retry until output is ready
-        j       .dispdigit  ; print out next character
-.endigit:
-        out     10          ; print out \n
-        jz      .endigit
+        jz      endigit    ; if yes then finish display
+        mbs3_putc   b0
+        j       clock.dispdigit  ; print out next character
+endigit:
+        mbs3_putc   10
         popa
         iret                ; end of interrupt routine
-
-; Print out a welcome message
-welcome:
-        lean_w0 msg
-.loop:        
-        ld      b2, [w0]
-        cmp     b2, 0
-        jz      .endmsg
-.retry:
-        out     b2
-        jz      .retry
-        inc     w0
-        j       .loop
-.endmsg:        
-        ret
 
 ; data area
 counter dw      0
         db      0
 decstr  db      "00000", 0
 isover  db      0
-msg     db      "Type space character to stop",10,0

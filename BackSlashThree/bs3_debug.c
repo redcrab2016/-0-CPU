@@ -422,7 +422,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
             }
             bs3_asm_line_reset();
             strcat(pbs3debug->buff, "\n");
-            if ((i = bs3_asm_pass1_oneline(&bs3_asm, 0, addr, pbs3debug->buff + 6)) != BS3_ASM_PASS1_PARSE_ERR_OK)
+            if ((i = bs3_asm_pass1_oneline(&bs3_asm, 0, addr, pbs3debug->buff + 6, 1)) != BS3_ASM_PASS1_PARSE_ERR_OK)
             {
                 bs3_debug_comm_send(pbs3debug, bs3_asm_message[i]);
                 bs3_debug_comm_send(pbs3debug,"\n");

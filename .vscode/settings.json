@@ -14,9 +14,9 @@
         {
             "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
             "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
-            "binaryArgs": ["-d","dist/examples/timer/timer.asm"]
+            "binaryArgs": ["-d","dist/examples/timer/timer2.asm"]
         }
     ],
     "C_Cpp.dimInactiveRegions": false,
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.errorSquiggles": "enabled"
 }

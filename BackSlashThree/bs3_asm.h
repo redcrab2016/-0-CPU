@@ -220,7 +220,7 @@ int bs3_asm_pass1_param_compatible(int destType, int srcType, long srcValue);
 int bs3_asm_pass1_instructionCheck(struct bs3_asm_line * bs3line);
 int bs3_asm_pass1_assemble(struct bs3_asm_line * bs3line);
 int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue);
-int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD address, const char * oneLine);
+int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD address, const char * oneLine, int ignoreLabelCheck);
 int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, long asmIndexMacro);
 int bs3_asm_pass2();
 int bs3_asm_file( const char * filename, const char * filenameout, const char * filenamereport, int format);

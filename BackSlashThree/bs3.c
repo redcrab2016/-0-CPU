@@ -20,7 +20,7 @@ static sig_atomic_t timer_alarm = 0;
 
 static void sighandler(int signo)
 {
-  if (signo == SIGVTALRM) {
+  if (signo == SIGALRM /* or SIGVTALRM */) { 
     timer_alarm = 1;
   }
   else 
@@ -40,7 +40,7 @@ void bs3_hyper_timerset(DWORD microseconds)
   
   period.it_interval=interval;
   period.it_value=interval;
-  setitimer(ITIMER_VIRTUAL,&period,NULL);
+  setitimer(ITIMER_REAL /* or ITIMER_VIRTUAL */ ,&period,NULL);
 }
 
 void bs3_hyper_timerstop()
@@ -69,7 +69,7 @@ void bs3_cpu_init(struct bs3_cpu_data * pbs3)
   pbs3->input_ready = 0x01; /* by default nothing available for input */
   pbs3->output_ready = 0x00; /* by default output is ready to receveive data */
   pbs3->output2_ready = 0x00; /* by default auxiliary output is ready to receveive data. */
-  pbs3->msortick = 0; /* by default millisecond timer ( if =1, then cpu clock is used) */
+  pbs3->msortick = 0; /* by default microsecond timer ( if =1, then cpu clock is used) */
   bs3_hyper_timerstop();
 }
 
@@ -1957,7 +1957,7 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
     sigaction(SIGQUIT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
     /* add timer alarm signal handling */
-    sigaction(SIGVTALRM, &sa, NULL);
+    sigaction(SIGALRM /* or SIGVTALRM */ , &sa, NULL); 
 
     /* This is needed to be able to tcsetattr() after a hangup (Ctrl-C)
      * see tcsetattr() on POSIX

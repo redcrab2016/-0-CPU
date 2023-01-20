@@ -249,8 +249,11 @@ struct bs3_asm_line * bs3_asm_line_atlabel(const char * label, struct bs3_asm_li
   int j;
   int k;
   long l;
+  char currFilename[BS3_ASM_LINE_SIZE];
+  char parentFilename[BS3_ASM_LINE_SIZE];
+
   l = bs3_asm_line_size();
-  if (label[0] == '.') 
+  if (label[0] == '.') /* local label case */
   {
     for (i=0; label[i]; i++) local_label[i] = label[i];
     local_label[i] = 0;
@@ -259,10 +262,14 @@ struct bs3_asm_line * bs3_asm_line_atlabel(const char * label, struct bs3_asm_li
     {
       if (bs3_asm_line_at(i, bs3lineLabel))
       {
-        if (bs3lineLabel->label                      >= 0 &&
-            bs3lineLabel->labelIsAlias               == 0 &&
-            bs3lineLabel->line[bs3lineLabel->label]  != '.' )
+        bs3_asm_line_getFilename(bs3line, currFilename);
+        bs3_asm_line_getFilename(bs3lineLabel, parentFilename); 
+        if (bs3lineLabel->label                      >= 0   &&
+            bs3lineLabel->labelIsAlias               == 0   &&
+            bs3lineLabel->line[bs3lineLabel->label]  != '.' &&
+            strcmp(currFilename, parentFilename) == 0 )
         {
+        
           /* then search local label attached to the global label and equals to local_label*/
           j = bs3lineLabel->asmIndex;
           for (k = j+1; k < l; k++)
@@ -272,8 +279,14 @@ struct bs3_asm_line * bs3_asm_line_atlabel(const char * label, struct bs3_asm_li
               if (bs3lineLabel->label               >= 0 &&
                   bs3lineLabel->labelIsAlias        == 0)
               {    
-                  if (bs3lineLabel->line[bs3lineLabel->label]  != '.') return ((void *)0);
-                  if (strcmp( &bs3lineLabel->line[bs3lineLabel->label], local_label ) == 0 ) return bs3lineLabel;
+                  //if (bs3lineLabel->line[bs3lineLabel->label]  != '.') return ((void *)0);
+                  bs3_asm_line_getFilename(bs3lineLabel, parentFilename); 
+                  if (strcmp( &bs3lineLabel->line[bs3lineLabel->label], local_label ) == 0 && /* same label name */
+                      strcmp(currFilename, parentFilename)                            == 0 && /* same file(prog/include/macro) name */
+                      bs3lineLabel->asmIndexToGlobalLabel == j ) 
+                  {
+                    return bs3lineLabel;
+                  }
               }
             }
             else return ((void *)0);
