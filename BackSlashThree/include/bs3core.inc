@@ -103,8 +103,8 @@ mbs3_bootat             macro
 ;     1) interrupt reference 
 ;     2) global label/address/w0-3 representing the handler address
 ;   if interrupt ref is xxx then lbs3xxx label name is used
-;   example: mbs3_set_interrupt_handler int_timer myTimerHandler
-mbs3_set_interrupt_handler  macro
+;   example: mbs3_sethandler int_timer myTimerHandler
+mbs3_sethandler  macro
                         push_w0
                         mov     w0, {2}
                         sr      w0, [lbs3{1}]
@@ -117,8 +117,8 @@ mbs3_set_interrupt_handler  macro
 ;     2) label/address/W1-3 representing the address location that
 ;        will contain the handler address
 ;   if interrupt reference is xxx then lbs3xxx label name is used
-;   example: mbs3_save_interrupt_handler int_timer oldHandlerAddr
-mbs3_save_interrupt_handler macro
+;   example: mbs3_savehandler int_timer oldHandlerAddr
+mbs3_savehandler macro
                         push_w0
                         ld      w0, [lbs3{1}]
                         sr      w0, [{2}]
@@ -131,8 +131,8 @@ mbs3_save_interrupt_handler macro
 ;     2) label/address/W0-3 representing the address location that
 ;        contain the handler address to set
 ;   if interrupt reference is xxx then lbs3xxx label name is used
-;   example: mbs3_restore_interrupt_handler int_timer oldHandlerAddr
-mbs3_restore_interrupt_handler macro
+;   example: mbs3_restorehandler int_timer oldHandlerAddr
+mbs3_restorehandler macro
                         push_w0
                         ld      w0, [{2}]
                         sr      w0, [lbs3{1}]
@@ -142,8 +142,8 @@ mbs3_restore_interrupt_handler macro
 ;   Set timer mode
 ;   expect 1 parameter:
 ;     1) ebs3_timer_mode_tick or ebs3_timer_mode_time
-;   example: mbs3_set_timer_mode ebs3_timer_mode_time
-mbs3_set_timer_mode     macro
+;   example: mbs3_settimermode ebs3_timer_mode_time
+mbs3_settimermode     macro
                         push_b0
                         mov     b0, {1}
                         sr      b0, [lbs3_timer_mode]
@@ -154,9 +154,9 @@ mbs3_set_timer_mode     macro
 ;   expect 2 parameters:  32 bits (2x16bits) value in microseconds
 ;     1) 16 bits value representing MSW 32 bits (decimal/hexa/w0-3)
 ;     2) 16 bits value representing LSW 32 bits (decimal/hexa/w0-3)
-;   example: mbs3_start_timer $000F $4240 ; 1 second interval
-;            mbs3_start_timer w0 w1 ; w0-w1 as a 32 bits value
-mbs3_start_timer        macro
+;   example: mbs3_starttimer $000F $4240 ; 1 second interval
+;            mbs3_starttimer w0 w1 ; w0-w1 as a 32 bits value
+mbs3_starttimer        macro
                         pushf
                         cli
                         push_w0
@@ -172,7 +172,7 @@ mbs3_start_timer        macro
 
 ;   Stop timer, no more interrupt 3 invocation
 ;   no parameter expected
-mbs3_stop_timer         macro
+mbs3_stoptimer         macro
                         mbs3_start_timer 0 0
                         endm
 
@@ -195,7 +195,7 @@ mbs3_putc               macro
 mbs3_print_             macro
                         mov         w0, {1}
 .loop                   ld          b2, [w0]
-                        cmp         w0, 0
+                        cmp         b2, 0
                         jz          .end
                         mbs3_putc   b2
                         inc         w0
@@ -234,9 +234,9 @@ mbs3_println            macro
 ;   expect 1 parameter
 ;   1) static string 
 ;   example: mbs3_print_static "Hello world."
-mbs3_print_static       macro
+mbs3_printstr           macro
                         j           .code
-.msg                    db          {1}, 0
+.msg db {1}, 0
 .code                   push_w0
                         push_b2
                         lean_w0     .msg
@@ -251,8 +251,8 @@ mbs3_print_static       macro
 ;   1) static string 
 ;  NB: print out also a line feed '\n' afterward
 ;   example: mbs3_print_static "Hello world."
-mbs3_println_static     macro
-                        mbs3_print_static   {1}
+mbs3_printlnstr      macro
+ mbs3_printstr {1}
                         mbs3_putc           10
                         endm
                         

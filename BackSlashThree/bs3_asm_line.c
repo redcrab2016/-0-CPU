@@ -282,8 +282,8 @@ struct bs3_asm_line * bs3_asm_line_atlabel(const char * label, struct bs3_asm_li
                   //if (bs3lineLabel->line[bs3lineLabel->label]  != '.') return ((void *)0);
                   bs3_asm_line_getFilename(bs3lineLabel, parentFilename); 
                   if (strcmp( &bs3lineLabel->line[bs3lineLabel->label], local_label ) == 0 && /* same label name */
-                      strcmp(currFilename, parentFilename)                            == 0 && /* same file(prog/include/macro) name */
-                      bs3lineLabel->asmIndexToGlobalLabel == j ) 
+                      strcmp(currFilename, parentFilename)                            == 0 ) //&& /* same file(prog/include/macro) name */
+                      //bs3lineLabel->asmIndexToGlobalLabel == j ) 
                   {
                     return bs3lineLabel;
                   }

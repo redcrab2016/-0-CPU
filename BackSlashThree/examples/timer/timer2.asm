@@ -2,16 +2,16 @@
 ; demonstrate timer and input interrupt
 ; stop program when 'space' character input
 ; this code do the same thing as timer.asm, but use bs3core.inc
-        include                     "bs3core.inc"
-        mbs3_bootat                 start
+        include                 "bs3core.inc"
+        mbs3_bootat             start
 
-start   org                         $0400
+start   org                     $0400
         cli
-        mbs3_set_interrupt_handler  int_timer, clock
-        mbs3_set_timer_mode         ebs3_timer_mode_time
-        mbs3_start_timer            $000F, $4240
-        mbs3_set_interrupt_handler  int_byteinput, input
-        mbs3_println_static         "Type space character to stop"
+        mbs3_sethandler         int_timer, clock
+        mbs3_settimermode       ebs3_timer_mode_time
+        mbs3_starttimer         $000F, $4240
+        mbs3_sethandler         int_byteinput, input
+        mbs3_printlnstr         "Type space character to stop"
         sti
         ; idle loop        
 .idle:  wait
@@ -54,10 +54,10 @@ clock:
         dec     w2          ; browse back the digit buffer
         ld      b0, [w2]    ; get the character
         cmp     b0, 0       ; is it the last character
-        jz      endigit    ; if yes then finish display
+        jz      .endigit    ; if yes then finish display
         mbs3_putc   b0
         j       clock.dispdigit  ; print out next character
-endigit:
+.endigit:
         mbs3_putc   10
         popa
         iret                ; end of interrupt routine

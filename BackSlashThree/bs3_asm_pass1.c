@@ -56,15 +56,20 @@ int bs3_asm_line_checkLabel(struct bs3_asm_line * bs3line)
   char * curLabel;
   struct bs3_asm_line bs3_asm_tmp;
   int i;
+  int currEquParentFilename;
   char currFilename[BS3_ASM_LINE_SIZE];
   char parentFilename[BS3_ASM_LINE_SIZE];
   if (bs3line->label == -1) return err;
   curLabel = &bs3line->line[bs3line->label];
+  bs3_asm_line_getFilename(bs3line, currFilename);
   for (i = bs3line->asmIndex -1; i >=0 ; i--)
   {
     bs3_asm_line_at(i, &bs3_asm_tmp);
     if (bs3_asm_tmp.label == -1) continue;
-    if (strcmp(curLabel, &bs3_asm_tmp.line[bs3_asm_tmp.label]) == 0)
+    bs3_asm_line_getFilename(&bs3_asm_tmp, parentFilename);
+    currEquParentFilename = (strcmp(currFilename, parentFilename) == 0);
+
+    if ((strcmp(curLabel, &bs3_asm_tmp.line[bs3_asm_tmp.label]) == 0 && curLabel[0] != '.' ))
     {
       err =BS3_ASM_PASS1_PARSE_ERR_DUPLABEL;
       break;
@@ -75,9 +80,6 @@ int bs3_asm_line_checkLabel(struct bs3_asm_line * bs3line)
       if (bs3_asm_tmp.line[bs3_asm_tmp.label] != '.') /* if found a global label */
       {
         /* if global name is in same filename then attach it*/
-        //bs3_asm_line_getFilename(struct bs3_asm_line * bs3line, char * filename)
-        bs3_asm_line_getFilename(bs3line, currFilename);
-        bs3_asm_line_getFilename(&bs3_asm_tmp, parentFilename);
         if (strcmp(currFilename, parentFilename) == 0)
         {
           /* attached to global label */
@@ -1899,7 +1901,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
   }
   j++; /* fist character if there is no '/' found, otherwise first char after last '/' */
   while (filename[j] && filename[j] == '.') j++; /* do not take '.' in front of the file name: avoid confusion with local label */
-    sprintf(fileline, "_%s_%d:  ;%s\n",&filename[j], fileId, &filename[j]);
+    sprintf(fileline, "_%s_%d:;%d=%s\n",&filename[j], fileId, fileId, &filename[j]);
   /* sanitize the label name */
   i = 0;
   while (fileline[i])
@@ -2112,7 +2114,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
             err = bs3_asm_line_commit(pbs3_asm);
             if (err == BS3_ASM_PASS1_PARSE_ERR_OK)
             {
-                sprintf(includefilename, "%s.macro", &pbs3_asm->line[pbs3_asm->ope]);
+                sprintf(includefilename, "%s.m", &pbs3_asm->line[pbs3_asm->ope]);
                 err = bs3_asm_pass1_file(includefilename ,  address, addressout, pbs3_asm->asmIndex);
                 address = *addressout;
             }
@@ -2155,7 +2157,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
             case BS3_INSTR_MACRO:
                 /* switch to macro recording mode */
                 isMacroRecording = 1;
-                sprintf(includefilename, "%s.macro", &pbs3_asm->line[pbs3_asm->label]);
+                sprintf(includefilename, "%s.m", &pbs3_asm->line[pbs3_asm->label]);
                 macroFile = fopen(includefilename,"wt");
                 bs3_asm_pass1_addmacro(includefilename);
                 break;
