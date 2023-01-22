@@ -1280,16 +1280,19 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
             pbs3->r.W[p.x2] = pbs3->r.W[p.y2];
+            break;
         case BS3_INSTR_MOVSW:
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
             pbs3->r.W[p.x2] = pbs3->r.SP;
+            break;
         case BS3_INSTR_MOVWS:
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
             pbs3->r.SP = pbs3->r.W[p.x2];
+            break;
         case BS3_INSTR_SWPW:
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
