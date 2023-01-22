@@ -5,7 +5,7 @@
         include                 "bs3core.inc"
         mbs3_bootat             start
 
-start   org                     $0400
+start   org                     ebs3_start
         cli
         mbs3_sethandler         int_timer, clock
         mbs3_settimermode       ebs3_timer_mode_time
@@ -22,7 +22,7 @@ start   org                     $0400
 
 ; Input handler : if ' ' (space character) then raise flag 'isover'
 input:
-        push_b0
+        push    b0
 .retry        
         in      b0          ; take input character
         jz      .retry      ; retry if necessary
@@ -30,7 +30,7 @@ input:
         jnz      .over      ; if yes then stop
         mov     b0, 1
         sr      b0, [isover]
-.over   pop_b0
+.over   pop     b0
         iret                ; end of interrupt routine
 
 ; Timer handler : count and display
@@ -42,7 +42,7 @@ clock:
         inc     w0          ; W0 = W0 + 1
         sr      w0, [w1]    ; [W1] = W0
         ; generate decimal ascii string
-        lean_w2 decstr      ; w2 = addr of digit buffer
+        lean    w2, decstr      ; w2 = addr of digit buffer
 .digit:        
         div     w0, 10, w1  ; w1 = w0 mod 10, w0 = w0 / 10
         add     b2, '0'     ; convert binary 0-9 to ASCII '0'-'9'
