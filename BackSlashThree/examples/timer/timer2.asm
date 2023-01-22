@@ -27,7 +27,7 @@ input:
         in      b0          ; take input character
         jz      .retry      ; retry if necessary
         cmp     b0, ' '     ; is it a space character
-        jnz      .over      ; if yes then stop
+        jnz     .over       ; if yes then stop
         mov     b0, 1
         sr      b0, [isover]
 .over   pop     b0
