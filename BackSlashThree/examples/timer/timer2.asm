@@ -49,7 +49,7 @@ clock:
         sr      b2, [w2]    ; store character to buffer
         inc     w2          ; increase buffer size
         cmp     w0, 0       ; is it end of number
-        jnz     .digit      ; if no then conitnue to decode
+        jnz     .digit      ; if no then continue to decode
 .dispdigit:        
         dec     w2          ; browse back the digit buffer
         ld      b0, [w2]    ; get the character

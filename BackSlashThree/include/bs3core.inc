@@ -98,6 +98,14 @@ mbs3_bootat             macro
                         dw      {1}
                         endm
 
+push                    macro
+                        push_{1}
+                        endm
+
+pop                     macro
+                        pop_{1}
+                        endm
+
 ;   Set an handler to an interrupt vector entry
 ;   expect 2 parameters:
 ;     1) interrupt reference 
@@ -105,10 +113,10 @@ mbs3_bootat             macro
 ;   if interrupt ref is xxx then lbs3xxx label name is used
 ;   example: mbs3_sethandler int_timer myTimerHandler
 mbs3_sethandler  macro
-                        push_w0
+                        push    w0
                         mov     w0, {2}
                         sr      w0, [lbs3{1}]
-                        pop_w0
+                        pop     w0
                         endm
 
 ;   Save current handler address of an interrupt vetor entry
@@ -119,10 +127,10 @@ mbs3_sethandler  macro
 ;   if interrupt reference is xxx then lbs3xxx label name is used
 ;   example: mbs3_savehandler int_timer oldHandlerAddr
 mbs3_savehandler macro
-                        push_w0
+                        push    w0
                         ld      w0, [lbs3{1}]
                         sr      w0, [{2}]
-                        pop_w0
+                        pop     w0
                         endm
 
 ;   Restore handler address of an interrupt vector entry
@@ -133,10 +141,10 @@ mbs3_savehandler macro
 ;   if interrupt reference is xxx then lbs3xxx label name is used
 ;   example: mbs3_restorehandler int_timer oldHandlerAddr
 mbs3_restorehandler macro
-                        push_w0
+                        push    w0
                         ld      w0, [{2}]
                         sr      w0, [lbs3{1}]
-                        pop_w0
+                        pop     w0
                         endm
 
 ;   Set timer mode
@@ -144,10 +152,10 @@ mbs3_restorehandler macro
 ;     1) ebs3_timer_mode_tick or ebs3_timer_mode_time
 ;   example: mbs3_settimermode ebs3_timer_mode_time
 mbs3_settimermode     macro
-                        push_b0
+                        push    b0
                         mov     b0, {1}
                         sr      b0, [lbs3_timer_mode]
-                        pop_b0
+                        pop     b0
                         endm
 
 ;   Start timer, interrupt 3 invoked at regular interval
@@ -156,23 +164,23 @@ mbs3_settimermode     macro
 ;     2) 16 bits value representing LSW 32 bits (decimal/hexa/w0-3)
 ;   example: mbs3_starttimer $000F $4240 ; 1 second interval
 ;            mbs3_starttimer w0 w1 ; w0-w1 as a 32 bits value
-mbs3_starttimer        macro
+mbs3_starttimer         macro
                         pushf
                         cli
-                        push_w0
+                        push    w0
                         mov     w0, {2}
                         sr      w0, [lbs3_timer_low16]
-                        pop_w0
-                        push_w0
+                        pop     w0
+                        push    w0
                         mov     w0, {1}
                         sr      w0, [lbs3_timer_high16]
-                        pop_w0
+                        pop     w0
                         popf
                         endm
 
 ;   Stop timer, no more interrupt 3 invocation
 ;   no parameter expected
-mbs3_stoptimer         macro
+mbs3_stoptimer          macro
                         mbs3_start_timer 0 0
                         endm
 
@@ -210,11 +218,11 @@ mbs3_print_             macro
 ;      the string must be terminated by a NULL byte (0)
 ;   example: mbs3_print welcomeMessage
 mbs3_print              macro
-                        push_w0
-                        push_b2
+                        push        w0
+                        push        b2
                         mbs3_print_ {1}
-                        pop_b2
-                        pop_w0
+                        pop         b2
+                        pop         w0
                         endm
 
 ;   Print a string character located at an address
@@ -233,16 +241,16 @@ mbs3_println            macro
 ;   usefull if the message is use only once in the program
 ;   expect 1 parameter
 ;   1) static string 
-;   example: mbs3_print_static "Hello world."
+;   example: mbs3_printstr "Hello world."
 mbs3_printstr           macro
                         j           .code
 .msg db {1}, 0
-.code                   push_w0
-                        push_b2
+.code                   push        w0
+                        push        b2
                         lean_w0     .msg
                         mbs3_print_ w0
-                        pop_b2
-                        pop_w0
+                        pop         b2
+                        pop         w0
                         endm 
 
 ;   Print a static string passed as parameter
@@ -250,7 +258,7 @@ mbs3_printstr           macro
 ;   expect 1 parameter
 ;   1) static string 
 ;  NB: print out also a line feed '\n' afterward
-;   example: mbs3_print_static "Hello world."
+;   example: mbs3_printlnstr "Hello world."
 mbs3_printlnstr      macro
  mbs3_printstr {1}
                         mbs3_putc           10
