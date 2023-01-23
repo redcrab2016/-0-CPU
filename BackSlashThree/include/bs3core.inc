@@ -102,30 +102,30 @@ mbs3_bootat macro
 
 ;   BS3 CPU macro for push_X
 ;   expect 1 parameter:
-      1) byte register B0-7 or word register W0-3
+;     1) byte register B0-7 or word register W0-3
 push    macro
         push_{1}
         endm
 
 ;   BS3 CPU macro for pop_X
 ;   expect 1 parameter:
-      1) byte register B0-7 or word register W0-3
+;      1) byte register B0-7 or word register W0-3
 pop     macro
         pop_{1}
         endm
 
 ;   BS3 CPU macro for lean_X, 
 ;   expect 2 parameters:
-      1) register W0-3
-      2) a global label (not local label : starting with a '.' )
+;     1) register W0-3
+;     2) a global label (not local label : starting with a '.' )
 lean    macro
         lean_{1} {2}
         endm
 
 ;   BS3 CPU macro for leaf_X
 ;   expect 2 parameters:
-      1) register W0-3
-      2) a global label (not local label : starting with a '.' )
+;     1) register W0-3
+;     2) a global label (not local label : starting with a '.' )
 leaf    macro
         leaf_{1} {2}
         endm
