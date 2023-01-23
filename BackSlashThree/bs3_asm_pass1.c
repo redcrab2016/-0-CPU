@@ -1098,7 +1098,6 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
             case '\n':
             case '\r':
             case '\'':
-            case ';':
               isok = 0;
               err = BS3_ASM_PASS1_PARSE_ERR_BADCHAR;
               break;

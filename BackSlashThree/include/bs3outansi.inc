@@ -68,11 +68,11 @@ _outByteStr macro
             push        w0
             mov         b0, {1}
             cmp         b0, 100
-            jc          .hundred
+            jc          .hundreds
             cmp         b0, 10
             jc          .tens 
             j           .units 
-.hundred
+.hundreds
             div         b0, 100, b1
             add         b0, '0'
             mbs3_putc   b0
@@ -82,7 +82,7 @@ _outByteStr macro
             add         b0, '0'
             mbs3_putc   b0
             mov         b0, b1
-.unit             
+.units             
             add         b0, '0'
             mbs3_putc   b0
             pop         w0
@@ -574,7 +574,7 @@ ansi_SGR_bg_yellow  macro
 ;    ## Background Blue
 ansi_SGR_bg_blue    macro
                     ansi_SGR_bgcolor    4
-                    endmacro    
+                    endm    
 
 ;    ## Background Magenta
 ansi_SGR_bg_magenta macro
