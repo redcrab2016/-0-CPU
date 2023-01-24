@@ -15,10 +15,10 @@ ebs3gfxlength   equ     16000   ; GFX memory size (bytes)
 
 
 mbs3gfxconst    macro
-lbs3gfxstr256
     jump .endofconstant
     ; from 0 to 255 in string, each string is 4 bytes long
     ; from 'n' binary , string addr = lbs3gfxstr256 + n * 4
+lbs3gfxstr256
     db  "0",0,0,0, "1",0,0,0, "2",0,0,0, "3",0,0,0, "4",0,0,0
     db  "5",0,0,0, "6",0,0,0, "7",0,0,0, "8",0,0,0, "9",0,0,0
     db  "10",0,0,  "11",0,0,  "12",0,0,  "13",0,0,  "14",0,0
