@@ -16,7 +16,7 @@ ebs3gfxlength   equ     16000   ; GFX memory size (bytes)
 
 mbs3gfxconst    macro
 lbs3gfxstr256
-    jmp .endofconstant
+    jump .endofconstant
     ; from 0 to 255 in string, each string is 4 bytes long
     ; from 'n' binary , string addr = lbs3gfxstr256 + n * 4
     db  "0",0,0,0, "1",0,0,0, "2",0,0,0, "3",0,0,0, "4",0,0,0
@@ -137,7 +137,9 @@ mbs3gfxshow     macro
         mov             w1, lbs3shadow
         ld              w1, [w1 + w2]
         cmp             w0, w1
-        jnz             .continue
+        jnz             .l0
+        jump            .continue
+.l0
 
 ;           word lbs3shadow[scridx] = word lbs3screen[scridx]
             mov             w1, lbs3shadow
@@ -157,14 +159,14 @@ mbs3gfxshow     macro
                 mbs3_putc       27
                 mbs3_putc       '['
                 mov             w0, lbs3gfxstr256
-                mov             b2, [row]
+                ld              b2, [row]
                 eor             b3, b3
                 mul             w1, 4, w3
                 add             w1, w0
                 mbs3_print_     w1
                 mbs3_putc       ';'
                 mov             w0, lbs3gfxstr256
-                mov             b2, [col]
+                ld              b2, [col]
                 eor             b3, b3
                 mul             w1, 4, w3
                 add             w1, w0
@@ -184,7 +186,7 @@ mbs3gfxshow     macro
                     mbs3_putc       27
                     mbs3_putc       '['
                     mov             w0, lbs3gfxstr256
-                    mov             b2, [col]
+                    ld              b2, [col]
                     eor             b3, b3
                     mul             w1, 4, w3
                     add             w1, w0
@@ -201,7 +203,7 @@ mbs3gfxshow     macro
                     cmp             b0, b1
                     jz              .l5
 
-                        ansi curdown (CSI prefix)
+;                       ansi curdown (CSI prefix)
                         mbs3_putc       27
                         mbs3_putc       '['
             
@@ -324,7 +326,7 @@ mbs3gfxshow     macro
 ; next row             
     endfwbloop      row
 
-  j       .endata
+  j       .enddata
 ; data area
 scridx      dw      0
 lastfc      db      0
@@ -356,7 +358,7 @@ mbs3gfxclear    macro  ; {1} screen value
 
 ;   generate the subroutine and init screen
 mbs3gfxcode     macro
-                jmp .endofgfxcode
+                jump .endofgfxcode
 ; subroutine to show screen
 lbs3gfxshow     mbs3gfxshow
                 ret
@@ -370,7 +372,9 @@ lbs3gfxclear    mbs3gfxclear    b0
                 mbs3gfxconst
 .endofgfxcode   
                 mov             b0, 232
-                call            lbs3gfxclear 
+                call            lbs3gfxclear
+                call            lbs3gfxshow
                 eor             b0, b0
                 call            lbs3gfxclear
+                call            lbs3gfxshow
                 endm
