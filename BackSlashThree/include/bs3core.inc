@@ -130,6 +130,45 @@ leaf    macro
         leaf_{1} {2}
         endm
 
+; unsigned byte variable forward(increase) loop 
+;     1) global label of the byte variable
+;     2) immediate byte value
+;     3) immediate byte last value
+startfwbloop macro ; {1} varname, {2} firstvalue, {3} lastvalue
+                mov     b0, {2}
+_loopstart_{1}                
+                sr      b0, [{1}]
+                cmp     b0, {3}
+                jc      _loopend_{1}
+                endm 
+
+endfwbloop   macro ; {1} varname
+                mov     b0, {1}
+                inc     b0
+                j       _loopstart_{1}
+_loopend_{1}
+                endm
+
+; unsigned word variable forward(increase) loop 
+;     1) global label of the word variable
+;     2) immediate word value
+;     3) immediate word last value
+startfwwloop macro ; {1} varname, {2} firstvalue, {3} lastvalue
+                mov     w0, {2}
+_loopstart_{1}                
+                sr      w0, [{1}]
+                cmp     w0, {3}
+                jc      _loopend_{1}
+                endm 
+
+endfwwloop   macro ; {1} varname
+                mov     w0, {1}
+                inc     w0
+                j       _loopstart_{1}
+_loopend_{1}
+                endm
+
+
 ;   Set an handler to an interrupt vector entry
 ;   expect 2 parameters:
 ;     1) interrupt reference 
