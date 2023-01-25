@@ -139,7 +139,7 @@ startfwbloop macro ; {1} varname, {2} firstvalue, {3} lastvalue
 _loopstart_{1}                
                 sr      b0, [{1}]
                 cmp     b0, {3}
-                jnc     .l1
+                jbe     .l1
                 jump    _loopend_{1}
 .l1                
                 endm 
@@ -160,7 +160,7 @@ startfwwloop macro ; {1} varname, {2} firstvalue, {3} lastvalue
 _loopstart_{1}                
                 sr      w0, [{1}]
                 cmp     w0, {3}
-                jnc     .l1
+                jbe     .l1
                 jump    _loopend_{1}
 .l1                
                 endm 

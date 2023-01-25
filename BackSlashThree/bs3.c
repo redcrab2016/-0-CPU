@@ -476,7 +476,7 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
               pbs3->r.PC += 2;
             break;
         case BS3_INSTR_JBE:
-            if (pbs3->r.C == 0 && pbs3->r.Z == 1) 
+            if (pbs3->r.C == 0 || pbs3->r.Z == 1) 
               pbs3->r.PC = 2 + pbs3->r.PC + ((SBYTE)bs3_cpu_read_byte(pbs3, pbs3->r.PC+1));
             else 
               pbs3->r.PC += 2;
@@ -1082,7 +1082,7 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
             pbs3->r.PC++;
             s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */ 
             s2 = (pbs3->r.W[p.y2] & 0x8000) != 0; /* keep sign of second */
-            dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)(pbs3->r.B[p.y2]));
+            dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)(pbs3->r.W[p.y2]));
             pbs3->r.W[p.x2] = (WORD)(dw & 0x0000FFFF);
             s3 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first+second */
             pbs3->r.C = (dw & 0x00010000) != 0;
@@ -1096,7 +1096,7 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
             pbs3->r.PC++;
             s1 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first */ 
             s2 = (pbs3->r.W[p.y2] & 0x8000) != 0; /* keep sign of second */
-            dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)(pbs3->r.B[p.y2])) + pbs3->r.C;
+            dw = ((DWORD)(pbs3->r.W[p.x2])) + ((DWORD)(pbs3->r.W[p.y2])) + pbs3->r.C;
             pbs3->r.W[p.x2] = (WORD)(dw & 0x0000FFFF);
             s3 = (pbs3->r.W[p.x2] & 0x8000) != 0; /* keep sign of first+second */
             pbs3->r.C = (dw & 0x00010000) != 0;
@@ -1899,7 +1899,7 @@ void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
     else
     {
       pbs3->output_ready = 0x00; /* data sent to output , ouput is ready for another sending*/
-      fflush(stdout);
+      /* fflush(stdout); */
     }
   }
   /* process auxiliary output */
@@ -1927,20 +1927,34 @@ void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
     struct pollfd pfds[1];
     int ret;
     char c;
-    
-    /* See if there is data available */
-    pfds[0].fd = 0;
-    pfds[0].events = POLLIN;
-    ret = poll(pfds, 1, 0);
-    
-    /* Consume Hypervisor input data, to provide as an available input data for the bs3 CPU */
-    if (ret > 0 && ((pfds[0].revents & 1) == 1)) {
-      read(0, &c, 1);
-      pbs3->input_data = (BYTE)c;
-      pbs3->input_ready = 0x00;
-      bs3_cpu_interrupt(pbs3, BS3_INT_INPUT);
-    }
-  
+    /* empiric wait for input latency to avoid too much poll syscall (slow down the BS3 emulator)*/
+    static unsigned int curwait = 1;
+    static unsigned int maxwait = 1;
+
+    curwait--;
+    if (curwait == 0)
+    {
+      /* See if there is data available */
+      pfds[0].fd = 0;
+      pfds[0].events = POLLIN;
+      ret = poll(pfds, 1, 0);
+      
+      /* Consume Hypervisor input data, to provide as an available input data for the bs3 CPU */
+      if (ret > 0 && ((pfds[0].revents & 1) == 1)) {
+        maxwait = 1;
+        curwait = 1;
+        read(0, &c, 1);
+        pbs3->input_data = (BYTE)c;
+        pbs3->input_ready = 0x00;
+        bs3_cpu_interrupt(pbs3, BS3_INT_INPUT);
+      } 
+      else
+      {
+        maxwait = maxwait << 1;
+        if (maxwait > 65536) maxwait = 65536;
+        curwait = maxwait;
+      }
+    }  
   }
 }
 

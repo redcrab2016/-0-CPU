@@ -5,17 +5,18 @@
 ; using background color for bottom pixel
 ; e.g a 160 x 50 character define a pixel buffer of 160 x 100 pixels
 
-lbs3screen      org     $8000
-lbs3shadow      org     $C000
+ebs3screen      equ     $8000
+ebs3shadow      equ     $C000
 
 ebs3gfxwidth    equ     160     ; GFX screen width
 ebs3gfxheight   equ     100     ; GFX screen height
+
+; below EQU , are manualy set, based on width and height
+ebs3gfxwidth2   equ     320     ; two times GFX screen width
 ebs3gfxhchar    equ     50      ; half of GFX screen height
-ebs3gfxlength   equ     16000   ; GFX memory size (bytes)
+ebs3gfxlength   equ     16000   ; GFX memory size(bytes)Width x Height
 
-
-mbs3gfxconst    macro
-    jump .endofconstant
+    jump .endofansigfx  ; include jump over
     ; from 0 to 255 in string, each string is 4 bytes long
     ; from 'n' binary , string addr = lbs3gfxstr256 + n * 4
 lbs3gfxstr256
@@ -71,10 +72,8 @@ lbs3gfxstr256
     db  "245", 0,  "246", 0,  "247", 0,  "248", 0,  "249", 0
     db  "250", 0,  "251", 0,  "252", 0,  "253", 0,  "254", 0
     db  "255", 0
-.endofconstant    
-                endm
 
-mbs3gfxshow     macro
+lbs3gfxshow     
 ; scridx = 0
 ; lastfc = 255
 ; lastbc = 255
@@ -85,8 +84,8 @@ mbs3gfxshow     macro
 ;
 ; for row = 1 to ebs3gfxhchar
 ;   for col = 1 to ebs3gfxwidth
-;       if word lbs3screen[scridx] != word lbs3shadow[scridx] then
-;           word lbs3shadow[scridx] = word lbs3screen[scridx]
+;       if word ebs3screen[scridx] != word ebs3shadow[scridx] then
+;           word ebs3shadow[scridx] = word ebs3screen[scridx]
 ;           if col != cucol and row != curow then
 ;               ansi cursorat row, col
 ;           else 
@@ -101,19 +100,19 @@ mbs3gfxshow     macro
 ;                   endif
 ;               endif
 ;           endif
-;           if lastfc != byte lbs3screen[scridx] then
-;               ansi forecolor byte lbs3screen[scridx]
-;               lastfc = byte lbs3screen[scridx]
+;           if lastfc != byte ebs3screen[scridx] then
+;               ansi forecolor byte ebs3screen[scridx]
+;               lastfc = byte ebs3screen[scridx]
 ;           endif
-;           if lastbc != byte lbs3screen[scridx + 1] then
-;               ansi backcolor byte lbs3screen[scridx + 1]
-;               lastbc = byte lbs3screen[scridx + 1]
+;           if lastbc != byte ebs3screen[scridx + 1] then
+;               ansi backcolor byte ebs3screen[scridx + 1]
+;               lastbc = byte ebs3screen[scridx + 1]
 ;           endif
 ;           print upper half block
 ;           cucol = col +1
-;           curow = row
-;           scridx += 2      
+;           curow = row      
 ;       endif
+;       scridx += 2
 ;   next col
 ; next row 
 ; here below the code with the above meta code in comment      
@@ -130,19 +129,19 @@ mbs3gfxshow     macro
 ;   for col = 1 to ebs3gfxwidth
     startfwbloop    col, 1, ebs3gfxwidth
 
-;       if word lbs3screen[scridx] != word lbs3shadow[scridx] then
+;       if word ebs3screen[scridx] != word ebs3shadow[scridx] then
         ld              w2, [scridx]
-        mov             w0, lbs3screen
+        mov             w0, ebs3screen
         ld              w0, [w0 + w2]
-        mov             w1, lbs3shadow
+        mov             w1, ebs3shadow
         ld              w1, [w1 + w2]
         cmp             w0, w1
         jnz             .l0
         jump            .continue
 .l0
 
-;           word lbs3shadow[scridx] = word lbs3screen[scridx]
-            mov             w1, lbs3shadow
+;           word ebs3shadow[scridx] = word ebs3screen[scridx]
+            mov             w1, ebs3shadow
             sr              w0, [w1 + w2]
 
 ;           if col != cucol and row != curow then
@@ -234,15 +233,15 @@ mbs3gfxshow     macro
 ;           endif
 .l2
 
-;           if lastfc != byte lbs3screen[scridx] then
-            mov             w0, lbs3screen
+;           if lastfc != byte ebs3screen[scridx] then
+            mov             w0, ebs3screen
             ld              w1, [scridx]
             ld              b4, [w0 + w1]
             ld              b5, [lastfc]
             cmp             b4, b5
             jz              .l7
 
-;               ansi forecolor byte lbs3screen[scridx]
+;               ansi forecolor byte ebs3screen[scridx]
                 push            b4
                 mbs3_putc       27
                 mbs3_putc       '['
@@ -252,29 +251,29 @@ mbs3gfxshow     macro
                 mbs3_putc       '5'
                 mbs3_putc       ';'
                 mov             w3, lbs3gfxstr256
-                push            b5
+                push            b4
                 pop             w1
                 mul             w1, 4, w2
                 add             w1, w3
                 mbs3_print_     w1
                 mbs3_putc       'm'
             
-;               lastfc = byte lbs3screen[scridx]
+;               lastfc = byte ebs3screen[scridx]
                 pop             b4
                 sr              b4, [lastfc]
 
 ;           endif
 .l7 
 
-;           if lastbc != byte lbs3screen[scridx + 1] then
-            mov             w0, lbs3screen
+;           if lastbc != byte ebs3screen[scridx + 1] then
+            mov             w0, ebs3screen
             ld              w1, [scridx]
             ld              b4, [w0 + w1 + 1]
             ld              b5, [lastbc]
             cmp             b4, b5
             jz              .l8
 
-;               ansi backcolor byte lbs3screen[scridx + 1]
+;               ansi backcolor byte ebs3screen[scridx + 1]
                 push            b4
                 mbs3_putc       27
                 mbs3_putc       '['
@@ -284,14 +283,14 @@ mbs3gfxshow     macro
                 mbs3_putc       '5'
                 mbs3_putc       ';'
                 mov             w3, lbs3gfxstr256
-                push            b5
+                push            b4
                 pop             w1
                 mul             w1, 4, w2
                 add             w1, w3
                 mbs3_print_     w1
                 mbs3_putc       'm'
 
-;               lastbc = byte lbs3screen[scridx + 1]
+;               lastbc = byte ebs3screen[scridx + 1]
                 pop             b4
                 sr              b4, [lastbc]
 
@@ -312,22 +311,24 @@ mbs3gfxshow     macro
             ld              b0, [row]
             sr              b0, [curow]
 
-;           scridx += 2      
-            ld              w0, [scridx]
-            add             w0, 2
-            sr              w0, [scridx]
 
 ;       endif
 .continue
+; line E(100Pi) ;)
+;       scridx += 2      
+        ld              w0, [scridx]
+        add             w0, 2
+        sr              w0, [scridx]
 
 ;   next col
     endfwbloop      col
 
 ; next row             
     endfwbloop      row
+    mbs3_putc   10
+    ret
 
-  j       .enddata
-; data area
+; data area of above subroutine
 scridx      dw      0
 lastfc      db      0
 lastbc      db      0
@@ -335,17 +336,16 @@ curow       db      0
 cucol       db      0
 row         db      0
 col         db      0
-.enddata
-                endm
+
 
 ;   clear screen with a value
 ;   expect 1 parameter:
-;     1) byte value or register
+;     1) register b0 byte value or register
 ;   NB: register w0,w1 and w2 are modified
-mbs3gfxclear    macro  ; {1} screen value
-            mov     b4, {1}
+lbs3gfxclear    ; b0 is  screen value
+            mov     b4, b0
             mov     b5, b4
-            mov     w0, lbs3screen
+            mov     w0, ebs3screen
             mov     w1, ebs3gfxlength
 .loop       cmp     w1,0
             jz      .endloop
@@ -354,27 +354,47 @@ mbs3gfxclear    macro  ; {1} screen value
             sub     w1, 2
             j       .loop
 .endloop                        
-                endm
-
-;   generate the subroutine and init screen
-mbs3gfxcode     macro
-                jump .endofgfxcode
-; subroutine to show screen
-lbs3gfxshow     mbs3gfxshow
                 ret
 
-; subroutine to clear screen
-; b0 mustbe set to represent the scree color              
-lbs3gfxclear    mbs3gfxclear    b0
-                ret
+;   Set a pixel color at location x,y (zero based coordinate)
+;   (0,0) is top left coordinate
+;   expect 3 parameters in stack 
+;    1) SP + 6  : x coordinate
+;    2) SP + 4  : y coordinate
+;    3) SP + 2  : color (between 0 to 255 : 256 colors palette)
+ebs3gfx_pixel_x equ     6
+ebs3gfx_pixel_y equ     4
+ebs3gfx_pixel_c equ     2
 
-; define constant string
-                mbs3gfxconst
-.endofgfxcode   
-                mov             b0, 232
-                call            lbs3gfxclear
-                call            lbs3gfxshow
-                eor             b0, b0
-                call            lbs3gfxclear
-                call            lbs3gfxshow
-                endm
+lbs3gfxpixel
+            ; addr = screen+(x<<1)+parity(y)+[((y>>1)*width)<<1]
+            ; NB: parity(y) is the value of y bit 0.
+            ld      w0, [sp + ebs3gfx_pixel_x]  ; take x
+            shl     w0                          ; x'=2x
+            ld      w1, [sp + ebs3gfx_pixel_y]  ; take y
+            shr     w1                          ; y'=E(y/2)
+            adc     w0, 0                       ; x"+= parity(y)
+            mul     w1, ebs3gfxwidth2, w2       ; y"=y'*width*2
+            add     w0, w1                      ; idx=x"+y"
+            add     w0, ebs3screen              ; addr=screen+idx
+            ld      b2, [sp + ebs3gfx_pixel_c]
+            sr      b2, [w0]
+            ret
+
+;   Initialize the screen and shadow
+;   by doing a double screen clear
+;   one with color 232 (black in grey scale palette)
+;   one with color 0  (black in classic pallete)
+;   No parameter expected
+lbs3gfxinit
+            mov             b0, 232
+            call            lbs3gfxclear
+            call            lbs3gfxshow
+            eor             b0, b0
+            call            lbs3gfxclear
+            call            lbs3gfxshow
+            ret
+
+; include jump over label
+.endofansigfx  
+
