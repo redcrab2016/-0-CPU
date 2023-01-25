@@ -356,30 +356,165 @@ lbs3gfxclear    ; b0 is  screen value
 .endloop                        
                 ret
 
-;   Set a pixel color at location x,y (zero based coordinate)
-;   (0,0) is top left coordinate
-;   expect 3 parameters in stack 
-;    1) SP + 6  : x coordinate
-;    2) SP + 4  : y coordinate
-;    3) SP + 2  : color (between 0 to 255 : 256 colors palette)
-ebs3gfx_pixel_x equ     6
-ebs3gfx_pixel_y equ     4
-ebs3gfx_pixel_c equ     2
-
-lbs3gfxpixel
+; set w0 = address of pixel
+; w1 and w2 registers are modified
+mbs3gfx_xyaddr  macro ; {1} x stack offset, {2} y stack offset
             ; addr = screen+(x<<1)+parity(y)+[((y>>1)*width)<<1]
             ; NB: parity(y) is the value of y bit 0.
-            ld      w0, [sp + ebs3gfx_pixel_x]  ; take x
+            ld      w0, [sp + {1}]  ; take x
             shl     w0                          ; x'=2x
-            ld      w1, [sp + ebs3gfx_pixel_y]  ; take y
+            ld      w1, [sp + {2}]  ; take y
             shr     w1                          ; y'=E(y/2)
             adc     w0, 0                       ; x"+= parity(y)
             mul     w1, ebs3gfxwidth2, w2       ; y"=y'*width*2
             add     w0, w1                      ; idx=x"+y"
             add     w0, ebs3screen              ; addr=screen+idx
+            endm
+
+;   Set a pixel color at location x,y (zero based coordinate)
+;   (0,0) is top left coordinate
+;   expect 3 parameters in stack 
+;    1) SP + 6  : x coordinate (first  push)
+;    2) SP + 4  : y coordinate (second push)
+;    3) SP + 2  : color        (third  push)
+;       color value is between 0 to 255 : ANSI 256 colors palette
+ebs3gfx_pixel_x equ     6
+ebs3gfx_pixel_y equ     4
+ebs3gfx_pixel_c equ     2
+
+lbs3gfxpixel
+            mbs3gfx_xyaddr ebs3gfx_pixel_x, ebs3gfx_pixel_y
             ld      b2, [sp + ebs3gfx_pixel_c]
             sr      b2, [w0]
             ret
+
+;   Horizontal pixel line
+;   draw a horizontal line with xmin, xmax, y and color
+;   expect 4 parameters in stack
+;     1) SP + 8 : xmin: xmin <= xmax (first  push)
+;     2) SP + 6 : xmax: xmax >= xmin (second push)
+;     3) SP + 4 : y                  (third  push)
+;     4) SP + 2 : color              (fourth push)
+;       color value is between 0 to 255 : ANSI 256 colors palette
+ebs3gfx_hline_xmin  equ     8
+ebs3gfx_hline_xmax  equ     6
+ebs3gfx_hline_y     equ     4
+ebs3gfx_hline_c     equ     2
+
+lbs3gfxhline
+            mbs3gfx_xyaddr  ebs3gfx_hline_xmin, ebs3gfx_hline_y
+            ; now w0 is address of first pixel
+            ld              b7, [sp + ebs3gfx_hline_c]   ; b7 = color
+            ld              b6, [sp + ebs3gfx_hline_xmax]
+            ld              b5, [sp + ebs3gfx_hline_xmin]
+            sub             b6, b5
+            inc             b6                           ; b6 = length
+.pixeloop   cmp             b6, 0
+            jz              .endline
+            sr              b7, [w0]
+            dec             b6
+            add             w0, 2
+            j               .pixeloop
+.endline            
+            ret
+
+;   vertical pixel line
+;   draw a vertical line with ymin, ymax, x and color
+;   expect 4 parameters in stack
+;     1) SP + 8 : ymin: ymin <= ymax (first  push)
+;     2) SP + 6 : ymax: ymax >= ymin (second push)
+;     3) SP + 4 : x                  (third  push)
+;     4) SP + 2 : color              (fourth push)
+;       color value is between 0 to 255 : ANSI 256 colors palette
+ebs3gfx_vline_ymin  equ     8
+ebs3gfx_vline_ymax  equ     6
+ebs3gfx_vline_x     equ     4
+ebs3gfx_vline_c     equ     2
+
+lbs3gfxvline
+            mbs3gfx_xyaddr  ebs3gfx_vline_x, ebs3gfx_vline_ymin
+            ; now w0 is address of first pixel
+            ld              b7, [sp + ebs3gfx_vline_c]   ; b7 = color
+            ld              b6, [sp + ebs3gfx_vline_ymax]
+            ld              w2, [sp + ebs3gfx_vline_ymin] ; b4=ymin
+            mov             w1, ebs3gfxwidth2
+            dec             w1                          ; w1=bigoffset
+            sub             b6, b4
+            inc             b6                           ; b6 = length
+            not             w2
+            and             w2, 1
+            jnz             .pixeloop
+            mov             w2, w1                       ; w2 = addoff
+
+.pixeloop   cmp             b6, 0
+            jz              .endline
+            sr              b7, [w0]
+            dec             b6
+            add             w0, w2
+            cmp             b4, b2
+            jz              .off1
+            mov             w2, w1
+            j               .pixeloop
+.off1       mov             w2, 1
+            j               .pixeloop            
+.endline            
+            ret
+
+;   Draw a rectangle with 4 coordinate xmin,ymin xmax,ymax
+;   with a byte color (between 0 and 255 : ansi 256 color palette)
+;   expect 5 parameters in stack
+;     1) SP + 10 : xmin: xmin <= xmax  (first  push)
+;     2) SP + 8  : ymin: ymin <= ymax  (second push)
+;     3) SP + 6  : xmax: xmax >= xmin  (third  push)
+;     4) SP + 4  : ymax: ymax >= ymin  (fourth push)
+;     5) SP + 2  : color               (fifth  push)
+;       color value is between 0 to 255 : ANSI 256 colors palette
+;       no optimazation or check done : each corner are ploted twice
+ebs3gfx_box_xmin  equ     10
+ebs3gfx_box_xmax  equ     6
+ebs3gfx_box_ymin  equ     8
+ebs3gfx_box_ymax  equ     4
+ebs3gfx_box_c     equ     2
+
+lbs3gfxbox
+            mov     w3, sp
+            sr      w3, [lbs3gfxbox_data1]
+            ; top horizontal line
+            ld      b0, [w3 + ebs3gfx_box_xmin]
+            push    b0
+            ld      b0, [w3 + ebs3gfx_box_xmax]
+            push    b0
+            ld      b0, [w3 + ebs3gfx_box_ymin]
+            push    b0
+            ld      b0, [w3 + ebs3gfx_box_c]
+            push    b0
+            call    lbs3gfxhline
+            ; bottom horizontal line
+            ld      w3, [lbs3gfxbox_data1]
+            ld      b0, [w3 + ebs3gfx_box_ymax]
+            sr      b0, [sp + 2]
+            call    lbs3gfxhline
+            ; left vertical line
+            ld      w3, [lbs3gfxbox_data1]
+            ld      b0, [w3 + ebs3gfx_box_ymin]
+            sr      b0, [sp + 6]
+            ld      b0, [w3 + ebs3gfx_box_ymax]
+            sr      b0, [sp + 4]
+            ld      b0, [w3 + ebs3gfx_box_xmin]
+            sr      b0, [sp + 2]
+            call    lbs3gfxvline
+            ; right vertical line
+            ld      w3, [lbs3gfxbox_data1]
+            ld      b0, [w3 + ebs3gfx_box_xmax]
+            sr      b0, [sp + 2]
+            call    lbs3gfxvline
+            drop
+            drop
+            drop
+            drop
+            ret
+lbs3gfxbox_data1 ; used to save SP
+            dw      0
 
 ;   Initialize the screen and shadow
 ;   by doing a double screen clear
