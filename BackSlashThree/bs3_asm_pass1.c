@@ -2144,6 +2144,38 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
         case BS3_ASM_OPETYPE_DIRECTIVE: /* INCLUDE/ MACRO/ENDM/ORG */
             switch (pbs3_asm->opeCode)
             {
+            case BS3_INSTR_ALIGN:
+                switch ((WORD)pbs3_asm->paramValue[0])
+                {
+                  case 2:
+                  case 4:
+                  case 8:
+                  case 16:
+                  case 32:
+                  case 64:
+                  case 128:
+                  case 256:
+                  case 512:
+                  case 1024:
+                  case 2048:
+                  case 4096:
+                  case 8192:
+                  case 16384:
+                  case 32768:
+                    address = (address & (~((WORD)pbs3_asm->paramValue[0])-1)) +  (WORD)pbs3_asm->paramValue[0];
+                    pbs3_asm->assemblyAddress = address; /* adjust the address , needed if there is a label */
+                    err = bs3_asm_line_commit(pbs3_asm);
+                    if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
+                    {
+                        bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+                    }
+                  case 1:
+                    break;
+                  default:
+                    err = BS3_ASM_PASS1_PARSE_ERR_BADALIGN;
+                    bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+                }
+                break;
             case BS3_INSTR_ORG:
                 address = pbs3_asm->paramValue[0];
                 pbs3_asm->assemblyAddress = address; /* adjust the address , needed if there is a label */
@@ -2151,6 +2183,22 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
                 if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
                 {
                     bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+                }
+                break;
+            case BS3_INSTR_SPACE:
+                if ( pbs3_asm->paramValue[0] <=0 (pbs3_asm->paramValue[0] + (long)address) >= 65536L )
+                {
+                    err = BS3_ASM_PASS1_PARSE_ERR_TOOBIGSPACE;
+                    bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+                }
+                else
+                {
+                    address = (WORD)(address + pbs3_asm->paramValue[0]);
+                    err = bs3_asm_line_commit(pbs3_asm);
+                    if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
+                    {
+                        bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+                    }
                 }
                 break;
             case BS3_INSTR_MACRO:
