@@ -33,7 +33,24 @@ start       org             ebs3_start
             pop             b0
             dec             b0              ; decrement b0 for coords.
             j               .pixelloop
-.endpixelloop            
+.endpixelloop
+            mov             b0, 25 ; xmin
+            push            b0
+            mov             b0, 25 ; ymin
+            push            b0
+            mov             b0, 75 ; xmax
+            push            b0
+            mov             b0, 75 ; ymax
+            push            b0
+            mov             b0, 10 ; color
+            push            b0
+            call            lbs3gfxbox
+            drop
+            drop
+            drop
+            drop
+            drop
+            
             call            lbs3gfxshow     ; show screen result
 
 .loop2      in              b0
