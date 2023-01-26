@@ -1928,8 +1928,8 @@ void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
     int ret;
     char c;
     /* empiric wait for input latency to avoid too much poll syscall (slow down the BS3 emulator)*/
-    static unsigned int curwait = 1;
-    static unsigned int maxwait = 256;
+    static unsigned long curwait = 1;
+    static unsigned long maxwait = BS3_HYPER_INPUT_INITWAIT;
 
     curwait--;
     if (curwait == 0) /* ==0 then it is time to check for pending input */
@@ -1941,7 +1941,7 @@ void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
       
       /* Consume Hypervisor input data, to provide as an available input data for the bs3 CPU */
       if (ret > 0 && ((pfds[0].revents & 1) == 1)) {
-        maxwait = 256;
+        maxwait = BS3_HYPER_INPUT_INITWAIT;
         curwait = 1;
         read(0, &c, 1);
         pbs3->input_data = (BYTE)c;
@@ -1952,7 +1952,7 @@ void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
       {
         curwait = maxwait;
         maxwait = maxwait << 1;
-        if (maxwait > 65536) maxwait = 65536;
+        if (maxwait > BS3_HYPER_INPUT_MAXWAIT) maxwait = BS3_HYPER_INPUT_MAXWAIT;
       }
     }  
   }

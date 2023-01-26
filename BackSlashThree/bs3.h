@@ -260,6 +260,10 @@
 #define BS3_INT_DIVZERO     6
 
 
+/* Hypervisor parameter */
+#define BS3_HYPER_INPUT_INITWAIT  512
+#define BS3_HYPER_INPUT_MAXWAIT   1048576
+
 /* BS3 CPU Registers structure */
 struct bs3_registers
 {
