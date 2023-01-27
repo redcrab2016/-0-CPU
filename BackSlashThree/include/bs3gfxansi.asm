@@ -500,7 +500,7 @@ lbs3gfxfullbox
             ; next horizontal line
             ld      w3, [lbs3gfxbox_data1]
             ld      b0, [sp + 2]
-            ld      b1, [w3 + w3 + ebs3gfx_box_ymax]
+            ld      b1, [w3 + ebs3gfx_box_ymax]
             cmp     b0, b1
             jz      .endboxfill
             inc     b0    
@@ -525,84 +525,84 @@ lbs3gfxglyph
             and     w0, $FFFE
 .PT         ld      b6, [w1]
 
-.PT8        shr     b6
+.PT8        shl     b6
             jnc     .PT7
             sr      b4, [w0]
-.PT7        shr     b6            
+.PT7        shl     b6            
             jnc     .PT6
             sr      b4, [w0 + 1]
-.PT6        shr     b6            
+.PT6        shl     b6            
             jnc     .PT5
             sr      b4, [w0 + 2]
-.PT5        shr     b6            
+.PT5        shl     b6            
             jnc     .PT4
             sr      b4, [w0 + 3]
-.PT4        shr     b6            
+.PT4        shl     b6            
             jnc     .PT3
             sr      b4, [w0 + 4]
-.PT3        shr     b6            
+.PT3        shl     b6            
             jnc     .PT2
             sr      b4, [w0 + 5]
-.PT2        shr     b6            
+.PT2        shl     b6            
             jnc     .PT1
             sr      b4, [w0 + 6]
-.PT1        shr     b6            
+.PT1        shl     b6            
             jnc     .PM
             sr      b4, [w0 + 7]
 
 .PM         ld      b6, [w1 + 1]
-            add     w1, ebs3gfxwidth2
+            add     w0, ebs3gfxwidth2
 
-.PM8        shr     b6
+.PM8        shl     b6
             jnc     .PM7
             sr      b4, [w0]
-.PM7        shr     b6            
+.PM7        shl     b6            
             jnc     .PM6
             sr      b4, [w0 + 1]
-.PM6        shr     b6            
+.PM6        shl     b6            
             jnc     .PM5
             sr      b4, [w0 + 2]
-.PM5        shr     b6            
+.PM5        shl     b6            
             jnc     .PM4
             sr      b4, [w0 + 3]
-.PM4        shr     b6            
+.PM4        shl     b6            
             jnc     .PM3
             sr      b4, [w0 + 4]
-.PM3        shr     b6            
+.PM3        shl     b6            
             jnc     .PM2
             sr      b4, [w0 + 5]
-.PM2        shr     b6            
+.PM2        shl     b6            
             jnc     .PM1
             sr      b4, [w0 + 6]
-.PM1        shr     b6            
+.PM1        shl     b6            
             jnc     .PB
             sr      b4, [w0 + 7]
 
 .PB         ld      b6, [w1 + 2]
-            add     w1, ebs3gfxwidth2
+            add     w0, ebs3gfxwidth2
 
-.PB8        shr     b6
+.PB8        shl     b6
             jnc     .PB7
             sr      b4, [w0]
-.PB7        shr     b6            
+.PB7        shl     b6            
             jnc     .PB6
             sr      b4, [w0 + 1]
-.PB6        shr     b6            
+.PB6        shl     b6            
             jnc     .PB5
             sr      b4, [w0 + 2]
-.PB5        shr     b6            
+.PB5        shl     b6            
             jnc     .PB4
             sr      b4, [w0 + 3]
-.PB4        shr     b6            
+.PB4        shl     b6            
             jnc     .PB3
             sr      b4, [w0 + 4]
-.PB3        shr     b6            
+.PB3        shl     b6            
             jnc     .PB2
             sr      b4, [w0 + 5]
-.PB2        shr     b6            
+.PB2        shl     b6            
             jnc     .PB1
             sr      b4, [w0 + 6]
-.PB1        shr     b6            
+.PB1        shl     b6            
             jnc     .endplot
             sr      b4, [w0 + 7]
 .endplot
@@ -619,7 +619,7 @@ lbs3gfxglyph
 lbs3gfxchar
             eor     b3, b3          ; w1 = b2 = character
             and     b2, $7F         ; takes ascii 0..127
-            tst     b2, $1F
+            tst     b2, $E0
             jz      .endchar        ; do not print ascii 0..31
             ; compute w1 to be address to the right font glyph
             sub     b2, $20         ; first glyph for ASCII ' '/32
@@ -649,7 +649,7 @@ ebs3gfx_drawstr_c       equ     2
 lbs3gfxdrawstr
             ; compute w0 = address on screen
             mbs3gfx_xyaddr  ebs3gfx_drawstr_x, ebs3gfx_drawstr_y
-            
+
             ; b4 = color
             ld      b4, [SP + ebs3gfx_drawstr_c]
             ; w3 = current character address
@@ -688,8 +688,8 @@ lbs3gfxfontodd
             leaf_w0         lbs3gfxtinyfont_even
             leaf_w1         lbs3gfxtinyfont_odd
 
-            mov             b3, 96 ; 96 characters to generate
-.loopchar   cmp             b3, 0            
+            mov             b4, 96 ; 96 characters to generate
+.loopchar   cmp             b4, 0            
             jz              .endloopchar
 
             ; first 4x2 bit font 
@@ -720,7 +720,7 @@ lbs3gfxfontodd
             add             w0, 3
             add             w1, 3
 
-            dec             b3
+            dec             b4
             j               .loopchar
 .endloopchar
             ret
@@ -1047,7 +1047,7 @@ lbs3gfxtinyfont_even
     ;  .#..  0001 1000 $18
     ;  #...
     ;  ....  1000 0000 $80
-    db  $00, $00, $00    ; 62  : $3E : > Greater than
+    db  $90, $18, $80    ; 62  : $3E : > Greater than
 
     ;  ###.
     ;  ..#.  1010 1100 $AC
@@ -1055,7 +1055,7 @@ lbs3gfxtinyfont_even
     ;  ....  0010 1000 $28
     ;  .#..
     ;  ....  0010 0000 $20
-    db  $00, $00, $00    ; 63  : $3F : ? Question mark
+    db  $AC, $28, $20    ; 63  : $3F : ? Question mark
 
     ;  ###.
     ;  #.#.  1110 1100 $EC
@@ -1127,7 +1127,7 @@ lbs3gfxtinyfont_even
     ;  #.#.  1110 1100 $EC
     ;  #.#.
     ;  ....  1000 1000 $88
-    db  $00, $00, $00    ; 72  : $48 : 'H'
+    db  $CC, $EC, $88    ; 72  : $48 : 'H'
 
     ;  ###.
     ;  .#..  1011 1000 $B8
@@ -1199,15 +1199,15 @@ lbs3gfxtinyfont_even
     ;  ###.  1101 1100 $DC
     ;  ..#.
     ;  ....  0000 1000 $08
-    db  $00, $00, $00    ; 81  : $51 : 'Q'
+    db  $EC, $DC, $08    ; 81  : $51 : 'Q'
 
     ;  ###.
     ;  #.#.  1110 1100 $EC
     ;  ##..
-    ;  #.#.  1110 0100 $E8
+    ;  #.#.  1110 0100 $E4
     ;  #.#.
     ;  ....  1000 1000 $88
-    db  $00, $00, $00    ; 82  : $52 : 'R'
+    db  $EC, $E4, $88    ; 82  : $52 : 'R'
 
     ;  ###.
     ;  #...  1110 1000 $E8
@@ -1279,7 +1279,7 @@ lbs3gfxtinyfont_even
     ;  .#..  0011 0000 $30
     ;  .##.
     ;  ....  0010 1000 $28
-    db  $38, $30, $28    ; 92  : $5C : [ Left square bracket
+    db  $38, $30, $28    ; 91  : $5B : [ Left square bracket
 
     ;  ....
     ;  #...  0100 0000 $40
@@ -1287,7 +1287,7 @@ lbs3gfxtinyfont_even
     ;  ..#.  0010 0100 $24
     ;  ....
     ;  ....  0000 0000 $00
-    db  $00, $00, $00    ; 93  : $5D : \ Backslash ;)
+    db  $00, $00, $00    ; 92  : $5C : \ Backslash ;)
 
     ;  ##..
     ;  .#..  1011 0000 $B0
@@ -1295,7 +1295,7 @@ lbs3gfxtinyfont_even
     ;  .#..  0011 0000 $30
     ;  ##..
     ;  ....  1010 0000 $A0
-    db  $B0, $30, $A0    ; 94  : $5E : ] Right square bracket
+    db  $B0, $30, $A0    ; 93  : $5D : ] Right square bracket
 
     ;  .#..
     ;  #.#.  0110 0100 $64
@@ -1303,7 +1303,7 @@ lbs3gfxtinyfont_even
     ;  ....  0000 0000 $00
     ;  ....
     ;  ....  0000 0000 $00
-    db  $64, $00, $00    ; 95  : $5F : ^ Caret / Circumflex
+    db  $64, $00, $00    ; 94  : $5E : ^ Caret / Circumflex
 
     ;  ....
     ;  ....  0000 0000 $00
@@ -1311,7 +1311,15 @@ lbs3gfxtinyfont_even
     ;  ....  0000 0000 $00
     ;  ###.
     ;  ....  1010 1000 $A8
-    db  $00, $00, $A8    ; 96  : $60 : _ Underscore
+    db  $00, $00, $A8    ; 95  : $5F : _ Underscore
+
+    ;  .#..
+    ;  ..#.  0010 0100 $24
+    ;  ....
+    ;  ....  1100 1100 $00
+    ;  ....
+    ;  ....  0010 1000 $00
+    db  $24, $00, $00    ; 96  : $60 : ` Back quote
 
     ;  ....
     ;  .##.  0001 0100 $14
@@ -1359,7 +1367,7 @@ lbs3gfxtinyfont_even
     ;  .#..  1011 1000 $B8
     ;  .#..
     ;  ....  0010 0000 $20
-    db  $00, $00, $00    ; 102 : $66 : 'f'
+    db  $38, $B8, $20    ; 102 : $66 : 'f'
 
     ;  ###.
     ;  #.#.  1110 1100 $EC
@@ -1375,7 +1383,7 @@ lbs3gfxtinyfont_even
     ;  #.#.  1100 1100 $CC
     ;  #.#.
     ;  ....  1000 1000 $88
-    db  $00, $00, $00    ; 104 : $68 : 'h'
+    db  $D0, $CC, $88    ; 104 : $68 : 'h'
 
     ;  .#..
     ;  ....  0010 0000 $20

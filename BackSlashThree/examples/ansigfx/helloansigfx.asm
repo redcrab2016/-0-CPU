@@ -50,6 +50,7 @@ start       org             ebs3_start
             drop
             drop
             drop
+
             mov             b0, 26 ; xmin
             push            b0
             mov             b0, 26 ; ymin
@@ -66,11 +67,26 @@ start       org             ebs3_start
             drop
             drop
             drop
+
             leaf_w0         hellomsg
             push_w0
             mov             b0, 30 ; x coordinate
             push_b0
-            mov             b0, 47 ; y coordinate
+            mov             b0, 46 ; y coordinate
+            push_b0
+            mov             b0, 8 ; color (grey)
+            push_b0
+            call            lbs3gfxdrawstr
+            drop
+            drop
+            drop
+            drop
+
+            leaf_w0         hellomsg
+            push_w0
+            mov             b0, 29 ; x coordinate
+            push_b0
+            mov             b0, 45 ; y coordinate
             push_b0
             mov             b0, 15 ; color (white)
             push_b0
@@ -91,5 +107,5 @@ start       org             ebs3_start
             ansi_SCU                        ; show cursor
 
             hlt
-hellomsg    db "Hello world.",0
+hellomsg    db "Hello world    BackSlashThree",0
             include         "bs3gfxansi.asm" ; ANSI gfx lib
