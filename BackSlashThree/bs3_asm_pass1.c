@@ -2186,7 +2186,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
                 }
                 break;
             case BS3_INSTR_SPACE:
-                if ( pbs3_asm->paramValue[0] <=0 (pbs3_asm->paramValue[0] + (long)address) >= 65536L )
+                if ( (pbs3_asm->paramValue[0] <= 0) || (pbs3_asm->paramValue[0] + (long)address) >= 65536L )
                 {
                     err = BS3_ASM_PASS1_PARSE_ERR_TOOBIGSPACE;
                     bs3_asm_report(filename, linenum, pbs3_asm->column, err);
