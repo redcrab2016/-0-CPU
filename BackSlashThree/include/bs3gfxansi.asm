@@ -259,7 +259,7 @@ lbs3gfxshow
 
 ;       endif
 .continue
-; line E(100Pi) ;)
+
 ;       scridx += 2      
         ld              w0, [scridx]
         add             w0, 2
@@ -301,7 +301,19 @@ lbs3gfxclear    ; b0 is  screen value
 .endloop                        
                 ret
 
-; set w0 = address of pixel
+
+; look down here
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   v
+; line E(100Pi) ;)
+
+; set w0 = address of pixel at coordinates (x,y)
 ; w1 and w2 registers are modified
 mbs3gfx_xyaddr  macro ; {1} x stack offset, {2} y stack offset
             ; addr = screen+(x<<1)+parity(y)+[((y>>1)*width)<<1]
@@ -405,7 +417,7 @@ lbs3gfxvline
 .endline            
             ret
 
-;   Draw a rectangle with 4 coordinate xmin,ymin xmax,ymax
+;   Draw a rectangle with 4 coordinates xmin,ymin xmax,ymax
 ;   with a byte color (between 0 and 255 : ansi 256 color palette)
 ;   expect 5 parameters in stack
 ;     1) SP + 10 : xmin: xmin <= xmax  (first  push)
@@ -461,19 +473,258 @@ lbs3gfxbox
 lbs3gfxbox_data1 ; used to save SP
             dw      0
 
+;   Draw a rectangle with 4 coordinates xmin,ymin xmax,ymax
+;   with a byte color (between 0 and 255 : ansi 256 color palette)
+;   expect 5 parameters in stack
+;     1) SP + 10 : xmin: xmin <= xmax  (first  push)
+;     2) SP + 8  : ymin: ymin <= ymax  (second push)
+;     3) SP + 6  : xmax: xmax >= xmin  (third  push)
+;     4) SP + 4  : ymax: ymax >= ymin  (fourth push)
+;     5) SP + 2  : color               (fifth  push)
+;       color value is between 0 to 255 : ANSI 256 colors palette
+;       no optimazation or check done : each corner are ploted twice
+lbs3gfxfullbox
+            mov     w3, sp
+            sr      w3, [lbs3gfxbox_data1]
+            ; top horizontal line
+            ld      b0, [w3 + ebs3gfx_box_xmin]
+            push    b0
+            ld      b0, [w3 + ebs3gfx_box_xmax]
+            push    b0
+            ld      b0, [w3 + ebs3gfx_box_ymin]
+            push    b0
+            ld      b0, [w3 + ebs3gfx_box_c]
+            push    b0
+.boxfill
+            call    lbs3gfxhline
+            ; next horizontal line
+            ld      w3, [lbs3gfxbox_data1]
+            ld      b0, [sp + 2]
+            ld      b1, [w3 + w3 + ebs3gfx_box_ymax]
+            cmp     b0, b1
+            jz      .endboxfill
+            inc     b0    
+            sr      b0, [sp + 2]
+            j       .boxfill
+
+.endboxfill
+            drop
+            drop
+            drop
+            drop
+            ret
+
+;   Draw a font glyph
+;   w0 address on screen (x, y & $FE ) even Y coordinate
+;   w1 font glyph address 
+;   b4 fore color
+;   no W register changed
+lbs3gfxglyph
+            push_w0
+            push_b6
+            and     w0, $FFFE
+.PT         ld      b6, [w1]
+
+.PT8        shr     b6
+            jnc     .PT7
+            sr      b4, [w0]
+.PT7        shr     b6            
+            jnc     .PT6
+            sr      b4, [w0 + 1]
+.PT6        shr     b6            
+            jnc     .PT5
+            sr      b4, [w0 + 2]
+.PT5        shr     b6            
+            jnc     .PT4
+            sr      b4, [w0 + 3]
+.PT4        shr     b6            
+            jnc     .PT3
+            sr      b4, [w0 + 4]
+.PT3        shr     b6            
+            jnc     .PT2
+            sr      b4, [w0 + 5]
+.PT2        shr     b6            
+            jnc     .PT1
+            sr      b4, [w0 + 6]
+.PT1        shr     b6            
+            jnc     .PM
+            sr      b4, [w0 + 7]
+
+.PM         ld      b6, [w1 + 1]
+            add     w1, ebs3gfxwidth2
+
+.PM8        shr     b6
+            jnc     .PM7
+            sr      b4, [w0]
+.PM7        shr     b6            
+            jnc     .PM6
+            sr      b4, [w0 + 1]
+.PM6        shr     b6            
+            jnc     .PM5
+            sr      b4, [w0 + 2]
+.PM5        shr     b6            
+            jnc     .PM4
+            sr      b4, [w0 + 3]
+.PM4        shr     b6            
+            jnc     .PM3
+            sr      b4, [w0 + 4]
+.PM3        shr     b6            
+            jnc     .PM2
+            sr      b4, [w0 + 5]
+.PM2        shr     b6            
+            jnc     .PM1
+            sr      b4, [w0 + 6]
+.PM1        shr     b6            
+            jnc     .PB
+            sr      b4, [w0 + 7]
+
+.PB         ld      b6, [w1 + 2]
+            add     w1, ebs3gfxwidth2
+
+.PB8        shr     b6
+            jnc     .PB7
+            sr      b4, [w0]
+.PB7        shr     b6            
+            jnc     .PB6
+            sr      b4, [w0 + 1]
+.PB6        shr     b6            
+            jnc     .PB5
+            sr      b4, [w0 + 2]
+.PB5        shr     b6            
+            jnc     .PB4
+            sr      b4, [w0 + 3]
+.PB4        shr     b6            
+            jnc     .PB3
+            sr      b4, [w0 + 4]
+.PB3        shr     b6            
+            jnc     .PB2
+            sr      b4, [w0 + 5]
+.PB2        shr     b6            
+            jnc     .PB1
+            sr      b4, [w0 + 6]
+.PB1        shr     b6            
+            jnc     .endplot
+            sr      b4, [w0 + 7]
+.endplot
+            pop_b6
+            pop_w0
+            ret
+
+;   Draw a character
+;   w0 address on screen
+;   b2 character to print
+;   b4 color
+;   after call:
+;       registers b2-b3, w1 are changed
+lbs3gfxchar
+            eor     b3, b3          ; w1 = b2 = character
+            and     b2, $7F         ; takes ascii 0..127
+            tst     b2, $1F
+            jz      .endchar        ; do not print ascii 0..31
+            ; compute w1 to be address to the right font glyph
+            sub     b2, $20         ; first glyph for ASCII ' '/32
+            push_w2
+            mul     w1, 3, w2       ; 3 bytes per glyph
+            pop_w2
+            tst     w0, 1           ; odd screen => odd Y and font
+            jz      .fonteven
+            add     w1, lbs3gfxtinyfont_odd
+            j       .printout
+.fonteven   add     w1, lbs3gfxtinyfont_even
+.printout   call lbs3gfxglyph
+.endchar
+            ret
+
+;   Draw a character string
+;   expect 4 parameters in stack
+;     1) SP + 8 : String address    (first  push)
+;     2) SP + 6 : x coordinate      (second push)
+;     3) SP + 4 : y coordinate      (third  push)
+;     4) SP + 2 : c color           (fourth push)
+ebs3gfx_drawstr_addr    equ     8
+ebs3gfx_drawstr_x       equ     6
+ebs3gfx_drawstr_y       equ     4
+ebs3gfx_drawstr_c       equ     2
+
+lbs3gfxdrawstr
+            ; compute w0 = address on screen
+            mbs3gfx_xyaddr  ebs3gfx_drawstr_x, ebs3gfx_drawstr_y
+            
+            ; b4 = color
+            ld      b4, [SP + ebs3gfx_drawstr_c]
+            ; w3 = current character address
+            ld      w3, [SP + ebs3gfx_drawstr_addr]
+            ; b2 = current character
+.loopstr    ld      b2, [w3]
+            cmp     b2, 0
+            jz      .endloopstr
+            call    lbs3gfxchar
+            add     w0, 8
+            inc     w3
+            j       .loopstr
+.endloopstr
+            ret
+
 ;   Initialize the screen and shadow
 ;   by doing a double screen clear
 ;   one with color 232 (black in grey scale palette)
 ;   one with color 0  (black in classic pallete)
 ;   No parameter expected
 lbs3gfxinit
+            ; compute tiny font at odd Y coordinate
+            c               lbs3gfxfontodd 
+            ; clear to 232 (black in grey scale)
             mov             b0, 232
             call            lbs3gfxclear
             call            lbs3gfxshow
+            ; clear to 0 (black in classic 16 palette)
             eor             b0, b0
             call            lbs3gfxclear
             call            lbs3gfxshow
             ret
+
+; compute tiny font at odd Y coordinate
+lbs3gfxfontodd 
+            leaf_w0         lbs3gfxtinyfont_even
+            leaf_w1         lbs3gfxtinyfont_odd
+
+            mov             b3, 96 ; 96 characters to generate
+.loopchar   cmp             b3, 0            
+            jz              .endloopchar
+
+            ; first 4x2 bit font 
+            ld              b7, [w0]
+            shr             b7
+            and             b7, $55
+            sr              b7, [w1]
+
+            ; second 4x2 bits font 
+            ld              w3, [w0] ; b6=[w0], b7=[W0+1]
+            shr             b7
+            and             b7, $55
+            shl             b6
+            and             b6, $AA 
+            or              b7, b6
+            sr              b7, [w1 + 1]
+
+            ; third 4x2 bits font
+            ld              w3, [w0 + 1] ; b6=[w0+1], b7=[W0+2]
+            shr             b7
+            and             b7, $55
+            shl             b6
+            and             b6, $AA 
+            or              b7, b6
+            sr              b7, [w1 + 2]
+
+            ; increment addr to next font glyph
+            add             w0, 3
+            add             w1, 3
+
+            dec             b3
+            j               .loopchar
+.endloopchar
+            ret
+
 
     ; from 0 to 255 in string, each string is 4 bytes long
     ; from 'n' binary , string addr = lbs3gfxstr256 + n * 4
@@ -1308,7 +1559,7 @@ lbs3gfxtinyfont_even
     ;  .#..  1011 1010 $BA
     ;  ..#.
     ;  ....  0000 1000 $08
-    db  $18, $BA, $08    ; 127 : $7F : ' ' Delete (here as space)
+    db  $18, $BA, $08    ; 127 : $7F : ' ' Delete (here as back arrow)
 
 lbs3gfxtinyfont_odd
 ; characters 32 to 127 (96 characters) with 3 bytes per character

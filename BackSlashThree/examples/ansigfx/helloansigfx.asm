@@ -50,7 +50,36 @@ start       org             ebs3_start
             drop
             drop
             drop
-            
+            mov             b0, 26 ; xmin
+            push            b0
+            mov             b0, 26 ; ymin
+            push            b0
+            mov             b0, 74 ; xmax
+            push            b0
+            mov             b0, 74 ; ymax
+            push            b0
+            mov             b0, 12 ; color blue
+            push            b0
+            call            lbs3gfxfullbox
+            drop
+            drop
+            drop
+            drop
+            drop
+            leaf_w0         hellomsg
+            push_w0
+            mov             b0, 30 ; x coordinate
+            push_b0
+            mov             b0, 47 ; y coordinate
+            push_b0
+            mov             b0, 15 ; color (white)
+            push_b0
+            call            lbs3gfxdrawstr
+            drop
+            drop
+            drop
+            drop
+
             call            lbs3gfxshow     ; show screen result
 
 .loop2      in              b0
@@ -62,5 +91,5 @@ start       org             ebs3_start
             ansi_SCU                        ; show cursor
 
             hlt
-
+hellomsg    db "Hello world.",0
             include         "bs3gfxansi.asm" ; ANSI gfx lib
