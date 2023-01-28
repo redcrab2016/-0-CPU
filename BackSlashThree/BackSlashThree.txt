@@ -34,27 +34,28 @@ If CPU registers is a C language structure on a Little-Endian data access then i
 #define BIT unsigned short
 struct bs3_registers
 {
-  WORD PC;
-	union
-  {
-    WORD FL;
-    struct 
+    WORD PC;
+    union
     {
-      BIT C:1;
-      BIT Z:1;
-      BIT V:1;
-      BIT N:1;
-      BIT I:1;
-      BIT reserved:11;
+        WORD FL;
+        struct 
+        {
+            BIT C:1;
+            BIT Z:1;
+            BIT V:1;
+            BIT N:1;
+            BIT I:1;
+            BIT reserved:11;
+        };
     };
-  };
-  WORD SP;
-	union 
-	{
-		WORD W[4];
-		BYTE B[8];
-	};
+    WORD SP;
+    union 
+    {
+        WORD W[4];
+        BYTE B[8];
+    };
 };
+
 
 INSTRUCTION
 	1 or 2 bytes operator, 0, 1 or 2 bytes immediate data
