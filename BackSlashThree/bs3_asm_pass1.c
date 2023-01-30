@@ -1189,7 +1189,15 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
               bs3line->line[idxLine] = 0;
               bs3line->paramValue[bs3line->nbParam-1] = value;
               j = strlen(&bs3line->line[  bs3line->param[bs3line->nbParam-1]  ]);
-              bs3line->paramType[bs3line->nbParam-1] = (j<=3) ? BS3_ASM_PARAM_TYPE_BYTE_HEXA : BS3_ASM_PARAM_TYPE_WORD_HEXA;
+              if (j == 1) /* '$' alone means current address*/
+              {
+                  bs3line->paramValue[bs3line->nbParam-1] = ((long)address) & 0x0000FFFF;
+                  bs3line->paramType[bs3line->nbParam-1]  = BS3_ASM_PARAM_TYPE_WORD_HEXA;
+              }
+              else
+              {
+                bs3line->paramType[bs3line->nbParam-1] = (j<=3) ? BS3_ASM_PARAM_TYPE_BYTE_HEXA : BS3_ASM_PARAM_TYPE_WORD_HEXA;
+              }
               if (eol) break;
               idxLine++;
               state = BS3_ASM_PASS1_PARSE_STATE_APARAM;
@@ -2162,7 +2170,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
                   case 8192:
                   case 16384:
                   case 32768:
-                    address = (address & (~((WORD)pbs3_asm->paramValue[0])-1)) +  (WORD)pbs3_asm->paramValue[0];
+                    address = (address & (~((WORD)pbs3_asm->paramValue[0]-1))) +  (WORD)pbs3_asm->paramValue[0];
                     pbs3_asm->assemblyAddress = address; /* adjust the address , needed if there is a label */
                     err = bs3_asm_line_commit(pbs3_asm);
                     if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 

@@ -1,7 +1,7 @@
 ; Hello Ansi example
 ; An 'hello world' program to test ANSI feature in bs3outansi.inc
         include "bs3core.inc"           ; use bs3 core
-        include "bs3outansi.inc"        ; use bs3 print out ANSI 
+        include "bs3ansi.inc"        ; use bs3 print out ANSI 
         mbs3_bootat     start           ; 'start' is where CPU boot
 
 start   org             ebs3_start      ; boot at normal code addr

@@ -5,8 +5,6 @@
 ; using background color for bottom pixel
 ; e.g a 160 x 50 character define a pixel buffer of 160 x 100 pixels
 
-ebs3screen      equ     $8000
-ebs3shadow      equ     $C000
 
 ebs3gfxwidth    equ     160     ; GFX screen width
 ebs3gfxheight   equ     100     ; GFX screen height
@@ -17,6 +15,12 @@ ebs3gfxhchar    equ     50      ; half of GFX screen height
 ebs3gfxlength   equ     16000   ; GFX memory size(bytes)Width x Height
 
     jump .endofansigfx  ; include jump over
+lbs3screen      align   16
+ebs3screen      equ     $ ;  may be $8000
+                space   ebs3gfxlength
+lbs3shadow      align   16  
+ebs3shadow      equ     $ ;  may be $C000
+                space   ebs3gfxlength
 
 lbs3gfxshow     
 ; scridx = 0

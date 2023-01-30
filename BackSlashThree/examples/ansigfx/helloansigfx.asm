@@ -1,11 +1,11 @@
 ; Hello from ANSI GFX
             include         "bs3core.inc"
-            include         "bs3outansi.inc"
-            
+            include         "bs3ansi.inc"
+            include         "bs3ansigfx.asm" ; ANSI gfx lib            
 
             mbs3_bootat     start
 
-start       org             ebs3_start
+start       ; 
             ansi_ED         2               ; clear screen
             ansi_HCU                        ; hide cursor
             call            lbs3gfxinit     ; init ANSI gfx
@@ -108,4 +108,4 @@ start       org             ebs3_start
 
             hlt
 hellomsg    db "Hello world    BackSlashThree",0
-            include         "bs3gfxansi.asm" ; ANSI gfx lib
+

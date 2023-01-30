@@ -85,7 +85,7 @@ lbs3_timer_mode         org     ebs3_timer_mode
 
 ;   Misc
 lbs3_default_stack      org     ebs3_default_stack
-
+                        org             ebs3_start
 ; == BS3 macros
 
 ;   Set BS3 boot address,
@@ -95,10 +95,13 @@ lbs3_default_stack      org     ebs3_default_stack
 ;     1) global label/decimal/hexadecimal 
 ;        representing the boot address
 ;   example: mbs3_bootat myprogram
-mbs3_bootat macro
-            org     ebs3int0
-            dw      {1}
-            endm
+mbs3_bootat     macro
+_beforeboot_    equ     $
+        
+                org     ebs3int0
+                dw      {1}
+                org     _beforeboot_
+                endm
 
 ;   BS3 CPU macro for push_X
 ;   expect 1 parameter:
