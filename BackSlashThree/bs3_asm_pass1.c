@@ -2170,6 +2170,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
                   case 8192:
                   case 16384:
                   case 32768:
+                    if (address == (address & (~((WORD)pbs3_asm->paramValue[0]-1)))) break; /* nothing to do if current address is already aligned*/
                     address = (address & (~((WORD)pbs3_asm->paramValue[0]-1))) +  (WORD)pbs3_asm->paramValue[0];
                     pbs3_asm->assemblyAddress = address; /* adjust the address , needed if there is a label */
                     err = bs3_asm_line_commit(pbs3_asm);

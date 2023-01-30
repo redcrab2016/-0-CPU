@@ -287,6 +287,33 @@ row         db      0
 col         db      0
 
 
+; look down here
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   |
+;   v
+; line E(100Pi) ;)
+
+
 ;   clear screen with a value
 ;   expect 1 parameter:
 ;     1) register b0 byte value or register
@@ -306,16 +333,6 @@ lbs3gfxclear    ; b0 is  screen value
                 ret
 
 
-; look down here
-;   |
-;   |
-;   |
-;   |
-;   |
-;   |
-;   |
-;   v
-; line E(100Pi) ;)
 
 ; set w0 = address of pixel at coordinates (x,y)
 ; w1 and w2 registers are modified
@@ -667,6 +684,91 @@ lbs3gfxdrawstr
             inc     w3
             j       .loopstr
 .endloopstr
+            ret
+
+;   blit
+;   expect 3 parameters
+;     1) SP + 8 : screen x coordinate (first push)
+;     2) SP + 6 : screen y coordinate (second push)
+;     3) SP + 4 : address to image (third push)
+;     4) SP + 2 : operator (mov, eor, or, and, sub, add, mul)
+
+ebs3gfx_blit_op_set     equ     $B6
+ebs3gfx_blit_op_eor     equ     $92
+ebs3gfx_blit_op_or      equ     $91
+ebs3gfx_blit_op_and     equ     $90
+ebs3gfx_blit_op_sub     equ     $9D
+ebs3gfx_blit_op_add     equ     $9B
+ebs3gfx_blit_op_mul     equ     $B0
+
+ebs3gfx_blit_x          equ     8
+ebs3gfx_blit_y          equ     6
+ebs3gfx_blit_image      equ     4
+ebs3gfx_blit_op         equ     2
+
+lbs3gfxblit
+            ; compute w0 = address on screen
+            mbs3gfx_xyaddr  ebs3gfx_blit_x, ebs3gfx_blit_y
+;   w0: address in screen
+;   w1: address of image 
+            ld          w1, [SP + ebs3gfx_blit_image]
+            ; set operand (code update)
+            ld          b7, [SP + ebs3gfx_blit_op]
+            sr          b7, [_operand]
+;   b4: image width
+            ld          b4, [w1]        ; w1 = addr image width
+            ld          b5, [w1 + 1]    ; w1+1 = addr image height
+            add         w1,2            ; w1+2 = image data addr
+;   b5: image height
+            ld          b7, [SP + ebs3gfx_blit_y]
+            tst         b7, 1           ; is it odd Y screen coord.
+            jnz         .odd_line
+.even_line  cmp     b5, 0
+            jz      .end_blit
+            push    b4
+            push    w0
+            push    w1
+            call    .oneline
+            pop     w1
+            pop     w0
+            pop     b4
+            eor     w3, w3
+            mov     b6, b4 
+            add     w1, w3  ; go to next image line
+            inc     w0      ; go to next screen line
+            dec     b5
+
+.odd_line   cmp     b5, 0
+            jz      .end_blit
+            push    b4
+            push    w0
+            push    w1
+            call    .oneline
+            pop     w1
+            pop     w0
+            pop     b4
+            eor     w3, w3
+            mov     b6, b4 
+            add     w1, w3              ; go to next image line
+            add     w0, ebs3gfxwidth2      
+            dec     w0                  ; go to next screen line
+            dec     b5
+            j       .even_line
+; plot one horiz image line 
+.oneline
+            cmp     b4, 00      ; end of image line
+            jz      .end_routine
+            ld      b6, [w0]    ; get screen pixel
+            ld      b7, [w1]    ; get image pixel
+_operand    mov     b6, b7      ; update screen pixel value
+            sr      b6, [w0]    ; set screen pixel
+            inc     w1          ; go to right image pixel address 
+            add     w0, 2       ; go to right screen pixel address
+            dec     b4
+            j       .oneline
+.end_blit
+                       
+.end_routine
             ret
 
 ;   Initialize the screen and shadow

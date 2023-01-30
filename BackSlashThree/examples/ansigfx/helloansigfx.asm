@@ -5,8 +5,7 @@
 
             mbs3_bootat     start
 
-start       ; 
-            ansi_ED         2               ; clear screen
+start       ansi_ED         2               ; clear screen
             ansi_HCU                        ; hide cursor
             call            lbs3gfxinit     ; init ANSI gfx
 .loop1      in              b0
@@ -96,6 +95,47 @@ start       ;
             drop
             drop
 
+            ; Set : prepare parameter for image blit
+            mov             b0, 110 ; x coordinate
+            push            b0
+            mov             b0, 25  ; y coordinate
+            push            b0
+            leaf_w0         image
+            push_w0
+
+            ; operator amongst
+            ;   ebs3gfx_blit_op_add : screen += image
+            ;   ebs3gfx_blit_op_sub : screen -= image
+            ;   ebs3gfx_blit_op_mul : screen *= image
+            ;   ebs3gfx_blit_op_or  : screen |= image
+            ;   ebs3gfx_blit_op_eor : screen ^= image
+            ;   ebs3gfx_blit_op_and : screen &= image
+            ;   ebs3gfx_blit_op_set : screen = image
+            mov             b0, ebs3gfx_blit_op_set
+            push            b0
+            call            lbs3gfxblit
+            drop
+            drop
+            drop
+            drop  
+
+            ; XOR :prepare parameter for image blit
+            mov             b0, 110 ; x coordinate
+            push            b0
+            mov             b0, 32  ; y coordinate
+            push            b0
+            leaf_w0         image   ; image address
+            push_w0
+            ; operator amongst
+            mov             b0, ebs3gfx_blit_op_eor
+            push            b0
+            call            lbs3gfxblit
+            drop
+            drop
+            drop
+            drop  
+
+
             call            lbs3gfxshow     ; show screen result
 
 .loop2      in              b0
@@ -108,4 +148,10 @@ start       ;
 
             hlt
 hellomsg    db "Hello world    BackSlashThree",0
+image       db 5,5
+            db $0F, $0F, $0F, $0F, $0F
+            db $0F, $00, $00, $00, $0F
+            db $0F, $00, $03, $00, $0F
+            db $0F, $00, $00, $00, $0F
+            db $0F, $0F, $0F, $0F, $0F
 
