@@ -111,7 +111,7 @@ start       ansi_ED         2               ; clear screen
             ;   ebs3gfx_blit_op_eor : screen ^= image
             ;   ebs3gfx_blit_op_and : screen &= image
             ;   ebs3gfx_blit_op_set : screen = image
-            mov             b0, ebs3gfx_blit_op_set
+            mov             b0, ebs3gfx_blit_op_set ; screen = image
             push            b0
             call            lbs3gfxblit
             drop
@@ -126,7 +126,7 @@ start       ansi_ED         2               ; clear screen
             push            b0
             leaf_w0         image   ; image address
             push_w0
-            ; operator amongst
+            ; operator exclusif or
             mov             b0, ebs3gfx_blit_op_eor
             push            b0
             call            lbs3gfxblit

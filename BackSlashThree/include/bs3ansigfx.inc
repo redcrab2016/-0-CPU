@@ -687,19 +687,19 @@ lbs3gfxdrawstr
             ret
 
 ;   blit
-;   expect 3 parameters
+;   expect 4 parameters
 ;     1) SP + 8 : screen x coordinate (first push)
 ;     2) SP + 6 : screen y coordinate (second push)
 ;     3) SP + 4 : address to image (third push)
 ;     4) SP + 2 : operator (mov, eor, or, and, sub, add, mul)
 
-ebs3gfx_blit_op_set     equ     $B6
-ebs3gfx_blit_op_eor     equ     $92
-ebs3gfx_blit_op_or      equ     $91
-ebs3gfx_blit_op_and     equ     $90
-ebs3gfx_blit_op_sub     equ     $9D
-ebs3gfx_blit_op_add     equ     $9B
-ebs3gfx_blit_op_mul     equ     $B0
+ebs3gfx_blit_op_set     equ     $B6 ; screen = image
+ebs3gfx_blit_op_eor     equ     $92 ; screen ^= image
+ebs3gfx_blit_op_or      equ     $91 ; screen |= image
+ebs3gfx_blit_op_and     equ     $90 ; screen &= image
+ebs3gfx_blit_op_sub     equ     $9D ; screen -= image
+ebs3gfx_blit_op_add     equ     $9B ; screen += image
+ebs3gfx_blit_op_mul     equ     $B0 ; screen *= image
 
 ebs3gfx_blit_x          equ     8
 ebs3gfx_blit_y          equ     6
