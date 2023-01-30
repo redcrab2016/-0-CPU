@@ -1,7 +1,7 @@
 ; Hello from ANSI GFX
             include         "bs3core.inc"
             include         "bs3ansi.inc"
-            include         "bs3ansigfx.asm" ; ANSI gfx lib            
+            include         "bs3ansigfx.inc" ; ANSI gfx lib            
 
             mbs3_bootat     start
 
