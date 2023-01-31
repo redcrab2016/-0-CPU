@@ -849,10 +849,10 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
             fcntl(pbs3debug->connfd, F_SETFL, fdf | O_NONBLOCK); /* add non blocking flag to socket file descriptor */
             pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_CONNECTED;
             bs3_debug_comm_welcome(pbs3debug);
-            for (i = 1 ; i <= 10;i++)
+            for (i = 1 ; i <= 20;i++)
             {
                  bs3_debug_comm(pbs3debug);
-                 usleep(100000);
+                 usleep(50000);
             }
             pbs3debug->n = 0;
             bs3_debug_comm_prompt(pbs3debug); 

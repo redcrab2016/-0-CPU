@@ -195,7 +195,7 @@ struct bs3_asm_include_paths
 extern struct bs3_asm_code_map  bs3_asm_map; 
 extern struct bs3_asm_include_paths * bs3_asm_includepaths;
 extern const char * bs3_asm_message[];
-
+extern char bs3_asm_tmppath[];
 extern struct bs3_asm_line bs3_asm[]; /* to be managed as a sequential third party resource ( as a file) */
 extern long bs3_asm_nbline; /* current size of bs3_asm usage */
 
@@ -225,7 +225,7 @@ int bs3_asm_pass1_symboltype(const char * symbol, int length, long * pvalue);
 int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD address, const char * oneLine, int ignoreLabelCheck);
 int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, long asmIndexMacro);
 int bs3_asm_pass2();
-int bs3_asm_file( const char * filename, const char * filenameout, const char * filenamereport, int format);
+int bs3_asm_file( const char * filename, const char * filenameout, const char * filenamereport, int format, const char * tmppath, int keepTmpfile);
 
 /* BS3 CPU disassemble instruction definition structure */
 struct bs3_cpu_instr

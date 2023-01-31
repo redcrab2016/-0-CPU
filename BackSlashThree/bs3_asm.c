@@ -1,9 +1,10 @@
 #include <stdio.h>
+#include <string.h>
 #include "bs3_asm.h"
 
 struct bs3_asm_include_paths * bs3_asm_includepaths = 0;
 
-int bs3_asm_file( const char * filename, const char * filenameout, const char * filenamereport, int format)
+int bs3_asm_file( const char * filename, const char * filenameout, const char * filenamereport, int format, const char * tmppath,  int keepTmpfile)
 {
   int err;
   long l;
@@ -12,12 +13,16 @@ int bs3_asm_file( const char * filename, const char * filenameout, const char * 
   WORD addressout;
   FILE * freport;
   char reportline[BS3_ASM_LINE_BUFFER*3];
-  err = BS3_ASM_PASS1_PARSE_ERR_OK; 
+  err = BS3_ASM_PASS1_PARSE_ERR_OK;
+  if (tmppath != ((void *)0) )  
+    strcpy(bs3_asm_tmppath,tmppath);
+  else
+    strcpy(bs3_asm_tmppath, "/tmp");
   /* Init asm line set */
   bs3_asm_line_reset();
   /* pass 1 */
   err =  bs3_asm_pass1_file(filename, 0 /* adress 0x0000 by default */,&addressout, -1 /* not macro expansion mode*/);
-  bs3_asm_pass1_removemacrofiles();
+  if (!keepTmpfile) bs3_asm_pass1_removemacrofiles();
   if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
   {
     bs3_asm_report(filename, 0 , 0 , BS3_ASM_PASS1_FAILURE) ;

@@ -1,3 +1,4 @@
+#!./bs3asm -R
 ; Hello from ANSI GFX
             include         "bs3core.inc"    ; Utilities
             include         "bs3ansi.inc"    ; Basic ANSI print

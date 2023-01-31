@@ -7,7 +7,7 @@
 
 #include "bs3_asm.h"
 
-
+char bs3_asm_tmppath[256];
 /* get effective name based on current file name , wish file name and list of include path */
 int bs3_asm_effectivefilename(const char * currfilename, const char * wishfilename, char * finalFilename)
 {
@@ -821,6 +821,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
             case '\n':
             case '\r':
             case ';':
+            case '#': /* comment usefull for #! marker in first line*/
               eol = 1;
               bs3line->line[idxLine] = 0;
             case ' ':
@@ -2127,7 +2128,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
             err = bs3_asm_line_commit(pbs3_asm);
             if (err == BS3_ASM_PASS1_PARSE_ERR_OK)
             {
-                sprintf(includefilename, "%s.m", &pbs3_asm->line[pbs3_asm->ope]);
+                sprintf(includefilename, "%s/%s.m", bs3_asm_tmppath, &pbs3_asm->line[pbs3_asm->ope]);
                 err = bs3_asm_pass1_file(includefilename ,  address, addressout, pbs3_asm->asmIndex);
                 address = *addressout;
             }
@@ -2219,7 +2220,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
             case BS3_INSTR_MACRO:
                 /* switch to macro recording mode */
                 isMacroRecording = 1;
-                sprintf(includefilename, "%s.m", &pbs3_asm->line[pbs3_asm->label]);
+                sprintf(includefilename, "%s/%s.m", bs3_asm_tmppath, &pbs3_asm->line[pbs3_asm->label]);
                 macroFile = fopen(includefilename,"wt");
                 bs3_asm_pass1_addmacro(includefilename);
                 break;

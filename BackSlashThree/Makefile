@@ -7,7 +7,11 @@
 CC = @gcc
 
 LINKERFLAG = -lm
+# maxi run speed
+#DEBUG = -O3
+# mini size
 #DEBUG = -Os
+# debug info 
 DEBUG = -g  # for gdb debugging 
 BINS := bs3asm bs3rt
 

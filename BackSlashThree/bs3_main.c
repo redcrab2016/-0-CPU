@@ -30,13 +30,14 @@ int main(int argc, char *argv[])
 #include <stdlib.h>
 #include <stdio.h>
 #include <libgen.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include "bs3_asm.h"
 #include "bs3_debug.h"
 
 void bs3_usage(const char * prgname )
   {
-    printf("Usage: bs3asm [OPTION]... FILE                                                 \n");
+    printf("Usage: %s [OPTION]... FILE \n", prgname);
     printf("Assembler / Debugger of BackSlashThree (BS3) CPU program.                      \n");
     printf("                                                                               \n");
     printf("  -b, --output-type-bin      BS3 result file in binary format (default)        \n");
@@ -49,6 +50,8 @@ void bs3_usage(const char * prgname )
     printf("  -h, --help                 This current help message.                        \n");
     printf("  -i, --include-path  PATH   Path to search for include directive              \n");
     printf("                             multiple -i argument is allowed                   \n");
+    printf("  -k, --keep-tmpfile         Keep temporary generated file. Usefull to         \n");
+    printf("                             troubleshoot deep nested macro compilation.       \n");
     printf("  -n, --debug-bindip         IP address to bind the debug listening socket,    \n");
     printf("                             127.0.0.1 is by default.                          \n");
     printf("  -o, --output-bs3 BS3FILE   Assembling BS3 result in BS3FILE                  \n");
@@ -56,12 +59,14 @@ void bs3_usage(const char * prgname )
     printf("  -p, --debug-port PORT      Remote debug listening port (default: 35853)      \n");
     printf("  -r, --output-report RFILE  Assembling report in RFILE                        \n");
     printf("                             by default it is FILE with .rpt extension         \n");
+    printf("  -R, --nodebug-run          no debug, only run if possible.                   \n");
+    printf("  -t, --temp-path TPATH      set temp path to TPATH. (default '/tmp')          \n");
     printf("  -x, --output-type-hexa     BS3 result file in hexadecimal format, human      \n");
     printf("                             readable binary with a text viewer.               \n");
     printf("                                                                               \n");
     printf("If FILE has an .s, .asm, .S or .ASM extension, it assembles FILE, otherwise it \n");
     printf("load it for debug.                                                             \n");
-    printf("After successful assembling, you can debug it right awway by using argument -d.\n");
+    printf("After successful assembling, you can debug it right away by using argument -d. \n");
     printf("Debug service is reachable at localhost (127.0.0.1) with port 35853 by default.\n");
     printf("Use a telnet alike program to interract with the debugger:                     \n");
     printf("       >telnet localhost 35853                                                 \n");
@@ -92,11 +97,14 @@ int main(int argc, char *argv[])
   struct bs3_asm_include_paths inc;
   int nbIncludePath;
   int toDebug;
+  int noDebug;
   int debugStop;
   int toCompile;
+  int keepTmpfile;
   char outputBS3[BS3_MAX_FILENAME_SIZE];
   char bindaddr[BS3_MAX_FILENAME_SIZE];
   char outputReport[BS3_MAX_FILENAME_SIZE];
+  char tmppath[BS3_MAX_FILENAME_SIZE];
   char outputELF[BS3_MAX_FILENAME_SIZE];
   char inputFile[BS3_MAX_FILENAME_SIZE];
   char bs3rtFile[BS3_MAX_FILENAME_SIZE];
@@ -119,7 +127,10 @@ int main(int argc, char *argv[])
     {"debug-bindip",      1, 0, 'n'},
     {"debug-stop",        0, 0, 'd'},
     {"debug-run",         0, 0, 'D'},
+    {"keep-tmpfile",      0, 0, 'k'},
+    {"nodebug-run",       0, 0, 'R'},
     {"debug-port",        1, 0, 'p'},
+    {"temp-path",         1, 0, 't'},
     {"help",              0, 0, 'h'},
     {0, 0, 0, 0}
   };
@@ -128,10 +139,13 @@ int main(int argc, char *argv[])
   strcpy(outputReport,"");
   strcpy(outputELF,"");
   strcpy(bindaddr,"127.0.0.1");
+  strcpy(tmppath, "/tmp");
   port = 0; /* 0 = use default 35853 */
   nbIncludePath = 1;
   toDebug = 0;
   toCompile = 0;
+  noDebug = 0;
+  keepTmpfile = 0;
   inc.includePath[0][0] = 0; /* empty path */
   inc.includePath[1][0] = 0xFF; /* -1 is end of list of include */
   /* getopt_long stores the option index here. */
@@ -139,7 +153,7 @@ int main(int argc, char *argv[])
   while (1)
   {
     option_index = 0;
-    c = getopt_long (argc, argv, ":i:o:r:n:e:p:hbxdD",
+    c = getopt_long (argc, argv, ":i:o:r:n:e:p:t:hbxdDRk",
                       long_options, &option_index);
 
     /* Detect the end of the options. */
@@ -163,6 +177,14 @@ int main(int argc, char *argv[])
         debugStop = 0;
         break;
 
+      case 'k':
+        keepTmpfile = 1;
+        break;
+
+      case 'R':
+        noDebug = 1;
+        break;
+
       case 'h':
         bs3_usage(argv[0]);
         return 0;
@@ -171,6 +193,7 @@ int main(int argc, char *argv[])
       case 'b':
         bs3type = BS3_ASM_CODE_MAP_TYPE_BINARY;
         break;
+
       case 'x':
         bs3type = BS3_ASM_CODE_MAP_TYPE_HEXA;
         break;
@@ -192,24 +215,59 @@ int main(int argc, char *argv[])
         inc.includePath[nbIncludePath][1] = 0;
         break;
 
+      case 't':
+        if (strlen(optarg) > BS3_MAX_FILENAME_SIZE-32)
+        {
+          fprintf(stderr, "Too large temporary path %s\n", optarg);
+          return 1;
+        }
+        struct stat s = {0};
+        if (!stat(optarg, &s))
+        {
+          // (s.st_mode & S_IFDIR) can be replaced with S_ISDIR(s.st_mode)
+          if (! s.st_mode & S_IFDIR)
+          {
+            fprintf(stderr, "can't use %s for temporary path: not a directory.\n",optarg);
+            return 1;
+          }
+        }
+        else
+        {
+            fprintf(stderr, "can't use %s for temporary path: not found or can't access it\n", optarg);
+            return 1;
+        }
+        if(access(optarg, W_OK) != 0)
+        {
+            fprintf(stderr,"Can't use %s for temporary path: not writable\n", optarg);
+            return 1;
+        }
+        strcpy(tmppath, optarg);
+        break;
+
       case 'o':
         strncpy(outputBS3, optarg,  BS3_MAX_FILENAME_SIZE-1);
         outputBS3[BS3_MAX_FILENAME_SIZE-1] = 0;
         break;
+
       case 'n':
         strncpy(bindaddr, optarg, BS3_MAX_FILENAME_SIZE-1);
         bindaddr[BS3_MAX_FILENAME_SIZE-1] = 0;
+        break;
+
       case 'r':
         strncpy(outputReport, optarg,  BS3_MAX_FILENAME_SIZE-1);
         outputReport[BS3_MAX_FILENAME_SIZE-1] = 0;
         break;
+
       case 'e':
         strncpy(outputELF, optarg,  BS3_MAX_FILENAME_SIZE-1);
         outputELF[BS3_MAX_FILENAME_SIZE-1] = 0;
         break;
+
       case 'p':
         port  = atoi(optarg);
         break;
+
       case '?':
       case ':':
         /* getopt_long already printed an error message. */
@@ -319,7 +377,7 @@ int main(int argc, char *argv[])
   if (toCompile)
   {
     bs3_asm_includepaths = &inc; /* provides the include paths */
-    if (bs3_asm_file(inputFile, outputBS3, outputReport, bs3type ) != BS3_ASM_PASS1_PARSE_ERR_OK) return 1;
+    if (bs3_asm_file(inputFile, outputBS3, outputReport, bs3type, tmppath, keepTmpfile ) != BS3_ASM_PASS1_PARSE_ERR_OK) return 1;
     if (outputELF[0]!= 0) 
     {
       /* Generate the ELF file */
@@ -366,18 +424,18 @@ int main(int argc, char *argv[])
       }
     }
   }
-  if (toDebug)
+  if (toDebug || noDebug)
   {
-    bs3_asm_code_map_reset(&codemap);
+    if (!noDebug) bs3_asm_code_map_reset(&codemap);
     i = bs3_asm_code_map_load(outputBS3, &codemap,0);
     if ( i != BS3_ASM_CODE_MAP_ERR_OK) 
     {
       fprintf(stderr,"Error on loading %s : %s\n",outputBS3,bs3_asm_code_map_message[i]);
       return 1;
     }
-    bs3_debug_prepare(bindaddr, port, debugStop); /* 0 for default port 35853*/
-    bs3_hyper_main(&codemap,&bs3_debug);
-    bs3_debug_end();
+    if (!noDebug) bs3_debug_prepare(bindaddr, port, debugStop); /* 0 for default port 35853*/
+    bs3_hyper_main(&codemap,(noDebug)?((void *)0):&bs3_debug);
+    if (!noDebug) bs3_debug_end();
   }
   return 0;
  
