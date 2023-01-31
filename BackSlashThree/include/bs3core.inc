@@ -117,6 +117,70 @@ pop     macro
         pop_{1}
         endm
 
+;   BS3 CPU macro for multi drop
+drop2   macro
+        drop
+        drop
+        endm
+
+drop3   macro
+        drop
+        drop
+        drop
+        endm
+
+drop4   macro
+        drop
+        drop
+        drop
+        drop
+        endm
+
+drop5   macro
+        drop
+        drop
+        drop
+        drop
+        endm
+
+;   BS3 CPU push an immediate value or label address
+pushi   macro
+        j       .over
+.word   dw      0
+.over
+        sr      w0, [.word]
+        mov     w0, {1}
+        push    w0
+        ld      w0, [.word]
+        endm
+
+pushi2  macro ; pushi {1}, pushi {2}
+        pushi   {1}
+        pushi   {2}
+        endm
+
+pushi3  macro ; pushi {1}, pushi {2} & {3}
+        pushi   {1}
+        pushi   {2}
+        pushi   {3}
+        endm
+
+pushi4  macro ; pushi {1}, pushi {2} ..{4}
+        pushi   {1}
+        pushi   {2}
+        pushi   {3}
+        pushi   {4}
+        endm
+
+pushi5  macro ; pushi {1}, pushi {2} ..{5}
+        pushi   {1}
+        pushi   {2}
+        pushi   {3}
+        pushi   {4}
+        pushi   {5}
+        endm
+
+
 ;   BS3 CPU macro for lean_X, 
 ;   expect 2 parameters:
 ;     1) register W0-3

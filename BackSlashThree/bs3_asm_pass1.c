@@ -1741,10 +1741,16 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
              }
              else 
              {
-               bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M0LABEL; /* only alias */
+               bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M0LABEL; /* no EQU found then LABEL */
                bs3line->paramValue[i] = 0; /* default value */
              }
              continue; /* go to next param */
+           }
+           if ( symboltype == BS3_ASM_SYMBOLTYPE_LABEL )
+           {
+              bs3line->paramType[i] = BS3_ASM_PARAM_TYPE_M0LABEL;
+              bs3line->paramValue[i] = 0;
+              continue;
            }
            isok = 0;
            err = BS3_ASM_PASS1_PARSE_ERR_ADDRMODE;

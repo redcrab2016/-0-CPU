@@ -714,7 +714,7 @@ lbs3gfxblit
             ld          w1, [SP + ebs3gfx_blit_image]
             ; set operand (code update)
             ld          b7, [SP + ebs3gfx_blit_op]
-            sr          b7, [_operand]
+            sr          b7, [.operand]
 ;   b4: image width
             ld          b4, [w1]        ; w1 = addr image width
             ld          b5, [w1 + 1]    ; w1+1 = addr image height
@@ -760,7 +760,7 @@ lbs3gfxblit
             jz      .end_routine
             ld      b6, [w0]    ; get screen pixel
             ld      b7, [w1]    ; get image pixel
-_operand    mov     b6, b7      ; update screen pixel value
+.operand    mov     b6, b7      ; update screen pixel value
             sr      b6, [w0]    ; set screen pixel
             inc     w1          ; go to right image pixel address 
             add     w0, 2       ; go to right screen pixel address
