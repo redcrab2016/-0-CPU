@@ -27,7 +27,7 @@ start   org             ebs3_start      ; boot at normal code addr
         ansi_CUP        12, 1           ; cursor row 10 column 1
         hlt                             ; end of Hello World, stop
 
-msg     db              $E2, $96, $80   ; half upper block (UTF8 of $2580)
+msg     db              $E2, $96, $80   ; half upper block (UTF8 $2580)
         db              $E2, $96, $80   ; another half upper block
         db              $E2, $96, $80   ; a third one
         db              ' ',$E2, $96, $80, 0 ; a space and a fourth one
