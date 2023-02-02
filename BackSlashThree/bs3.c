@@ -261,6 +261,7 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
   WORD s2;
   WORD s3;
   WORD s4;
+  int busInterrupt;
   if (pbs3->status == BS3_STATUS_HALT) return; 
   if (pbs3->status == BS3_STATUS_RESET) 
   {
@@ -268,10 +269,13 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
     return;
   }
   /* is there pending interrupt, with interrupt enabled?*/
+  busInterrupt = -1;
   if (pbs3->r.I == 1 && pbs3->pending_interrupt != BS3_INT_NOPENDING) {
+    busInterrupt = pbs3->pending_interrupt;
     bs3_cpu_interrupt(pbs3, pbs3->pending_interrupt);
+    
   }
-  else /* timer interrupt ?*/
+  else /* bus or timer interrupt ?*/
   {
     if (pbs3->msortick == 1)
     {
@@ -279,14 +283,23 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
       if (pbs3->counter == 0)  
       {
         bs3_cpu_interrupt(pbs3, BS3_INT_TIMER);
+        busInterrupt = BS3_INT_TIMER;
         pbs3->counter == pbs3->timer;
       }
     } else {
       if (timer_alarm == 1) {
         bs3_cpu_interrupt(pbs3, BS3_INT_TIMER);
+        busInterrupt = BS3_INT_TIMER;
         timer_alarm = 0;
       }
     }
+    /* bus interrupt ?*/
+    if (busInterrupt == -1)
+    {
+      busInterrupt = bs3_bus_interrupt();
+      if (busInterrupt > -1) bs3_cpu_interrupt(pbs3, busInterrupt);
+    }
+    
   }
   if (pbs3->status == BS3_STATUS_WAIT) return;
   ope = pbs3->m[pbs3->r.PC]; /* operator at PC */

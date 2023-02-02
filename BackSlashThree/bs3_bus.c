@@ -2,10 +2,36 @@
 #include <stdio.h>
 #include "bs3_bus.h"
 
+#define INTERRUPT_QUEUE_SIZE 16
+
 struct bs3_device * bs3_devices[256];
 int nb_bs3_device = 0;
 struct bs3_device * bs3_bus_addresses[65536];
 pthread_mutex_t lockbus = PTHREAD_MUTEX_INITIALIZER;
+int bs3_bus_interrupt_FIFO[16];
+int bs3_bus_interrupt_FIFO_front = 0;
+int bs3_bus_interrupt_FIFO_rear = 0;
+int bs3_bus_interrupt_FIFO_count = 0;
+
+int bs3_bus_interrupt_enqueue(int item) {
+  if (bs3_bus_interrupt_FIFO_count == INTERRUPT_QUEUE_SIZE) {
+    return -1;
+  }
+  bs3_bus_interrupt_FIFO_rear = (bs3_bus_interrupt_FIFO_rear + 1) % INTERRUPT_QUEUE_SIZE;
+  bs3_bus_interrupt_FIFO[bs3_bus_interrupt_FIFO_rear] = item;
+  bs3_bus_interrupt_FIFO_count++;
+  return bs3_bus_interrupt_FIFO_count;
+}
+
+int bs3_bus_interrupt_dequeue() {
+  if (bs3_bus_interrupt_FIFO_count == 0) {
+    return -1;
+  }
+  int item = bs3_bus_interrupt_FIFO[bs3_bus_interrupt_FIFO_front];
+  bs3_bus_interrupt_FIFO_front = (bs3_bus_interrupt_FIFO_front + 1) % INTERRUPT_QUEUE_SIZE;
+  bs3_bus_interrupt_FIFO_count--;
+  return item;
+}
 /*
 struct bs3_device bs3_bus_default_device = 
 {
@@ -87,4 +113,23 @@ void bs3_bus_writeByte(WORD address, BYTE data)
     pthread_mutex_lock(&lockbus); 
     (*(bs3_bus_addresses[address]->writeByte))(address, data);
     pthread_mutex_unlock(&lockbus); 
+}
+
+int bs3_bus_interrupt()
+{
+    int interrupt;
+    int i;
+    for (i = 0 ; i < nb_bs3_device ; i++)
+    {
+        if (bs3_devices[i] && bs3_devices[i]->getIRQstate)
+        {
+            if ((*(bs3_devices[i]->getIRQstate))())
+            {
+                bs3_bus_interrupt_enqueue(bs3_devices[i]->interruptNumber);
+            }
+        }
+    }
+
+    interrupt = bs3_bus_interrupt_dequeue();
+    return interrupt;
 }
