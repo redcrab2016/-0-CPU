@@ -93,7 +93,7 @@ MEMORY MAP
 		vector 5  : 000A : data block input data (Hypervisor data input event, metadata at 002A-002F)
 		vector 6  : 000C : Division by Zero (can be catch by hypervisor)
 		vector 7  : 000E : Bad instruction (can be catch by hypervisor)
-		vector 8  : 0010 : user defined
+		vector 8  : 0010 : RTC 72421 signal
 		vector 9  : 0012 : user defined
 		vector 10 : 0014 : user defined
 		vector 11 : 0016 : user defined
@@ -122,7 +122,26 @@ MEMORY MAP
 		0108 : Timer clock count low  (32 bits counters, set here from 0106 0109, the tick delay)
 		010A : Timer clock count high (a word write operation at this address will restart the timer counter)
 		010C : Timer microseconds(0) or cpu ticks(1)
-		010D - 01FF : other system I/O
+		010D : reserved IO
+		010E : reserved IO
+		010F : reserved IO
+		0110 : RTC 72421 S1 register
+		0111 : RTC 72421 S10 register
+		0112 : RTC 72421 MI1 register
+		0113 : RTC 72421 MI10 register
+		0114 : RTC 72421 H1 register
+		0115 : RTC 72421 H10 register
+		0116 : RTC 72421 D1 register
+		0117 : RTC 72421 D10 register
+		0118 : RTC 72421 MO1 register
+		0119 : RTC 72421 MO10 register
+		011A : RTC 72421 Y1 register
+		011B : RTC 72421 Y10 register
+		011C : RTC 72421 W register
+		011D : RTC 72421 CD register
+		011E : RTC 72421 CE register
+		011F : RTC 72421 CF register
+		0120 - 01FF : other system I/O
 	0200 - 03FF : Default Stack(grow downward, SP initial value to 0400) / possible Data / possible Code		
 	0400 - FFFF : Code / Data(ROM, RAM System or shared with device) / possible stack
 

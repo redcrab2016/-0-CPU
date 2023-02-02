@@ -12,7 +12,7 @@
 #include <errno.h>
 
 #include "bs3.h"
-
+#include "bs3_bus.h"
 
 /* Signal handling (end process, timer alarm) */
 static sig_atomic_t end = 0;
@@ -46,6 +46,29 @@ void bs3_hyper_timerset(DWORD microseconds)
 void bs3_hyper_timerstop()
 {
   bs3_hyper_timerset(0);
+}
+
+
+struct bs3_cpu_data * bs3_cpu = NULL; /* bs3 cpu used by bs3 bus when cpu memory need to be access by the bus*/
+
+extern struct bs3_device dev_memory;
+extern struct bs3_device dev_rtc72421;
+
+void bs3_hyper_device_prepare()
+{
+  bs3_bus_plugdevice(&dev_memory);
+  bs3_bus_plugdevice(&dev_rtc72421);
+}
+
+void bs3_hyper_device_start()
+{
+  /* if call twice without stop, then it is a restart*/
+  bs3_bus_start();
+}
+
+void bs3_hyper_device_stop()
+{
+  bs3_bus_stop();
 }
 
 /* initialize CPU (memory not initialized) */
@@ -146,8 +169,7 @@ void bs3_cpu_write_byte(struct bs3_cpu_data * pbs3, WORD address, BYTE data)
         }
         break;
       default:
-        /* TODO : manage Write I/O */
-        /*        do nothing for now */
+        bs3_bus_writeByte(address,data);
         break;
     }
   }
@@ -187,7 +209,7 @@ BYTE bs3_cpu_read_byte(struct bs3_cpu_data * pbs3, WORD address) {
         break;
       default:
       /* TODO : manage other system  I/O read, return NULL byte for now. */
-        return 0;
+        return bs3_bus_readByte(address);
     }
   }
   else
@@ -207,6 +229,20 @@ void bs3_cpu_write_word(struct bs3_cpu_data * pbs3, WORD address, WORD data)
 WORD bs3_cpu_read_word(struct bs3_cpu_data * pbs3, WORD address) {
   return bs3_cpu_read_byte(pbs3, address) |  (((WORD)bs3_cpu_read_byte(pbs3, address + 1)) << 8);
 }
+
+
+BYTE bs3_memory_readbyte(WORD address)
+{
+  if (bs3_cpu) return bs3_cpu->m[address];
+  return 0;
+}
+
+void bs3_memory_writebyte(WORD address, BYTE data)
+{
+  if (bs3_cpu == 0) return;
+  bs3_cpu->m[address] = data;
+}
+
 
 
 void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
@@ -1990,11 +2026,15 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
 
     /* BS3 CPU controlled by the Hypervisor */
     struct bs3_cpu_data cpu;
+    bs3_cpu = &cpu;
     /* prepare cpu memory */
     bs3_hyper_reset_memory(&cpu);
     bs3_hyper_load_memory(&cpu, pcodemap);
     /* initialise cpu */
     bs3_cpu_init(&cpu);
+    /* initialize the devices*/
+    bs3_hyper_device_prepare();
+    bs3_hyper_device_start();
     /* main loop */
     while (!end) {
       bs3_hyper_coreIO(&cpu);
@@ -2004,6 +2044,7 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
         (*debugf)(&cpu);
         if (cpu.status == BS3_STATUS_RESET && prevBS3status != cpu.status) /* CPU reset requested by debuuger */
         {
+          bs3_hyper_device_start();
           bs3_hyper_reset_memory(&cpu);
           bs3_hyper_load_memory(&cpu, pcodemap); /*program, programsize, 0); */
         }
@@ -2022,6 +2063,7 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
             end = 1;
           break;
         case BS3_STATUS_RESET: /* CPU reset requested by program */
+          bs3_hyper_device_start();
           bs3_hyper_reset_memory(&cpu);
           bs3_hyper_load_memory(&cpu, pcodemap); /*program, programsize, 0); */
           break;
@@ -2050,4 +2092,19 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
     }
     /* restore terminal attributes */
     tcsetattr(0, TCSANOW, &oldtio);
+    bs3_hyper_device_stop();
 }
+
+/* declare memory device */
+struct bs3_device dev_memory = 
+{
+    .name="Memory",
+    .address=0x0000,
+    .mask=0x0000,
+    .startdevice = NULL,
+    .stopdevice = NULL,
+    .readByte = &bs3_memory_readbyte,
+    .writeByte = &bs3_memory_writebyte,
+    .getIRQstate = 0,
+    .interruptNumber = 0
+};
