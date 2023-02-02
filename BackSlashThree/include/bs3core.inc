@@ -55,6 +55,7 @@ lbs3int_divzero
 lbs3int7                org     ebs3int7
 lbs3int_badinstr
 lbs3int8                org     ebs3int8
+lbs3int_rtc72421
 lbs3int9                org     ebs3int9
 lbs3int10               org     ebs3int10
 lbs3int11               org     ebs3int11
