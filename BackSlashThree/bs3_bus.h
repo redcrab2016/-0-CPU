@@ -12,7 +12,6 @@ struct bs3_device
     int (*stopdevice)();
     BYTE (*readByte)(WORD address);
     void (*writeByte)(WORD address, BYTE data);
-    BYTE (*getIRQstate)();
     BYTE interruptNumber;
 };
 
@@ -21,5 +20,6 @@ void bs3_bus_stop();
 int  bs3_bus_plugdevice(struct bs3_device * ptrdevice);
 BYTE bs3_bus_readByte(WORD address);
 void bs3_bus_writeByte(WORD address, BYTE data);
-int  bs3_bus_interrupt();
+int  bs3_bus_setinterrupt(int interrupt);
+int  bs3_bus_getinterrupt();
 #endif

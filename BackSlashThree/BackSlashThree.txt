@@ -123,7 +123,7 @@ MEMORY MAP
 		010A : Timer clock count high (a word write operation at this address will restart the timer counter)
 		010C : Timer microseconds(0) or cpu ticks(1)
 		010D : reserved IO
-		010E : reserved IO
+		010E : BS3 IRQ controller ( read for Number of pending IRQ, write anything to clear the pending IRQs)
 		010F : reserved IO
 		0110 : RTC 72421 S1 register
 		0111 : RTC 72421 S10 register

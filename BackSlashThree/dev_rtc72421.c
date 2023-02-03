@@ -81,14 +81,14 @@ struct dev_rtc72421 {
 
 struct dev_rtc72421 reg_RTC72421;
 pthread_t thread_RTC72421; 
-
+extern struct bs3_device dev_rtc72421;
 
 
 BYTE dev_rtc72421_read(WORD address)
 {
     int addr = address & 0x00FF;
     BYTE value = reg_RTC72421.reg[addr] & 0x0F;
-    if (addr == 0x0005 & reg_RTC72421._24_12) value &= 0x03; /* if 24h then remove AM/PM bit*/
+    if (addr == 0x0005 && reg_RTC72421._24_12) value &= 0x03; /* if 24h then remove AM/PM bit*/
     return value;
 }
 
@@ -107,15 +107,6 @@ void dev_rtc72421_write(WORD address, BYTE data)
     reg_RTC72421.reg[addr] = value;
 }
 
-BYTE dev_rtc72421_irq()
-{
-    if (reg_RTC72421.hasIRQEventSignal)
-    {
-        reg_RTC72421.hasIRQEventSignal = 0;
-        return 1;
-    }
-    return 0;
-}
 
 static void dev_rtc72421_sleep_tenthofmicroseconds(long microseconds)
 {
@@ -129,8 +120,8 @@ static void dev_rtc72421_fixedperiod()
 {
     if (reg_RTC72421.IRQ_FLAG || reg_RTC72421.MASK ) return;
     reg_RTC72421.IRQ_FLAG = 1;
-    reg_RTC72421.hasIRQEventSignal = 1;
     reg_RTC72421.pulseCount = (reg_RTC72421.ITRPT_STND)?0:1; /* 1 for IRQ_FLAG will be down to 0 after half of 1/64 second when STND (pulse) mode*/
+    bs3_bus_setinterrupt(dev_rtc72421.interruptNumber);
 }
 
 /* this function is invoked by an independant thread */
@@ -386,6 +377,5 @@ struct bs3_device dev_rtc72421 =
     .stopdevice = &dev_rtc72421_stop,
     .readByte = &dev_rtc72421_read,
     .writeByte = &dev_rtc72421_write,
-    .getIRQstate = &dev_rtc72421_irq,
-    .interruptNumber = 8 /* interrupt 8 */
+    .interruptNumber = 8 /* interrupt vector 8 */
 };

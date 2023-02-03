@@ -53,10 +53,12 @@ struct bs3_cpu_data * bs3_cpu = NULL; /* bs3 cpu used by bs3 bus when cpu memory
 
 extern struct bs3_device dev_memory;
 extern struct bs3_device dev_rtc72421;
+extern struct bs3_device dev_bs3irqctrl;
 
 void bs3_hyper_device_prepare()
 {
   bs3_bus_plugdevice(&dev_memory);
+  bs3_bus_plugdevice(&dev_bs3irqctrl);
   bs3_bus_plugdevice(&dev_rtc72421);
 }
 
@@ -294,9 +296,9 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
       }
     }
     /* bus interrupt ?*/
-    if (busInterrupt == -1)
+    if (busInterrupt == -1 && pbs3->r.I == 1) /* do not consume interrupt from bus if cpu mask interrupt */
     {
-      busInterrupt = bs3_bus_interrupt();
+      busInterrupt = bs3_bus_getinterrupt();
       if (busInterrupt > -1) bs3_cpu_interrupt(pbs3, busInterrupt);
     }
     
@@ -2114,10 +2116,9 @@ struct bs3_device dev_memory =
     .name="Memory",
     .address=0x0000,
     .mask=0x0000,
-    .startdevice = NULL,
-    .stopdevice = NULL,
+    .startdevice = NULL, /* no start device function */
+    .stopdevice = NULL,  /* no stop device function */
     .readByte = &bs3_memory_readbyte,
     .writeByte = &bs3_memory_writebyte,
-    .getIRQstate = 0,
-    .interruptNumber = 0
+    .interruptNumber = 0 /* No interrupt */
 };

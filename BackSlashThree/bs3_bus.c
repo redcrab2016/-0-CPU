@@ -8,18 +8,35 @@ struct bs3_device * bs3_devices[256];
 int nb_bs3_device = 0;
 struct bs3_device * bs3_bus_addresses[65536];
 pthread_mutex_t lockbus = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t lockirq = PTHREAD_MUTEX_INITIALIZER;
 int bs3_bus_interrupt_FIFO[16];
 int bs3_bus_interrupt_FIFO_front = 0;
 int bs3_bus_interrupt_FIFO_rear = 0;
 int bs3_bus_interrupt_FIFO_count = 0;
 
-int bs3_bus_interrupt_enqueue(int item) {
-  if (bs3_bus_interrupt_FIFO_count == INTERRUPT_QUEUE_SIZE) {
+int bs3_bus_interrupt_enqueue(int interrupt) {
+  int i;
+  pthread_mutex_lock(&lockirq);
+  /* check if interrupt is already in queue : if yes do not enqueue interrupt */
+  for (i = 0 ; i < INTERRUPT_QUEUE_SIZE ; i++)
+  {
+    if (bs3_bus_interrupt_FIFO[i] == interrupt)
+    {
+        pthread_mutex_unlock(&lockirq);
+        return bs3_bus_interrupt_FIFO_count;       
+    } 
+  }
+  /* does queue is full */
+  if (bs3_bus_interrupt_FIFO_count == INTERRUPT_QUEUE_SIZE) 
+  {
+    pthread_mutex_unlock(&lockirq);
     return -1;
   }
+  /* not full then enqueue */
   bs3_bus_interrupt_FIFO_rear = (bs3_bus_interrupt_FIFO_rear + 1) % INTERRUPT_QUEUE_SIZE;
-  bs3_bus_interrupt_FIFO[bs3_bus_interrupt_FIFO_rear] = item;
+  bs3_bus_interrupt_FIFO[bs3_bus_interrupt_FIFO_rear] = interrupt;
   bs3_bus_interrupt_FIFO_count++;
+  pthread_mutex_unlock(&lockirq);
   return bs3_bus_interrupt_FIFO_count;
 }
 
@@ -27,9 +44,12 @@ int bs3_bus_interrupt_dequeue() {
   if (bs3_bus_interrupt_FIFO_count == 0) {
     return -1;
   }
+  pthread_mutex_lock(&lockirq);
   int item = bs3_bus_interrupt_FIFO[bs3_bus_interrupt_FIFO_front];
+  bs3_bus_interrupt_FIFO[bs3_bus_interrupt_FIFO_front] = -1;/* clean queue */
   bs3_bus_interrupt_FIFO_front = (bs3_bus_interrupt_FIFO_front + 1) % INTERRUPT_QUEUE_SIZE;
   bs3_bus_interrupt_FIFO_count--;
+  pthread_mutex_unlock(&lockirq);
   return item;
 }
 /*
@@ -100,9 +120,9 @@ BYTE bs3_bus_readByte(WORD address)
     BYTE value;
     if (bs3_bus_addresses[address] == 0) return 0;
     if (bs3_bus_addresses[address]->readByte == 0) return 0;
-    pthread_mutex_lock(&lockbus); 
+//    pthread_mutex_lock(&lockbus); 
     value = (*(bs3_bus_addresses[address]->readByte))(address);
-    pthread_mutex_unlock(&lockbus); 
+//    pthread_mutex_unlock(&lockbus); 
 
 }
 
@@ -110,26 +130,47 @@ void bs3_bus_writeByte(WORD address, BYTE data)
 {
     if (bs3_bus_addresses[address] == 0) return;
     if (bs3_bus_addresses[address]->writeByte == 0) return;
-    pthread_mutex_lock(&lockbus); 
+//    pthread_mutex_lock(&lockbus); 
     (*(bs3_bus_addresses[address]->writeByte))(address, data);
-    pthread_mutex_unlock(&lockbus); 
+//    pthread_mutex_unlock(&lockbus); 
 }
 
-int bs3_bus_interrupt()
+/* to be used by the device that emit an interrupt */
+int bs3_bus_setinterrupt(int interrupt)
+{
+    return bs3_bus_interrupt_enqueue(interrupt);
+}
+
+/* to be used by the CPU to get the IRQ : emulated BS3 CPU IRQ pin + IRQ controller information retreival */
+int bs3_bus_getinterrupt()
 {
     int interrupt;
     int i;
-    for (i = 0 ; i < nb_bs3_device ; i++)
-    {
-        if (bs3_devices[i] && bs3_devices[i]->getIRQstate)
-        {
-            if ((*(bs3_devices[i]->getIRQstate))())
-            {
-                bs3_bus_interrupt_enqueue(bs3_devices[i]->interruptNumber);
-            }
-        }
-    }
-
+    if (bs3_bus_interrupt_FIFO_count == 0) return -1;
     interrupt = bs3_bus_interrupt_dequeue();
     return interrupt;
 }
+
+/* Interrupt controler */
+
+BYTE bs3_bus_intctrl_readbyte(WORD address)
+{
+    return (BYTE)bs3_bus_interrupt_FIFO_count;
+}
+
+void bs3_bus_intctrl_writebyte(WORD address, BYTE data)
+{
+    while (bs3_bus_interrupt_dequeue() != -1 );/* empty the FIFO IRQ queue */
+}
+
+struct bs3_device dev_bs3irqctrl = 
+{
+    .name="BS3 IRQ-Controller",
+    .address=0x010E,
+    .mask=0xFFFF, /* One I/O for IRQ */
+    .startdevice = NULL,
+    .stopdevice = NULL,
+    .readByte = &bs3_bus_intctrl_readbyte,
+    .writeByte = &bs3_bus_intctrl_writebyte,
+    .interruptNumber = 0 /* No interrupt (BS3 CPU IRQ pin emulated) */
+};
