@@ -81,6 +81,7 @@ struct dev_rtc72421 {
 
 struct dev_rtc72421 reg_RTC72421;
 pthread_t thread_RTC72421; 
+int created_thread_RTC72421 = 0;
 extern struct bs3_device dev_rtc72421;
 
 
@@ -351,6 +352,7 @@ static void * dev_rtc72421_run(void * bs3_device_bus) /* thread dedicated functi
 int dev_rtc72421_stop()
 {
   int result = pthread_kill(thread_RTC72421, 0);
+  created_thread_RTC72421 = 0;
   if (result == ESRCH) {
     return result;
   } else if (result == 0) {
@@ -362,8 +364,10 @@ int dev_rtc72421_stop()
 
 int dev_rtc72421_start()
 {
-    dev_rtc72421_stop(); /* just to avoid double start without stop */
-    return pthread_create(&thread_RTC72421, NULL, &dev_rtc72421_run, NULL); 
+    if (created_thread_RTC72421) dev_rtc72421_stop(); /* just to avoid double start without stop */
+    int result = pthread_create(&thread_RTC72421, NULL, &dev_rtc72421_run, NULL); 
+    if (result == 0) created_thread_RTC72421 = 1;
+    return result;
 }
 
 /* declare RTC-72421 device */

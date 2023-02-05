@@ -1887,7 +1887,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
   BYTE isMacroRecording=0;
   char fileline[BS3_ASM_LINE_BUFFER];
   char macroline[BS3_ASM_LINE_BUFFER];
-  char includefilename[BS3_ASM_LINE_BUFFER+10];
+  char includefilename[BS3_ASM_LINE_BUFFER*5];
   long fileasmindex;
   *addressout = address;
   /* check file : not null and not empty */
