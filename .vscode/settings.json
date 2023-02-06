@@ -3,7 +3,8 @@
         "stdio.h": "c",
         "typeinfo": "c",
         "*.tcc": "c",
-        "cstdio": "c"
+        "cstdio": "c",
+        "signal.h": "c"
     },
     "makefile.launchConfigurations": [
         {
@@ -14,7 +15,7 @@
         {
             "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
             "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
-            "binaryArgs": ["-d","dist/examples/timer/timer2.asm"]
+            "binaryArgs": ["-D","dist/examples/ansigfx/helloansigfx.asm"]
         }
     ],
     "C_Cpp.dimInactiveRegions": false,

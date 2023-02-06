@@ -87,7 +87,7 @@ extern struct bs3_device dev_rtc72421;
 
 BYTE dev_rtc72421_read(WORD address)
 {
-    int addr = address & 0x00FF;
+    int addr = address & 0x000F;
     BYTE value = reg_RTC72421.reg[addr] & 0x0F;
     if (addr == 0x0005 && reg_RTC72421._24_12) value &= 0x03; /* if 24h then remove AM/PM bit*/
     return value;
@@ -97,7 +97,7 @@ void dev_rtc72421_write(WORD address, BYTE data)
 {
     int addr;
     BYTE value;
-    addr = address & 0x00FF;
+    addr = address & 0x000F;
     value = data & 0x0F;
     if (reg_RTC72421.BUSY && addr < 0x0D) return; /* no RTC date/time change if busy */
     if (addr == 0x0D) /* keep busy bit */

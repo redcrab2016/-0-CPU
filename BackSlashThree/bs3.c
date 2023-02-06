@@ -54,12 +54,14 @@ struct bs3_cpu_data * bs3_cpu = NULL; /* bs3 cpu used by bs3 bus when cpu memory
 extern struct bs3_device dev_memory;
 extern struct bs3_device dev_rtc72421;
 extern struct bs3_device dev_bs3irqctrl;
+extern struct bs3_device dev_bs3inout;
 
 void bs3_hyper_device_prepare()
 {
   bs3_bus_plugdevice(&dev_memory);
-  bs3_bus_plugdevice(&dev_bs3irqctrl);
+  bs3_bus_plugdevice(&dev_bs3inout);
   bs3_bus_plugdevice(&dev_rtc72421);
+  bs3_bus_plugdevice(&dev_bs3irqctrl);
 }
 
 void bs3_hyper_device_start()
@@ -130,27 +132,27 @@ void bs3_cpu_write_byte(struct bs3_cpu_data * pbs3, WORD address, BYTE data)
   {
     switch (address)
     {
-      case 0x0100: /* write on input data is ignored */
-      case 0x0101: /* write on input status is ignored */
-        break;
-      case 0x0102:
-        if (pbs3->m[0x0103] == 0x00) /* if ok to write on output */ 
-        {
-          pbs3->m[0x0103]  = 0x01; /* output is waiting to be consummed */
-          pbs3->m[address] = data; /* output data available */
-        }
-        break;
-      case 0x0103: /* write on output status is ignored */
-        break;
-      case 0x0104:
-        if (pbs3->m[0x0105] == 0x00) /* if ok to write on auxiliary output */
-        {
-          pbs3->m[0x0105]  = 0x01; /* output is waiting to be consummed */
-          pbs3->m[address] = data; /* output data available */
-        }
-        break;
-      case 0x0105: /* write on auxiliary output status is ignored */ 
-        break;
+ //     case 0x0100: /* write on input data is ignored */
+ //     case 0x0101: /* write on input status is ignored */
+ //       break;
+ //     case 0x0102:
+ //       if (pbs3->m[0x0103] == 0x00) /* if ok to write on output */ 
+ //       {
+ //         pbs3->m[0x0103]  = 0x01; /* output is waiting to be consummed */
+ //         pbs3->m[address] = data; /* output data available */
+ //       }
+ //       break;
+ //     case 0x0103: /* write on output status is ignored */
+ //       break;
+ //     case 0x0104:
+ //       if (pbs3->m[0x0105] == 0x00) /* if ok to write on auxiliary output */
+ //       {
+//          pbs3->m[0x0105]  = 0x01; /* output is waiting to be consummed */
+//          pbs3->m[address] = data; /* output data available */
+//        }
+//        break;
+//      case 0x0105: /* write on auxiliary output status is ignored */ 
+//        break;
       case 0x0108: /* low byte of the low 16 bits of the 32 bits timer */
       case 0x0109: /* high byte of the low 16 bits of the 32 bits timer */
       case 0x010A: /* low byte of the high 16 bits of the 32 bits timer */
@@ -188,20 +190,20 @@ BYTE bs3_cpu_read_byte(struct bs3_cpu_data * pbs3, WORD address) {
   {
     switch (address)
     {
-      case 0x0100:
-        if (pbs3->m[0x101] == 0x00)
-        {
-          pbs3->m[0x0101] = 0x01; /* core input consummed */
-        }
-        return pbs3->m[address]; 
-        break;
-      case 0x0101: /* core input status */
-      case 0x0102: /* core output */
-      case 0x0103: /* core output status */
-      case 0x0104: /* core auxiliary output */
-      case 0x0105: /* core auxliiary output status */
-      case 0x0106: 
-      case 0x0107:
+//      case 0x0100:
+//        if (pbs3->m[0x101] == 0x00)
+//        {
+//          pbs3->m[0x0101] = 0x01; /* core input consummed */
+//        }
+//        return pbs3->m[address]; 
+//        break;
+//      case 0x0101: /* core input status */
+//      case 0x0102: /* core output */
+//      case 0x0103: /* core output status */
+//      case 0x0104: /* core auxiliary output */
+//      case 0x0105: /* core auxliiary output status */
+//      case 0x0106: 
+//      case 0x0107:
       case 0x0108: /* timer 32 low, 16 bits low */
       case 0x0109: /* timer 32 low, 16 bit high */
       case 0x010A: /* timer 32 high, 16 bits low */
@@ -210,7 +212,7 @@ BYTE bs3_cpu_read_byte(struct bs3_cpu_data * pbs3, WORD address) {
         return pbs3->m[address];
         break;
       default:
-      /* TODO : manage other system  I/O read, return NULL byte for now. */
+      /* manage other system  I/O read, */
         return bs3_bus_readByte(address);
     }
   }
@@ -326,7 +328,7 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
             b = bs3_cpu_read_byte(pbs3, 0x0103); // read output status
             pbs3->r.Z = (b == 0x01); 
             pbs3->r.V = (b == 0xFF);
-            bs3_cpu_write_byte(pbs3, 0x0102, pbs3->r.B[p.x3]); // write occurs if output is ready to receive data
+            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0102, pbs3->r.B[p.x3]); // write occurs if output is ready to receive data
             break;
         case BS3_INSTR_OUTB2:
             pbs3->r.PC++;
@@ -335,7 +337,7 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
             b = bs3_cpu_read_byte(pbs3, 0x0105); // read output status
             pbs3->r.Z = (b == 0x01); 
             pbs3->r.V = (b == 0xFF);
-            bs3_cpu_write_byte(pbs3, 0x0104, pbs3->r.B[p.x3]); // write occurs if output is ready to receive data
+            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0104, pbs3->r.B[p.x3]); // write occurs if output is ready to receive data
         case BS3_INSTR_OUTBI:
             pbs3->r.PC++;
             immB = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
@@ -343,7 +345,7 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
             b = bs3_cpu_read_byte(pbs3, 0x0103); // read output status
             pbs3->r.Z = (b == 0x01); 
             pbs3->r.V = (b == 0xFF);
-            bs3_cpu_write_byte(pbs3, 0x0102, immB); // write occurs if output is ready to receive data
+            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0102, immB); // write occurs if output is ready to receive data
             break;
         case BS3_INSTR_OUTB2I:
             pbs3->r.PC++;
@@ -352,7 +354,7 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
             b = bs3_cpu_read_byte(pbs3, 0x0105); // read output status
             pbs3->r.Z = (b == 0x01); 
             pbs3->r.V = (b == 0xFF);
-            bs3_cpu_write_byte(pbs3, 0x0104, immB); // write occurs if output is ready to receive data
+            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0104, immB); // write occurs if output is ready to receive data
             break;
         case BS3_INSTR_LEAW0:
         case BS3_INSTR_LEAW1:
@@ -2037,6 +2039,7 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
     /* Set non-canonical no-echo for stdin */
     tcgetattr(0, &curtio);
     curtio.c_lflag &= ~(ICANON | ECHO);
+    //curtio.c_lflag &= ~( ECHO);
     tcsetattr(0, TCSANOW, &curtio);
 
     /* BS3 CPU controlled by the Hypervisor */
@@ -2052,7 +2055,7 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
     bs3_hyper_device_start();
     /* main loop */
     while (!end) {
-      bs3_hyper_coreIO(&cpu);
+      /*bs3_hyper_coreIO(&cpu);*/
       if (debugf)
       {
         prevBS3status = cpu.status;

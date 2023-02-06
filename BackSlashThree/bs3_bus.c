@@ -11,7 +11,7 @@ pthread_mutex_t lockbus = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lockirq = PTHREAD_MUTEX_INITIALIZER;
 int bs3_bus_interrupt_FIFO[16];
 int bs3_bus_interrupt_FIFO_front = 0;
-int bs3_bus_interrupt_FIFO_rear = 0;
+int bs3_bus_interrupt_FIFO_rear = -1;
 int bs3_bus_interrupt_FIFO_count = 0;
 
 int bs3_bus_interrupt_enqueue(int interrupt) {
