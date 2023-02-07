@@ -118,29 +118,19 @@ BYTE dev_bs3inout_read(WORD address)
             pthread_mutex_unlock(&lockINSTATUS);
             break;
         case 0x0001:
-            pthread_mutex_lock(&lockINSTATUS);
             value = reg_bs3inout.reg[addr];
-            pthread_mutex_unlock(&lockINSTATUS);
             break;
         case 0x0002:
-            pthread_mutex_lock(&lockOUTSTATUS);
             value = reg_bs3inout.reg[addr];
-            pthread_mutex_unlock(&lockOUTSTATUS);
             break;
         case 0x0003:
-            pthread_mutex_lock(&lockOUTSTATUS);
             value = reg_bs3inout.reg[addr];
-            pthread_mutex_unlock(&lockOUTSTATUS);
             break;
         case 0x0004:
-            pthread_mutex_lock(&lockOUT2STATUS);
             value = reg_bs3inout.reg[addr];
-            pthread_mutex_unlock(&lockOUT2STATUS);
             break;
         case 0x0005:
-            pthread_mutex_lock(&lockOUT2STATUS);
             value = reg_bs3inout.reg[addr];
-            pthread_mutex_unlock(&lockOUT2STATUS);
             break;
         default:
             value = reg_bs3inout.reg[addr];
@@ -165,9 +155,9 @@ void dev_bs3inout_write(WORD address, BYTE data)
         case 5: /* write to OUT2 status */
             return; /* write is ignored */
         case 2:
-            pthread_mutex_lock(&lockOUTSTATUS);
             if ( !reg_bs3inout.OUTSTATUS)  /* ignore write when output is not ready for any reason */
             {
+                pthread_mutex_lock(&lockOUTSTATUS);
                 reg_bs3inout.reg[addr] = value;
                 enqueueOUT(value);
                 if (value == 10 || queueOUT_count == QUEUE_SIZE)
@@ -177,14 +167,14 @@ void dev_bs3inout_write(WORD address, BYTE data)
                     pthread_cond_signal(&condOUT);
                     pthread_mutex_unlock(&lockOUT);
                 }
-
+                pthread_mutex_unlock(&lockOUTSTATUS);
             }
-            pthread_mutex_unlock(&lockOUTSTATUS);
             return;
         case 4:
-            pthread_mutex_lock(&lockOUT2STATUS);
+            
             if ( !reg_bs3inout.OUT2STATUS)  /* ignore write when output2 is not ready for any reason */
             {
+                pthread_mutex_lock(&lockOUT2STATUS);
                 reg_bs3inout.reg[addr] = value;
                 enqueueOUT2(value);
                 if (value == 10 || queueOUT2_count == QUEUE_SIZE)
@@ -194,8 +184,9 @@ void dev_bs3inout_write(WORD address, BYTE data)
                     pthread_cond_signal(&condOUT2);
                     pthread_mutex_unlock(&lockOUT2);
                 }
+                pthread_mutex_unlock(&lockOUT2STATUS);
             }
-            pthread_mutex_unlock(&lockOUT2STATUS);
+            
             return;
         default:
             reg_bs3inout.reg[addr] = value; /* reserved IO as memory*/

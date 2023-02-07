@@ -55,11 +55,13 @@ extern struct bs3_device dev_memory;
 extern struct bs3_device dev_rtc72421;
 extern struct bs3_device dev_bs3irqctrl;
 extern struct bs3_device dev_bs3inout;
+extern struct bs3_device dev_bs3timer;
 
 void bs3_hyper_device_prepare()
 {
   bs3_bus_plugdevice(&dev_memory);
   bs3_bus_plugdevice(&dev_bs3inout);
+  bs3_bus_plugdevice(&dev_bs3timer);
   bs3_bus_plugdevice(&dev_rtc72421);
   bs3_bus_plugdevice(&dev_bs3irqctrl);
 }
