@@ -47,8 +47,57 @@ int created_thread_bs3out = 0;
 pthread_t thread_bs3out2; 
 int created_thread_bs3out2 = 0;
 
-extern struct bs3_device dev_bs3inout;
+#define QUEUE_SIZE 262144
 
+BYTE queueOUT[QUEUE_SIZE];
+long queueOUT_rear = -1;
+long queueOUT_front = 0;
+long queueOUT_count = 0;
+
+BYTE queueOUT2[QUEUE_SIZE];
+long queueOUT2_rear = -1;
+long queueOUT2_front = 0;
+long queueOUT2_count = 0;
+
+long enqueueOUT(BYTE value)
+{
+    if (queueOUT_count >= QUEUE_SIZE) return -1;
+    queueOUT_rear = (queueOUT_rear + 1) % QUEUE_SIZE;
+    queueOUT[queueOUT_rear] = value;
+    queueOUT_count++;
+    return queueOUT_count;
+}
+
+long enqueueOUT2(BYTE value)
+{
+    if (queueOUT2_count >= QUEUE_SIZE) return -1;
+    queueOUT2_rear = (queueOUT2_rear + 1) % QUEUE_SIZE;
+    queueOUT2[queueOUT2_rear] = value;
+    queueOUT2_count++;
+    return queueOUT2_count;
+}
+
+long dequeueOUT()
+{
+    if (queueOUT_count == 0) return -1;
+    BYTE item = queueOUT[queueOUT_front];
+    queueOUT[queueOUT_front] = -1;/* clean zombi queue value */
+    queueOUT_front = (queueOUT_front + 1) % QUEUE_SIZE;
+    queueOUT_count--;
+    return item;
+}
+
+long dequeueOUT2()
+{
+    if (queueOUT2_count == 0) return -1;
+    BYTE item = queueOUT2[queueOUT2_front];
+    queueOUT2[queueOUT2_front] = -1;/* clean zombi queue value */
+    queueOUT2_front = (queueOUT2_front + 1) % QUEUE_SIZE;
+    queueOUT2_count--;
+    return item;
+}
+
+extern struct bs3_device dev_bs3inout;
 
 BYTE dev_bs3inout_read(WORD address)
 {
@@ -105,6 +154,7 @@ void dev_bs3inout_write(WORD address, BYTE data)
 {
     int addr;
     BYTE value;
+    int trylock;
     addr = address & 0x0007;
     value = data;
     switch(addr)
@@ -119,8 +169,15 @@ void dev_bs3inout_write(WORD address, BYTE data)
             if ( !reg_bs3inout.OUTSTATUS)  /* ignore write when output is not ready for any reason */
             {
                 reg_bs3inout.reg[addr] = value;
-                reg_bs3inout.OUTSTATUS = 0x01; /* pending for sending */
-//                pthread_cond_signal(&condOUT);
+                enqueueOUT(value);
+                if (value == 10 || queueOUT_count == QUEUE_SIZE)
+                {
+                    reg_bs3inout.OUTSTATUS = 0x01; /* pending for sending */
+                    pthread_mutex_lock(&lockOUT);
+                    pthread_cond_signal(&condOUT);
+                    pthread_mutex_unlock(&lockOUT);
+                }
+
             }
             pthread_mutex_unlock(&lockOUTSTATUS);
             return;
@@ -129,8 +186,14 @@ void dev_bs3inout_write(WORD address, BYTE data)
             if ( !reg_bs3inout.OUT2STATUS)  /* ignore write when output2 is not ready for any reason */
             {
                 reg_bs3inout.reg[addr] = value;
-                reg_bs3inout.OUT2STATUS = 0x01; /* pending for sending */
-//                pthread_cond_signal(&condOUT2);
+                enqueueOUT2(value);
+                if (value == 10 || queueOUT2_count == QUEUE_SIZE)
+                {
+                    reg_bs3inout.OUT2STATUS = 0x01; /* pending for sending */
+                    pthread_mutex_lock(&lockOUT2);
+                    pthread_cond_signal(&condOUT2);
+                    pthread_mutex_unlock(&lockOUT2);
+                }
             }
             pthread_mutex_unlock(&lockOUT2STATUS);
             return;
@@ -198,6 +261,8 @@ static void * dev_bs3out_run(void * bs3_device_bus) /* thread dedicated function
 {
     reg_bs3inout.OUTSTATUS = 0x00; /* ready to send something */
     int status;
+    long value;
+    int retry;
     endOUT = 0;
     while (!endOUT)
     {
@@ -205,30 +270,37 @@ static void * dev_bs3out_run(void * bs3_device_bus) /* thread dedicated function
         switch (reg_bs3inout.OUTSTATUS)
         {
             case 0x01: /* there is somthing to send */
-                status = fputc((int)reg_bs3inout.OUT,stdout);
-                switch (status)
-                {
-                    case EOF:
-                        switch(errno)
+                while ((value = dequeueOUT()) != -1) /* send the pending characters in FIFO queue*/
+                {        
+                    do
+                    {
+                        retry = 0;
+                        status = fputc((int)value,stdout);
+                        switch (status)
                         {
-                            case EAGAIN : /* retry is needed */
+                            case EOF:
+                                switch(errno)
+                                {
+                                    case EAGAIN : /* retry is needed */
+                                        retry = 1;
+                                        break;
+                                    default:
+                                        reg_bs3inout.OUTSTATUS = 0xFF; /* output not available anymore */
+                                }
                                 break;
                             default:
-                                reg_bs3inout.OUTSTATUS = 0xFF; /* output not available anymore */
+                                break;
                         }
-                        break;
-                    default:
-                        /*pthread_mutex_lock(&lockOUTSTATUS);*/
-                        reg_bs3inout.OUTSTATUS = 0x00; /* character sent */
-                        /*pthread_mutext_unlock(&lockOUTSTATUS);    */
+                    } while (retry);
                 }
+                reg_bs3inout.OUTSTATUS = 0x00; /* character(s) sent , FIFO queue is empty*/
                 break;
             case 0x00: /* wait for something to send*/
-                //pthread_mutex_lock(&lockOUT);
-                //pthread_mutex_unlock(&lockOUTSTATUS);
-                //if (!reg_bs3inout.OUTSTATUS ) pthread_cond_wait(&condOUT, &lockOUT); /* wait for input */
-                //pthread_mutex_lock(&lockOUTSTATUS);
-                //pthread_mutex_unlock(&lockOUT);
+                pthread_mutex_lock(&lockOUT);
+                pthread_mutex_unlock(&lockOUTSTATUS);
+                if (!reg_bs3inout.OUTSTATUS ) pthread_cond_wait(&condOUT, &lockOUT); /* wait for input */
+                pthread_mutex_unlock(&lockOUT);
+                pthread_mutex_lock(&lockOUTSTATUS);
                 break;
             case 0xFF: /* no output available */
                 sleep (1);
@@ -246,6 +318,8 @@ static void * dev_bs3out2_run(void * bs3_device_bus) /* thread dedicated functio
 {
     reg_bs3inout.OUT2STATUS = 0x00; /* ready to send something */
     int status;
+    long value;
+    int retry;    
     endOUT2 = 0;
     while (!endOUT2)
     {
@@ -253,30 +327,37 @@ static void * dev_bs3out2_run(void * bs3_device_bus) /* thread dedicated functio
         switch (reg_bs3inout.OUT2STATUS)
         {
             case 0x01: /* there is somthing to send */
-                status = fputc((int)reg_bs3inout.OUT2,stderr);
-                switch (status)
-                {
-                    case EOF:
-                        switch(errno)
+                while ((value = dequeueOUT2()) != -1) /* send the pending characters in FIFO queue*/
+                {        
+                    do
+                    {
+                        retry = 0;
+                        status = fputc((int)value,stderr);
+                        switch (status)
                         {
-                            case EAGAIN : /* retry is needed */
+                            case EOF:
+                                switch(errno)
+                                {
+                                    case EAGAIN : /* retry is needed */
+                                        retry = 1;
+                                        break;
+                                    default:
+                                        reg_bs3inout.OUT2STATUS = 0xFF; /* output not available anymore */
+                                }
                                 break;
                             default:
-                                reg_bs3inout.OUT2STATUS = 0xFF; /* output not available anymore */
+                                break;
                         }
-                        break;
-                    default:
-                        /*pthread_mutex_lock(&lockOUT2STATUS);*/
-                        reg_bs3inout.OUT2STATUS = 0x00; /* character sent */
-                        /*pthread_mutex_unlock(&lockOUT2STATUS);    */
+                    } while (retry);
                 }
+                reg_bs3inout.OUT2STATUS = 0x00; /* character(s) sent , FIFO queue is empty*/
                 break;
             case 0x00: /* wait for something to send*/
-                //pthread_mutex_lock(&lockOUT2);
-                //pthread_mutex_unlock(&lockOUT2STATUS);
-                //if (!reg_bs3inout.OUT2STATUS) pthread_cond_wait(&condOUT2, &lockOUT2); /* wait for input */
-                //pthread_mutex_lock(&lockOUT2STATUS);
-                //pthread_mutex_unlock(&lockOUT2);
+                pthread_mutex_lock(&lockOUT2);
+                pthread_mutex_unlock(&lockOUT2STATUS);
+                if (!reg_bs3inout.OUT2STATUS) pthread_cond_wait(&condOUT2, &lockOUT2); /* wait for input */
+                pthread_mutex_unlock(&lockOUT2);
+                pthread_mutex_lock(&lockOUT2STATUS);
                 break;
             case 0xFF: /* no output available */
                 sleep (1);
@@ -303,7 +384,7 @@ int dev_bs3inout_stop()
   if (resultin == 0 && created_thread_bs3in) 
   {
     endIN = 1;
-    //pthread_kill(thread_bs3in, SIGUSR1);
+    pthread_kill(thread_bs3in, 0);
     pthread_cond_signal(&condIN);
     sleep(1);
     pthread_cancel(thread_bs3in); 
@@ -313,20 +394,14 @@ int dev_bs3inout_stop()
   if (resultout == 0 && created_thread_bs3out) 
   {
     endOUT = 1;
-    //pthread_kill(thread_bs3out, SIGUSR1);
-    //pthread_cond_signal(&condOUT);
-    //sleep(1);
-    //pthread_cancel(thread_bs3out);
+    pthread_cond_signal(&condOUT);
     pthread_join(thread_bs3out, NULL);
   }
 
   if (resultout2 == 0 && created_thread_bs3out2) 
   {
     endOUT2 = 1;
-    //pthread_kill(thread_bs3out2, SIGUSR1);
-    //pthread_cond_signal(&condOUT2);
-    //sleep(1);
-    //pthread_cancel(thread_bs3out2); 
+    pthread_cond_signal(&condOUT2);
     pthread_join(thread_bs3out2, NULL);
   }
 
@@ -338,6 +413,7 @@ int dev_bs3inout_stop()
   {
     return ESRCH;
   } 
+  return 0;
 }
 
 int dev_bs3inout_start()

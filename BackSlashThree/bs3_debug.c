@@ -826,6 +826,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
         case BS3_DEBUG_COMM_STATE_NOCONNECTION:
             /* non blocking accept connection */
             /* Accept the data packet from client and verification */
+            pbs3debug->canQuit = 1;
             len = sizeof(pbs3debug->cli);
             pbs3debug->connfd = accept(pbs3debug->sockfd, (SA*)&pbs3debug->cli, &len);
             if (pbs3debug->connfd < 0) 
@@ -841,6 +842,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
                         pbs3debug->comm_state = BS3_DEBUG_COMM_STATE_NOSERVICE;
                         close(pbs3debug->sockfd);
                         pbs3debug->sockfd = 0;
+                        
                 }
                 pbs3debug->connfd = 0;
                 break;
@@ -858,6 +860,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
             pbs3debug->n = 0;
             bs3_debug_comm_prompt(pbs3debug); 
             pbs3debug->lastPC = 0;
+            pbs3debug->canQuit = 0;
             break;
 
         case BS3_DEBUG_COMM_STATE_NOSERVICE:
