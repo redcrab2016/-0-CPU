@@ -16,38 +16,11 @@
 
 /* Signal handling (end process, timer alarm) */
 static sig_atomic_t end = 0;
-static sig_atomic_t timer_alarm = 0;
 
 static void sighandler(int signo)
 {
-  if (signo == SIGALRM /* or SIGVTALRM */) { 
-    timer_alarm = 1;
-  }
-  else 
-  {
     end = 1;
-  }
 }
-
-void bs3_hyper_timerset(DWORD microseconds) 
-{
-  struct timeval interval;
-  struct itimerval period;
-
-  interval.tv_sec=(time_t)microseconds / 1000000;
-  interval.tv_usec=(long int)(microseconds % 1000000);
-  
-  
-  period.it_interval=interval;
-  period.it_value=interval;
-  setitimer(ITIMER_REAL /* or ITIMER_VIRTUAL */ ,&period,NULL);
-}
-
-void bs3_hyper_timerstop()
-{
-  bs3_hyper_timerset(0);
-}
-
 
 struct bs3_cpu_data * bs3_cpu = NULL; /* bs3 cpu used by bs3 bus when cpu memory need to be access by the bus*/
 
@@ -99,10 +72,7 @@ void bs3_cpu_init(struct bs3_cpu_data * pbs3)
   pbs3->output_ready = 0x00; /* by default output is ready to receveive data */
   pbs3->output2_ready = 0x00; /* by default auxiliary output is ready to receveive data. */
   pbs3->msortick = 0; /* by default microsecond timer ( if =1, then cpu clock is used) */
-  bs3_hyper_timerstop();
 }
-
-
 
 /* for interrupt from external (not by program INT instruction) */
 void bs3_cpu_interrupt(struct bs3_cpu_data * pbs3, int intnum)
@@ -132,99 +102,24 @@ void bs3_cpu_write_byte(struct bs3_cpu_data * pbs3, WORD address, BYTE data)
 {
   if ((address & 0xFF00) == 0x0100) /* System Write I/O */
   {
-    switch (address)
-    {
- //     case 0x0100: /* write on input data is ignored */
- //     case 0x0101: /* write on input status is ignored */
- //       break;
- //     case 0x0102:
- //       if (pbs3->m[0x0103] == 0x00) /* if ok to write on output */ 
- //       {
- //         pbs3->m[0x0103]  = 0x01; /* output is waiting to be consummed */
- //         pbs3->m[address] = data; /* output data available */
- //       }
- //       break;
- //     case 0x0103: /* write on output status is ignored */
- //       break;
- //     case 0x0104:
- //       if (pbs3->m[0x0105] == 0x00) /* if ok to write on auxiliary output */
- //       {
-//          pbs3->m[0x0105]  = 0x01; /* output is waiting to be consummed */
-//          pbs3->m[address] = data; /* output data available */
-//        }
-//        break;
-//      case 0x0105: /* write on auxiliary output status is ignored */ 
-//        break;
-      case 0x0108: /* low byte of the low 16 bits of the 32 bits timer */
-      case 0x0109: /* high byte of the low 16 bits of the 32 bits timer */
-      case 0x010A: /* low byte of the high 16 bits of the 32 bits timer */
-      case 0x010C: /* ms(0) or tick timer(1) */
-        pbs3->m[address] = data;
-        break;
-      case 0x010B: /* high byte of the high 16 bits of the 3é bits timer : at this write, timer is restarted */
-        pbs3->m[address] = data;
-        
-        if (pbs3->msortick == 0) /* microseconds */ 
-        {
-          bs3_hyper_timerset(pbs3->timer);
-        } 
-        else /* timer tick */
-        {
-          pbs3->counter = pbs3->timer;
-          bs3_hyper_timerstop();
-        }
-        break;
-      default:
-        bs3_bus_writeByte(address,data);
-        break;
-    }
+    bs3_bus_writeByte(address,data);
   }
-  else
+  else /* for CPU only, address out of IO range , access direct to memory*/
   {
     pbs3->m[address] = data;
   }
 }
 
-
-
 BYTE bs3_cpu_read_byte(struct bs3_cpu_data * pbs3, WORD address) {
   if ((address & 0xFF00) == 0x0100) /* System I/O */
   {
-    switch (address)
-    {
-//      case 0x0100:
-//        if (pbs3->m[0x101] == 0x00)
-//        {
-//          pbs3->m[0x0101] = 0x01; /* core input consummed */
-//        }
-//        return pbs3->m[address]; 
-//        break;
-//      case 0x0101: /* core input status */
-//      case 0x0102: /* core output */
-//      case 0x0103: /* core output status */
-//      case 0x0104: /* core auxiliary output */
-//      case 0x0105: /* core auxliiary output status */
-//      case 0x0106: 
-//      case 0x0107:
-      case 0x0108: /* timer 32 low, 16 bits low */
-      case 0x0109: /* timer 32 low, 16 bit high */
-      case 0x010A: /* timer 32 high, 16 bits low */
-      case 0x010B: /* timer 32 high, 16 bits high */ 
-      case 0x010C: /* msortick */
-        return pbs3->m[address];
-        break;
-      default:
-      /* manage other system  I/O read, */
-        return bs3_bus_readByte(address);
-    }
+    return bs3_bus_readByte(address);
   }
-  else
+  else /* for CPU only, address out of IO range , access direct to memory*/
   {
     return pbs3->m[address];
   }
-  return 0;
 }
-
 
 void bs3_cpu_write_word(struct bs3_cpu_data * pbs3, WORD address, WORD data) 
 {
@@ -236,7 +131,7 @@ WORD bs3_cpu_read_word(struct bs3_cpu_data * pbs3, WORD address) {
   return bs3_cpu_read_byte(pbs3, address) |  (((WORD)bs3_cpu_read_byte(pbs3, address + 1)) << 8);
 }
 
-
+/* memory access dedicated to bs3 bus*/
 BYTE bs3_memory_readbyte(WORD address)
 {
   if (bs3_cpu) return bs3_cpu->m[address];
@@ -248,8 +143,6 @@ void bs3_memory_writebyte(WORD address, BYTE data)
   if (bs3_cpu == 0) return;
   bs3_cpu->m[address] = data;
 }
-
-
 
 void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
 {
@@ -281,25 +174,8 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
     bs3_cpu_interrupt(pbs3, pbs3->pending_interrupt);
     
   }
-  else /* bus or timer interrupt ?*/
+  else /* bus interrupt ?*/
   {
-    if (pbs3->msortick == 1)
-    {
-      pbs3->counter--;
-      if (pbs3->counter == 0)  
-      {
-        bs3_cpu_interrupt(pbs3, BS3_INT_TIMER);
-        busInterrupt = BS3_INT_TIMER;
-        pbs3->counter == pbs3->timer;
-      }
-    } else {
-      if (timer_alarm == 1) {
-        bs3_cpu_interrupt(pbs3, BS3_INT_TIMER);
-        busInterrupt = BS3_INT_TIMER;
-        timer_alarm = 0;
-      }
-    }
-    /* bus interrupt ?*/
     if (busInterrupt == -1 && pbs3->r.I == 1) /* do not consume interrupt from bus if cpu mask interrupt */
     {
       busInterrupt = bs3_bus_getinterrupt();
@@ -318,45 +194,45 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
-            b = bs3_cpu_read_byte(pbs3, 0x0101); // read input status
+            b = bs3_cpu_read_byte(pbs3, 0x0101); /* read input status */
             pbs3->r.Z = (b == 0x01); 
             pbs3->r.V = (b == 0xFF);
-            pbs3->r.B[p.x3] =  pbs3->r.Z ? pbs3->r.B[p.x3] : bs3_cpu_read_byte(pbs3, 0x0100); // read input if there is something to get
+            pbs3->r.B[p.x3] =  pbs3->r.Z ? pbs3->r.B[p.x3] : bs3_cpu_read_byte(pbs3, 0x0100); /* read input if there is something to get */
             break;
         case BS3_INSTR_OUTB:
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
-            b = bs3_cpu_read_byte(pbs3, 0x0103); // read output status
+            b = bs3_cpu_read_byte(pbs3, 0x0103); /* read output status */
             pbs3->r.Z = (b == 0x01); 
             pbs3->r.V = (b == 0xFF);
-            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0102, pbs3->r.B[p.x3]); // write occurs if output is ready to receive data
+            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0102, pbs3->r.B[p.x3]); /* write occurs if output is ready to receive data */
             break;
         case BS3_INSTR_OUTB2:
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
-            b = bs3_cpu_read_byte(pbs3, 0x0105); // read output status
+            b = bs3_cpu_read_byte(pbs3, 0x0105); /* read output status */
             pbs3->r.Z = (b == 0x01); 
             pbs3->r.V = (b == 0xFF);
-            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0104, pbs3->r.B[p.x3]); // write occurs if output is ready to receive data
+            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0104, pbs3->r.B[p.x3]); /* write occurs if output is ready to receive data */
         case BS3_INSTR_OUTBI:
             pbs3->r.PC++;
             immB = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
-            b = bs3_cpu_read_byte(pbs3, 0x0103); // read output status
+            b = bs3_cpu_read_byte(pbs3, 0x0103); /* read output status */
             pbs3->r.Z = (b == 0x01); 
             pbs3->r.V = (b == 0xFF);
-            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0102, immB); // write occurs if output is ready to receive data
+            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0102, immB); /* write occurs if output is ready to receive data */
             break;
         case BS3_INSTR_OUTB2I:
             pbs3->r.PC++;
             immB = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
-            b = bs3_cpu_read_byte(pbs3, 0x0105); // read output status
+            b = bs3_cpu_read_byte(pbs3, 0x0105); /* read output status */
             pbs3->r.Z = (b == 0x01); 
             pbs3->r.V = (b == 0xFF);
-            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0104, immB); // write occurs if output is ready to receive data
+            if (!pbs3->r.Z) bs3_cpu_write_byte(pbs3, 0x0104, immB); /* write occurs if output is ready to receive data */
             break;
         case BS3_INSTR_LEAW0:
         case BS3_INSTR_LEAW1:
@@ -1083,7 +959,7 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
             pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             pbs3->r.C = (dw & 0x00010000) !=0;
             break;
-        case BS3_INSTR_SHRW: // see in doc also as SHRWB
+        case BS3_INSTR_SHRW: /* see in doc also as SHRWB */
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
@@ -1093,7 +969,7 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
             pbs3->r.Z = (pbs3->r.W[p.x2] == 0);
             pbs3->r.C = (w & 0x00008000) !=0;
             break;
-        case BS3_INSTR_SARW: // see in doc also as SARWB
+        case BS3_INSTR_SARW: /* see in doc also as SARWB */
             pbs3->r.PC++;
             p.param = bs3_cpu_read_byte(pbs3, pbs3->r.PC);
             pbs3->r.PC++;
@@ -1931,89 +1807,6 @@ void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, struct bs3_asm_code_map *
   }
 }
 
-/* process core I/O between Hypervisor and bs3 CPU */
-void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3)
-{
-  int ret;
-  int data;
-  /* process output*/ 
-  if (pbs3->output_ready == 0x01) { /* something pending for output*/
-    data = pbs3->output_data;
-    ret = fputc(data, stdout);
-    if (ret == EOF) 
-    {
-      switch (errno)
-      {
-        case EAGAIN : /* output is not ready, another try is necessary */
-          break;
-        case EBADF :
-        case EIO :
-          pbs3->output_ready = 0xFF; /* output is not usable*/
-      }
-    } 
-    else
-    {
-      pbs3->output_ready = 0x00; /* data sent to output , ouput is ready for another sending*/
-      /* fflush(stdout); */
-    }
-  }
-  /* process auxiliary output */
-  if (pbs3->output2_ready == 0x01) { /*  something pending for auxiliary output */
-    data = pbs3->output2_data;
-    ret = fputc(data, stderr);
-    if (ret == EOF) 
-    {
-      switch (errno)
-      {
-        case EAGAIN : /* auxiliary output is not ready, another try is necessary*/
-          break;
-        case EBADF :
-        case EIO :
-          pbs3->output2_ready = 0xFF; /* auxiliary output is not usable*/
-      }
-    } 
-    else
-    {
-      pbs3->output2_ready = 0x00; /* data sent to auxiliary output , auxiliary ouput is ready for another sending*/
-    }
-  }
-  /* process input */
-  if (pbs3->input_ready == 0x01) { /* input byte is consummed, then it is an opportunity to provide another input if there is one available */
-    struct pollfd pfds[1];
-    int ret;
-    char c;
-    /* empiric wait for input latency to avoid too much poll syscall (slow down the BS3 emulator)*/
-    static unsigned long curwait = 1;
-    static unsigned long maxwait = BS3_HYPER_INPUT_INITWAIT;
-
-    curwait--;
-    if (curwait == 0) /* ==0 then it is time to check for pending input */
-    {
-      /* See if there is data available */
-      pfds[0].fd = 0;
-      pfds[0].events = POLLIN;
-      ret = poll(pfds, 1, 0);
-      
-      /* Consume Hypervisor input data, to provide as an available input data for the bs3 CPU */
-      if (ret > 0 && ((pfds[0].revents & 1) == 1)) {
-        maxwait = BS3_HYPER_INPUT_INITWAIT;
-        curwait = 1;
-        read(0, &c, 1);
-        pbs3->input_data = (BYTE)c;
-        pbs3->input_ready = 0x00;
-        bs3_cpu_interrupt(pbs3, BS3_INT_INPUT);
-      } 
-      else
-      {
-        curwait = maxwait;
-        maxwait = maxwait << 1;
-        if (maxwait > BS3_HYPER_INPUT_MAXWAIT) maxwait = BS3_HYPER_INPUT_MAXWAIT;
-      }
-    }  
-  }
-}
-
-
 void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs3_cpu_data *)) /* BYTE * program, WORD programsize) */
 {
     struct termios oldtio, curtio;
@@ -2028,8 +1821,6 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGQUIT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
-    /* add timer alarm signal handling */
-    sigaction(SIGALRM /* or SIGVTALRM */ , &sa, NULL); 
 
     /* This is needed to be able to tcsetattr() after a hangup (Ctrl-C)
      * see tcsetattr() on POSIX

@@ -22,8 +22,8 @@ struct dev_bs3timer {
             BYTE timerByte0;
             BYTE timerByte1;
             BYTE timerByte2;
-            BYTE timerByte3;
-            BYTE timerMode;
+            BYTE timerByte3; /* a write to this address reinit the timer */
+            BYTE timerMode; /* ==0 repeat, ==1 once */
             BYTE reserved5;
             BYTE reserved6; /* same address as bs3 IRQ port ,  bs3 IRQ device must mask this address */
             BYTE reserved7;
@@ -52,40 +52,53 @@ void dev_bs3timer_write(WORD address, BYTE data)
     WORD addr;
     addr = address & 0x0007;
     reg_bs3timer.reg[addr] = data;
+    if ( addr == 0x0003)
+    {
+        pthread_mutex_lock(&lockTimer);
+        timerChanged = 1;
+        pthread_cond_signal(&condWakeUp);
+        pthread_mutex_unlock(&lockTimer);
+    }
 }
 
 static void * dev_bs3timer_run(void * bs3_device_bus) /* thread dedicated function */
 {
     endTimer = 0;
-    struct timespec remaining, request;
+    struct timespec request;
     unsigned long timer; /* micro second timer */
+    unsigned long long tmptimer;
     int afterwait;
     timer = reg_bs3timer.timer & 0x0FFFFFFFF;
 
+    pthread_mutex_lock(&lockTimer);
     while (!endTimer)
     {
-        pthread_mutex_lock(&lockTimer);
+        clock_gettime(CLOCK_REALTIME, &request);
         if (timer)
         {
-            request.tv_sec = timer / 1000000;
-            request.tv_nsec = (timer % 1000000) * 1000;
+            request.tv_sec += (timer / 1000000);
+            request.tv_nsec += ((timer % 1000000) * 1000);
+            request.tv_sec += request.tv_nsec / 1000000000;
+            request.tv_nsec = request.tv_nsec % 1000000000;
         } 
         else
         {
-            request.tv_sec = 1;
-            request.tv_nsec = 0;
+            request.tv_sec += 1;
+            request.tv_nsec += 0;
         }
        
         afterwait = pthread_cond_timedwait(&condWakeUp, &lockTimer, &request);
-        if (timer && afterwait == ETIMEDOUT) bs3_bus_setinterrupt(dev_bs3timer.interruptNumber);
+        if (timer && reg_bs3timer.timerMode) timer = 0; /* do not readmed the timer is mode is 1 */
+        if (timer && afterwait == ETIMEDOUT) 
+            bs3_bus_setinterrupt(dev_bs3timer.interruptNumber); /* if out of timedwait without signal then set interrupt */
         if (timerChanged) 
         {
             timerChanged = 0;
             timer = reg_bs3timer.timer & 0x0FFFFFFFF;
         }
-        pthread_mutex_unlock(&lockTimer);
 
     }
+    pthread_mutex_unlock(&lockTimer);
     return NULL;
 }
 
@@ -98,18 +111,13 @@ int dev_bs3timer_stop()
     if (resultTimer == 0 && created_thread_bs3timer) 
     {
         endTimer = 1;
-        pthread_kill(thread_bs3timer, 0);
-        pthread_cancel(thread_bs3timer); 
+        pthread_mutex_lock(&lockTimer);
+        pthread_cond_signal(&condWakeUp);
+        pthread_mutex_unlock(&lockTimer);        
         pthread_join(thread_bs3timer, NULL);
     }
-
     created_thread_bs3timer = 0;
-
-    if (resultTimer == ESRCH) 
-    {
-        return ESRCH;
-    } 
-    return 0;
+    return resultTimer;
 }
 
 int dev_bs3timer_start()
