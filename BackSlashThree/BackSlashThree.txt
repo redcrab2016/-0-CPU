@@ -119,8 +119,8 @@ MEMORY MAP
 		0105 : secondary output data ready (==0, 0104 is ready for write operation, ==FF no output available, ==01 wait(about to come))
 		0106 : reserved byte I/O
 		0107 ; reserved byte I/O
-		0108 : Timer clock count low  (32 bits counters, set here from 0106 0109, the tick delay)
-		010A : Timer clock count high (a word write operation at this address 010B (byte at 010B or word at 010A) will restart the timer counter)
+		0108 : Timer clock count low  (microseconds 32 bits counters, set here from 0108 010B, the tick delay)
+		010A : Timer clock count high (microseconds high 16 bits : a word write operation at this address  (byte at 010B or word at 010A) will reset/restart the timer counter)
 		010C : Timer repeat(0) or once(1) (0 = when timer is complete then repreat the timer, 1= when timer is complete the timer is not re-armed)
 		010D : reserved IO
 		010E : BS3 IRQ controller ( read for Number of pending IRQ, write anything to clear the pending IRQs)

@@ -162,7 +162,7 @@ static void * dev_rtc72421_run(void * bs3_device_bus) /* thread dedicated functi
     reg_RTC72421.D1         = (BYTE)( ptr_tm->tm_mday        % 10);
     reg_RTC72421.D10        = (BYTE)( ptr_tm->tm_mday        / 10);
     reg_RTC72421.MO1        = (BYTE)((ptr_tm->tm_mon  + 1)   % 10);
-    reg_RTC72421.MO1        = (BYTE)((ptr_tm->tm_mon  + 1)   / 10);
+    reg_RTC72421.MO10       = (BYTE)((ptr_tm->tm_mon  + 1)   / 10);
     reg_RTC72421.Y1         = (BYTE)((ptr_tm->tm_year % 100) % 10);
     reg_RTC72421.Y1         = (BYTE)((ptr_tm->tm_year % 100) / 10);
     reg_RTC72421.W          = (BYTE)( ptr_tm->tm_wday            );
