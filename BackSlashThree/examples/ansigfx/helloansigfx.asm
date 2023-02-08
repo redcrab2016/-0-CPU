@@ -72,7 +72,6 @@ start       ansi_ED         2               ; clear screen
             ansi_CUP        1, 1            ; set cursor to top left
             mbs3_printlnstr "bye."
             ansi_SCU                        ; show cursor
-            mbs3_putc       10
 
             hlt
 hellomsg    db "Hello world    BackSlashThree",0

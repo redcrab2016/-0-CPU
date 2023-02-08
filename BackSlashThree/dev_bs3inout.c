@@ -247,13 +247,73 @@ static void * dev_bs3in_run(void * bs3_device_bus) /* thread dedicated function 
     return NULL;
 }
 
+void dev_bs3out_flush()
+{
+    int status;
+    long value;
+    int retry;
+    while ((value = dequeueOUT()) != -1) /* send the pending characters in FIFO queue*/
+    {        
+        do
+        {
+            retry = 0;
+            status = fputc((int)value,stdout);
+            switch (status)
+            {
+                case EOF:
+                    switch(errno)
+                    {
+                        case EAGAIN : /* retry is needed */
+                            retry = 1;
+                            break;
+                        default:
+                            reg_bs3inout.OUTSTATUS = 0xFF; /* output not available anymore */
+                    }
+                    break;
+                default:
+                    break;
+            }
+        } while (retry);
+    }
+
+}
+
+void dev_bs3out2_flush()
+{
+    int status;
+    long value;
+    int retry;
+    while ((value = dequeueOUT2()) != -1) /* send the pending characters in FIFO queue*/
+    {        
+        do
+        {
+            retry = 0;
+            status = fputc((int)value,stderr);
+            switch (status)
+            {
+                case EOF:
+                    switch(errno)
+                    {
+                        case EAGAIN : /* retry is needed */
+                            retry = 1;
+                            break;
+                        default:
+                            reg_bs3inout.OUT2STATUS = 0xFF; /* output not available anymore */
+                    }
+                    break;
+                default:
+                    break;
+            }
+        } while (retry);
+    }
+
+}
+
+
 /* this function is invoked by an independant thread */
 static void * dev_bs3out_run(void * bs3_device_bus) /* thread dedicated function */
 {
     reg_bs3inout.OUTSTATUS = 0x00; /* ready to send something */
-    int status;
-    long value;
-    int retry;
     endOUT = 0;
     while (!endOUT)
     {
@@ -261,30 +321,8 @@ static void * dev_bs3out_run(void * bs3_device_bus) /* thread dedicated function
         switch (reg_bs3inout.OUTSTATUS)
         {
             case 0x01: /* there is somthing to send */
-                while ((value = dequeueOUT()) != -1) /* send the pending characters in FIFO queue*/
-                {        
-                    do
-                    {
-                        retry = 0;
-                        status = fputc((int)value,stdout);
-                        switch (status)
-                        {
-                            case EOF:
-                                switch(errno)
-                                {
-                                    case EAGAIN : /* retry is needed */
-                                        retry = 1;
-                                        break;
-                                    default:
-                                        reg_bs3inout.OUTSTATUS = 0xFF; /* output not available anymore */
-                                }
-                                break;
-                            default:
-                                break;
-                        }
-                    } while (retry);
-                }
-                reg_bs3inout.OUTSTATUS = 0x00; /* character(s) sent , FIFO queue is empty*/
+                dev_bs3out_flush();
+                reg_bs3inout.OUTSTATUS = (reg_bs3inout.OUTSTATUS == 0x01)?0x00:reg_bs3inout.OUTSTATUS; /* character(s) sent , FIFO queue is empty*/
                 break;
             case 0x00: /* wait for something to send*/
                 pthread_mutex_lock(&lockOUT);
@@ -318,30 +356,8 @@ static void * dev_bs3out2_run(void * bs3_device_bus) /* thread dedicated functio
         switch (reg_bs3inout.OUT2STATUS)
         {
             case 0x01: /* there is somthing to send */
-                while ((value = dequeueOUT2()) != -1) /* send the pending characters in FIFO queue*/
-                {        
-                    do
-                    {
-                        retry = 0;
-                        status = fputc((int)value,stderr);
-                        switch (status)
-                        {
-                            case EOF:
-                                switch(errno)
-                                {
-                                    case EAGAIN : /* retry is needed */
-                                        retry = 1;
-                                        break;
-                                    default:
-                                        reg_bs3inout.OUT2STATUS = 0xFF; /* output not available anymore */
-                                }
-                                break;
-                            default:
-                                break;
-                        }
-                    } while (retry);
-                }
-                reg_bs3inout.OUT2STATUS = 0x00; /* character(s) sent , FIFO queue is empty*/
+                dev_bs3out2_flush();
+                reg_bs3inout.OUT2STATUS = (reg_bs3inout.OUT2STATUS == 0x01)?0x01:reg_bs3inout.OUT2STATUS; /* character(s) sent , FIFO queue is empty*/
                 break;
             case 0x00: /* wait for something to send*/
                 pthread_mutex_lock(&lockOUT2);
@@ -377,7 +393,7 @@ int dev_bs3inout_stop()
     endIN = 1;
     pthread_kill(thread_bs3in, 0);
     pthread_cond_signal(&condIN);
-    sleep(1);
+    //sleep(1);
     pthread_cancel(thread_bs3in); 
     pthread_join(thread_bs3in, NULL);
   }
@@ -387,6 +403,7 @@ int dev_bs3inout_stop()
     endOUT = 1;
     pthread_cond_signal(&condOUT);
     pthread_join(thread_bs3out, NULL);
+    dev_bs3out_flush();
   }
 
   if (resultout2 == 0 && created_thread_bs3out2) 
@@ -394,6 +411,7 @@ int dev_bs3inout_stop()
     endOUT2 = 1;
     pthread_cond_signal(&condOUT2);
     pthread_join(thread_bs3out2, NULL);
+    dev_bs3out2_flush();
   }
 
   created_thread_bs3in = 0;
