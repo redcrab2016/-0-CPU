@@ -23,10 +23,10 @@ struct dev_rtc72421 {
                 BYTE H10;
                 struct
                 {
-                    BIT h10_20:2;
-                    BIT AM_PM:1;
-                    BIT unused_h3:1;
-                    BIT reservedh4_7:4;
+                    BYTE h10_20:2;
+                    BYTE AM_PM:1;
+                    BYTE unused_h3:1;
+                    BYTE reservedh4_7:4;
                 };
             };
             BYTE D1;
@@ -41,11 +41,11 @@ struct dev_rtc72421 {
                 BYTE CD;
                 struct 
                 {
-                    BIT HOLD:1;
-                    BIT BUSY:1;
-                    BIT IRQ_FLAG:1;
-                    BIT ADJ30s:1;
-                    BIT reservedcd4_7:4;
+                    BYTE HOLD:1;
+                    BYTE BUSY:1;
+                    BYTE IRQ_FLAG:1;
+                    BYTE ADJ30s:1;
+                    BYTE reservedcd4_7:4;
                 };
             };
             union 
@@ -53,10 +53,10 @@ struct dev_rtc72421 {
                 BYTE CE;
                 struct 
                 {
-                    BIT MASK:1;
-                    BIT ITRPT_STND:1;
-                    BIT t0_1:2;
-                    BIT reservedce4_7:4;
+                    BYTE MASK:1;
+                    BYTE ITRPT_STND:1;
+                    BYTE t0_1:2;
+                    BYTE reservedce4_7:4;
                 };
                 
             };
@@ -65,11 +65,11 @@ struct dev_rtc72421 {
                 BYTE CF;
                 struct 
                 {
-                    BIT RESET:1;
-                    BIT STOP:1;
-                    BIT _24_12:1;
-                    BIT TEST:1;
-                    BIT reservedcf4_7:4;
+                    BYTE RESET:1;
+                    BYTE STOP:1;
+                    BYTE _24_12:1;
+                    BYTE TEST:1;
+                    BYTE reservedcf4_7:4;
                 };
             };
             
@@ -164,7 +164,7 @@ static void * dev_rtc72421_run(void * bs3_device_bus) /* thread dedicated functi
     reg_RTC72421.MO1        = (BYTE)((ptr_tm->tm_mon  + 1)   % 10);
     reg_RTC72421.MO10       = (BYTE)((ptr_tm->tm_mon  + 1)   / 10);
     reg_RTC72421.Y1         = (BYTE)((ptr_tm->tm_year % 100) % 10);
-    reg_RTC72421.Y1         = (BYTE)((ptr_tm->tm_year % 100) / 10);
+    reg_RTC72421.Y10        = (BYTE)((ptr_tm->tm_year % 100) / 10);
     reg_RTC72421.W          = (BYTE)( ptr_tm->tm_wday            );
 
     prevSecond = ptr_tm->tm_sec;
