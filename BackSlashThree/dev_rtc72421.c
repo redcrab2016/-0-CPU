@@ -138,20 +138,6 @@ static void * dev_rtc72421_run(void * bs3_device_bus) /* thread dedicated functi
     /* init with current host RTC 24h format */
     time_t t = time(NULL);
     struct tm *ptr_tm = localtime(&t);
-    /* register D */
-    reg_RTC72421.ADJ30s     = 0; /* no 30 second adjustment */
-    reg_RTC72421.IRQ_FLAG   = 0; /* no active interupt signal */
-    reg_RTC72421.BUSY       = 1; /* alway busy until HOLD == 1 */
-    reg_RTC72421.HOLD       = 0; /* no request for stop time/date clock register external update */
-    /* register E */
-    reg_RTC72421.t0_1       = 0; /* 0== 1/64 second, 1== 1 second, 2== 1 minute, 3 = 1 hour */
-    reg_RTC72421.ITRPT_STND = 0; /* 1== ITRPT mode, 0 == STND mode  */
-    reg_RTC72421.MASK       = 1; /* 0 == ITRPT_STND enabled, 1 = disabled : default no signal or interrupt */
-    /* register F */
-    reg_RTC72421.TEST       = 0; /* must be always 0 */
-    reg_RTC72421._24_12     = 1; /* 1 == 24 h, 0 = 12 h AM/PM */
-    reg_RTC72421.STOP       = 0; /* 0 == clock running, 1 = Clock stop */
-    reg_RTC72421.RESET      = 0; /* 0 == no reset, 1== reset requested */
     /* S1 to W registers */
     reg_RTC72421.S1         = (BYTE)( ptr_tm->tm_sec         % 10);
     reg_RTC72421.S10        = (BYTE)( ptr_tm->tm_sec         / 10);
@@ -239,7 +225,7 @@ static void * dev_rtc72421_run(void * bs3_device_bus) /* thread dedicated functi
                                 if (reg_RTC72421._24_12) /* 24 h case */
                                 {
                                     reg_RTC72421.AM_PM = 0; /* no meaning then 0 (fake AM) */
-                                    if (reg_RTC72421.H1 <2) /* when hour 0..19*/
+                                    if (reg_RTC72421.H10 <2) /* when hour 0..19*/
                                     {
                                         carry = ((++reg_RTC72421.H1)>9)?1:0;
                                         if (carry)
@@ -251,7 +237,7 @@ static void * dev_rtc72421_run(void * bs3_device_bus) /* thread dedicated functi
                                     }
                                     else /* when hour 20 ... 23 */
                                     {
-                                        carry = ((++reg_RTC72421.H1)>4)?1:0;
+                                        carry = ((++reg_RTC72421.H1)>3)?1:0;
                                         if (carry) /* go over midnight*/
                                         {
                                             reg_RTC72421.H1 = 0;
@@ -365,6 +351,21 @@ int dev_rtc72421_stop()
 int dev_rtc72421_start()
 {
     if (created_thread_RTC72421) dev_rtc72421_stop(); /* just to avoid double start without stop */
+    /* register D */
+    reg_RTC72421.ADJ30s     = 0; /* no 30 second adjustment */
+    reg_RTC72421.IRQ_FLAG   = 0; /* no active interupt signal */
+    reg_RTC72421.BUSY       = 1; /* alway busy until HOLD == 1 */
+    reg_RTC72421.HOLD       = 0; /* no request for stop time/date clock register external update */
+    /* register E */
+    reg_RTC72421.t0_1       = 0; /* 0== 1/64 second, 1== 1 second, 2== 1 minute, 3 = 1 hour */
+    reg_RTC72421.ITRPT_STND = 0; /* 1== ITRPT mode, 0 == STND mode  */
+    reg_RTC72421.MASK       = 1; /* 0 == ITRPT_STND enabled, 1 = disabled : default no signal or interrupt */
+    /* register F */
+    reg_RTC72421.TEST       = 0; /* must be always 0 */
+    reg_RTC72421._24_12     = 1; /* 1 == 24 h, 0 = 12 h AM/PM */
+    reg_RTC72421.STOP       = 0; /* 0 == clock running, 1 = Clock stop */
+    reg_RTC72421.RESET      = 0; /* 0 == no reset, 1== reset requested */
+
     int result = pthread_create(&thread_RTC72421, NULL, &dev_rtc72421_run, NULL); 
     if (result == 0) created_thread_RTC72421 = 1;
     return result;
