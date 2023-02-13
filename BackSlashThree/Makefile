@@ -40,6 +40,11 @@ bs3_mainrt.o : bs3_main.c
 	@echo ">>> Creating object bs3_mainrt.o"
 	${CC} ${DEBUG} -D BS3RUNTIME -c bs3_main.c -o bs3_mainrt.o
 
+bs3.o: bs3.c
+	@echo  ">>> Creating object" $@
+	${CC} ${DEBUG} -c $<
+
+
 %.o: %.c
 	@echo  ">>> Creating object" $@
 	${CC} ${DEBUG} -c $<
