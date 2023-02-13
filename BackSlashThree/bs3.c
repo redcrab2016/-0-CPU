@@ -123,12 +123,26 @@ BYTE bs3_cpu_read_byte(struct bs3_cpu_data * pbs3, WORD address) {
 
 void bs3_cpu_write_word(struct bs3_cpu_data * pbs3, WORD address, WORD data) 
 {
-  bs3_cpu_write_byte(pbs3, address, (BYTE)(data & 0x00FF));
-  bs3_cpu_write_byte(pbs3, address+1, (BYTE)((data>>8) & 0x00FF));
+    if ((address & 0xFF00) == 0x0100) /* System I/O */
+    {
+        bs3_bus_writeWord(address, data);
+    } 
+    else
+    {
+        bs3_cpu_write_byte(pbs3, address, (BYTE)(data & 0x00FF));
+        bs3_cpu_write_byte(pbs3, address+1, (BYTE)((data>>8) & 0x00FF));
+    }
 }
 
 WORD bs3_cpu_read_word(struct bs3_cpu_data * pbs3, WORD address) {
-  return bs3_cpu_read_byte(pbs3, address) |  (((WORD)bs3_cpu_read_byte(pbs3, address + 1)) << 8);
+    if ((address & 0xFF00) == 0x0100) /* System I/O */
+    {  
+        return bs3_bus_readWord(address); 
+    }
+    else
+    {
+        return bs3_cpu_read_byte(pbs3, address) |  (((WORD)bs3_cpu_read_byte(pbs3, address + 1)) << 8);
+    }
 }
 
 /* memory access dedicated to bs3 bus*/

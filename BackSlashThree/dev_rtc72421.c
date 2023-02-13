@@ -351,6 +351,7 @@ int dev_rtc72421_stop()
 int dev_rtc72421_start()
 {
     if (created_thread_RTC72421) dev_rtc72421_stop(); /* just to avoid double start without stop */
+    /* Init control registers */
     /* register D */
     reg_RTC72421.ADJ30s     = 0; /* no 30 second adjustment */
     reg_RTC72421.IRQ_FLAG   = 0; /* no active interupt signal */

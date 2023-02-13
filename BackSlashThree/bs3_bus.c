@@ -123,7 +123,7 @@ BYTE bs3_bus_readByte(WORD address)
 //    pthread_mutex_lock(&lockbus); 
     value = (*(bs3_bus_addresses[address]->readByte))(address);
 //    pthread_mutex_unlock(&lockbus); 
-
+    return value;
 }
 
 void bs3_bus_writeByte(WORD address, BYTE data)
@@ -132,6 +132,34 @@ void bs3_bus_writeByte(WORD address, BYTE data)
     if (bs3_bus_addresses[address]->writeByte == 0) return;
 //    pthread_mutex_lock(&lockbus); 
     (*(bs3_bus_addresses[address]->writeByte))(address, data);
+//    pthread_mutex_unlock(&lockbus); 
+}
+
+WORD bs3_bus_readWord(WORD address)
+{
+    WORD value;
+    if (bs3_bus_addresses[address] == 0) return 0;
+    if (bs3_bus_addresses[address]->readWord == 0) 
+    {
+        return bs3_bus_readByte(address) | (bs3_bus_readByte(address+1) << 8 );
+    }
+//    pthread_mutex_lock(&lockbus); 
+    value = (*(bs3_bus_addresses[address]->readWord))(address);
+//    pthread_mutex_unlock(&lockbus); 
+    return value;
+}
+
+void bs3_bus_writeWord(WORD address, WORD data)
+{
+    if (bs3_bus_addresses[address] == 0) return;
+    if (bs3_bus_addresses[address]->writeWord == 0) 
+    {
+        bs3_bus_writeByte(address, (BYTE)(data & 0x00FF));
+        bs3_bus_writeByte(address + 1, (BYTE)((data >> 8) & 0x00FF));
+        return;
+    }
+//    pthread_mutex_lock(&lockbus); 
+    (*(bs3_bus_addresses[address]->writeWord))(address, data);
 //    pthread_mutex_unlock(&lockbus); 
 }
 
