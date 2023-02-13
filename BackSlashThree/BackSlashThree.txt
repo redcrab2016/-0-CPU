@@ -1,4 +1,5 @@
 CISC 16 bits address, 8/16 bits data   0x5C33 "\\3"
+16 bits data/address bus
 little-endian data access and immediate encoding
 Event/Interruption enabled
 Hypervisor controlled
@@ -9,7 +10,7 @@ No coprocessor capabilities
 
 REGISTERS
 
-11 registers (4 times 16 bits general purpose registers overlaying the 8 times 8 bits general purpose registry)
+11 registers (4 times 16 bits general purpose registers overlaying the 8 times 8 bits general purpose registers)
 16 bits stack, growing downward
 dedicated purpose register
 	PC		: 16 bits : Reset at [0] (reset handler) : Program Counter , is where the CPU is fetching instruction and immediate data
@@ -26,7 +27,7 @@ general registers
 	B0 W0(low)
 
 	Wx : 4 times 16 bits registers, 2 bits encoding (W0:00, W1:01, W2:10, W3:11)
-	Rx : 8 times 8 bits registers, 3 bits encoding (B0:000, B1:001, B2:010, B3:011, B4:100, B5:101, B6:110, B7:111)
+	Bx : 8 times 8 bits registers, 3 bits encoding (B0:000, B1:001, B2:010, B3:011, B4:100, B5:101, B6:110, B7:111)
 If CPU registers is a C language structure on a Little-Endian data access then it may looks like
 
 #define BYTE unsigned char
