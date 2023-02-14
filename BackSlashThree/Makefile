@@ -12,7 +12,7 @@ LINKERFLAG = -lm -pthread
 # mini size
 #DEBUG = -Os
 # debug info 
-DEBUG = -g  # for gdb debugging 
+DEBUG = -std=gnu11 -g  # for gdb debugging 
 BINS := bs3asm bs3rt
 
 all: ${BINS} distribute
@@ -39,11 +39,6 @@ bs3asm: bs3_asm_code_map.o  bs3_asm_line.o  bs3_asm_message.o  bs3_asm.o  bs3_as
 bs3_mainrt.o : bs3_main.c
 	@echo ">>> Creating object bs3_mainrt.o"
 	${CC} ${DEBUG} -D BS3RUNTIME -c bs3_main.c -o bs3_mainrt.o
-
-bs3.o: bs3.c
-	@echo  ">>> Creating object" $@
-	${CC} ${DEBUG} -c $<
-
 
 %.o: %.c
 	@echo  ">>> Creating object" $@
