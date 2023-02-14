@@ -3,6 +3,8 @@
 #include <unistd.h> 
 #include <errno.h>
 #include <time.h>
+#include <termios.h>
+#include <sys/ioctl.h>
 #include <signal.h>
 
 #include "bs3_bus.h"
@@ -46,6 +48,8 @@ pthread_t thread_bs3out;
 int created_thread_bs3out = 0;
 pthread_t thread_bs3out2; 
 int created_thread_bs3out2 = 0;
+
+struct termios oldtio, curtio;
 
 #define QUEUE_SIZE 262144
 
@@ -199,7 +203,7 @@ void dev_bs3inout_write(WORD address, BYTE data)
 static void * dev_bs3in_run(void * bs3_device_bus) /* thread dedicated function */
 {
     ssize_t status;
-    reg_bs3inout.INSTATUS = 0x01; /* at start we consider that program is waiting for input*/
+    
     endIN = 0;
     while (!endIN)
     {
@@ -313,7 +317,7 @@ void dev_bs3out2_flush()
 /* this function is invoked by an independant thread */
 static void * dev_bs3out_run(void * bs3_device_bus) /* thread dedicated function */
 {
-    reg_bs3inout.OUTSTATUS = 0x00; /* ready to send something */
+
     endOUT = 0;
     while (!endOUT)
     {
@@ -345,7 +349,7 @@ static void * dev_bs3out_run(void * bs3_device_bus) /* thread dedicated function
 /* this function is invoked by an independant thread */
 static void * dev_bs3out2_run(void * bs3_device_bus) /* thread dedicated function */
 {
-    reg_bs3inout.OUT2STATUS = 0x00; /* ready to send something */
+    
     int status;
     long value;
     int retry;    
@@ -396,6 +400,7 @@ int dev_bs3inout_stop()
     //sleep(1);
     pthread_cancel(thread_bs3in); 
     pthread_join(thread_bs3in, NULL);
+    tcsetattr(0, TCSANOW, &oldtio);
   }
 
   if (resultout == 0 && created_thread_bs3out) 
@@ -432,10 +437,19 @@ int dev_bs3inout_start()
   int resultout2;
 
     if (created_thread_bs3in || created_thread_bs3out || created_thread_bs3out2) dev_bs3inout_stop(); /* just to avoid double start without stop */
+    reg_bs3inout.INSTATUS = 0x01; /* at start we consider that program is waiting for input*/
+    tcgetattr(0, &oldtio);
+     /* Set non-canonical no-echo for stdin */
+    tcgetattr(0, &curtio);
+    curtio.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(0, TCSANOW, &curtio);
+
     resultin = pthread_create(&thread_bs3in, NULL, &dev_bs3in_run, NULL); 
     if (resultin == 0) created_thread_bs3in = 1;
+    reg_bs3inout.OUTSTATUS = 0x00; /* ready to send something */
     resultout = pthread_create(&thread_bs3out, NULL, &dev_bs3out_run, NULL); 
     if (resultout == 0) created_thread_bs3out = 1;
+    reg_bs3inout.OUT2STATUS = 0x00; /* ready to send something */
     resultout2 = pthread_create(&thread_bs3out2, NULL, &dev_bs3out2_run, NULL); 
     if (resultout2 == 0) created_thread_bs3out2 = 1;
     if (resultin) return resultin;

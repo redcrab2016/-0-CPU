@@ -98,51 +98,20 @@ void bs3_cpu_interrupt(struct bs3_cpu_data * pbs3, int intnum)
 }
 
 
-void bs3_cpu_write_byte(struct bs3_cpu_data * pbs3, WORD address, BYTE data) 
+#define bs3_cpu_write_byte(bs3cpudataptr, address, data)  bs3_bus_writeByte(address,data)
+#define bs3_cpu_read_byte(bs3cpudataptr, address)         (bs3_bus_readByte(address))
+#define bs3_cpu_write_word(bs3cpudataptr, address, data)  bs3_bus_writeWord(address, data)
+#define bs3_cpu_read_word(bs3cpudataptr, address)         (bs3_bus_readWord(address))
+
+int bs3_memory_start()
 {
-  if ((address & 0xFF00) == 0x0100) /* System Write I/O */
-  {
-    bs3_bus_writeByte(address,data);
-  }
-  else /* for CPU only, address out of IO range , access direct to memory*/
-  {
-    pbs3->m[address] = data;
-  }
-}
-
-BYTE bs3_cpu_read_byte(struct bs3_cpu_data * pbs3, WORD address) {
-  if ((address & 0xFF00) == 0x0100) /* System I/O */
-  {
-    return bs3_bus_readByte(address);
-  }
-  else /* for CPU only, address out of IO range , access direct to memory*/
-  {
-    return pbs3->m[address];
-  }
-}
-
-void bs3_cpu_write_word(struct bs3_cpu_data * pbs3, WORD address, WORD data) 
-{
-    if ((address & 0xFF00) == 0x0100) /* System I/O */
+    int i =0;
+    if (bs3_cpu) 
     {
-        bs3_bus_writeWord(address, data);
-    } 
-    else
-    {
-        bs3_cpu_write_byte(pbs3, address, (BYTE)(data & 0x00FF));
-        bs3_cpu_write_byte(pbs3, address+1, (BYTE)((data>>8) & 0x00FF));
+        for (i = 0 ; i <65536; i++) bs3_cpu->m[i] = 0;
+        return 0;
     }
-}
-
-WORD bs3_cpu_read_word(struct bs3_cpu_data * pbs3, WORD address) {
-    if ((address & 0xFF00) == 0x0100) /* System I/O */
-    {  
-        return bs3_bus_readWord(address); 
-    }
-    else
-    {
-        return bs3_cpu_read_byte(pbs3, address) |  (((WORD)bs3_cpu_read_byte(pbs3, address + 1)) << 8);
-    }
+    else return -1;
 }
 
 /* memory access dedicated to bs3 bus*/
@@ -156,6 +125,20 @@ void bs3_memory_writebyte(WORD address, BYTE data)
 {
   if (bs3_cpu == 0) return;
   bs3_cpu->m[address] = data;
+}
+
+WORD bs3_memory_readword(WORD address)
+{
+    if (bs3_cpu == 0) return 0;
+    return *(WORD *)(&bs3_cpu->m[address]);
+}
+
+void bs3_memory_writeword(WORD address, WORD data)
+{
+    if (bs3_cpu)
+    {
+        *(WORD *)(&bs3_cpu->m[address]) = data;
+    }
 }
 
 void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
@@ -1806,28 +1789,29 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
 }
 
 /* Hypervisor */
+
+/*
 void bs3_hyper_reset_memory(struct bs3_cpu_data * pbs3)
 {
   long i;
   for (i=0; i < 65536; i++) pbs3->m[i] = 0;
 }
+*/
 
 void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, struct bs3_asm_code_map * pcodemap)
 {
   long i;
   for (i=0; i < 65536; i++) 
   { 
-    if (pcodemap->inUse[i])  pbs3->m[i & 0xFFFF] = pcodemap->code[i];
+    if (pcodemap->inUse[i])  bs3_bus_writeByte(i & 0x0FFFF, pcodemap->code[i]);
   }
 }
 
 void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs3_cpu_data *)) /* BYTE * program, WORD programsize) */
 {
-    struct termios oldtio, curtio;
+ 
     struct sigaction sa;
     BYTE prevBS3status;
-    /* Save stdin terminal attributes */
-    tcgetattr(0, &oldtio);
 
     /* Make sure we exit cleanly */
     memset(&sa, 0, sizeof(struct sigaction));
@@ -1843,23 +1827,17 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
     sa.sa_handler = SIG_IGN;
     sigaction(SIGTTOU, &sa, NULL);
 
-    /* Set non-canonical no-echo for stdin */
-    tcgetattr(0, &curtio);
-    curtio.c_lflag &= ~(ICANON | ECHO);
-    //curtio.c_lflag &= ~( ECHO);
-    tcsetattr(0, TCSANOW, &curtio);
-
     /* BS3 CPU controlled by the Hypervisor */
     struct bs3_cpu_data cpu;
     bs3_cpu = &cpu;
-    /* prepare cpu memory */
-    bs3_hyper_reset_memory(&cpu);
-    bs3_hyper_load_memory(&cpu, pcodemap);
-    /* initialise cpu */
-    bs3_cpu_init(&cpu);
+ 
     /* initialize the devices*/
     bs3_hyper_device_prepare();
     bs3_hyper_device_start();
+   /* prepare cpu memory */
+    bs3_hyper_load_memory(&cpu, pcodemap);
+    /* initialise cpu */
+    bs3_cpu_init(&cpu);    
     /* main loop */
     while (!end) {
       /*bs3_hyper_coreIO(&cpu);*/
@@ -1870,7 +1848,6 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
         if (cpu.status == BS3_STATUS_RESET && prevBS3status != cpu.status) /* CPU reset requested by debuuger */
         {
           bs3_hyper_device_start();
-          bs3_hyper_reset_memory(&cpu);
           bs3_hyper_load_memory(&cpu, pcodemap); /*program, programsize, 0); */
         }
       } 
@@ -1889,7 +1866,6 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
           break;
         case BS3_STATUS_RESET: /* CPU reset requested by program */
           bs3_hyper_device_start();
-          bs3_hyper_reset_memory(&cpu);
           bs3_hyper_load_memory(&cpu, pcodemap); /*program, programsize, 0); */
           break;
         case BS3_STATUS_DEFAULT:
@@ -1916,7 +1892,6 @@ void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs
       }
     }
     /* restore terminal attributes */
-    tcsetattr(0, TCSANOW, &oldtio);
     bs3_hyper_device_stop();
 }
 
@@ -1926,9 +1901,11 @@ struct bs3_device dev_memory =
     .name="Memory",
     .address=0x0000,
     .mask=0x0000,
-    .startdevice = NULL, /* no start device function */
+    .startdevice = &bs3_memory_start, /* reset the memory */
     .stopdevice = NULL,  /* no stop device function */
     .readByte = &bs3_memory_readbyte,
     .writeByte = &bs3_memory_writebyte,
+    .readWord = &bs3_memory_readword,
+    .writeWord = &bs3_memory_writeword,
     .interruptNumber = 0 /* No interrupt */
 };

@@ -1,4 +1,6 @@
+
 #include "bs3_asm.h"
+#include "bs3_bus.h"
 
 static const char * hexa_digit="0123456789ABCDEF";
  
@@ -22,7 +24,7 @@ void bs3_cpu_memory_dump(struct bs3_cpu_data * pbs3, WORD addr, char * result)
   /* dump 16 bytes from addr to addr + 15 */ 
   for (i = 0; i < 16; i++)
   {
-    value = pbs3->m[addr + i];
+    value = bs3_bus_readByte(addr + i);
     /* set hexa byte value at right location */
     stridx = i * 3 + 6 + ((i<8)?0:1);
     result[stridx + 0] = hexa_digit[ (value >> 4) & 0x0F];
@@ -38,7 +40,12 @@ void bs3_cpu_memory_dump(struct bs3_cpu_data * pbs3, WORD addr, char * result)
 
 WORD bs3_cpu_disassemble(struct bs3_cpu_data * pbs3, char * result)
 {
-  return bs3_cpu_disassemble_(pbs3->r.PC, pbs3->m[pbs3->r.PC], pbs3->m[(pbs3->r.PC+1) & 0xFFFF], pbs3->m[(pbs3->r.PC+2) & 0xFFFF], pbs3->m[(pbs3->r.PC+3) & 0xFFFF], result);
+  return bs3_cpu_disassemble_(pbs3->r.PC, 
+                              bs3_bus_readByte(pbs3->r.PC), 
+                              bs3_bus_readByte((pbs3->r.PC+1) & 0xFFFF), 
+                              bs3_bus_readByte((pbs3->r.PC+2) & 0xFFFF), 
+                              bs3_bus_readByte((pbs3->r.PC+3) & 0xFFFF),
+                              result);
 }
 
 WORD bs3_cpu_disassemble_(WORD PC, BYTE a, BYTE b, BYTE c, BYTE d, char * result) {
@@ -225,10 +232,10 @@ void bs3_cpu_state(struct bs3_cpu_data * pbs3, char * result)
   result[79] = hexa_digit[(pbs3->r.SP & 0x00F0) >> 4]; 
   result[80] = hexa_digit[pbs3->r.SP & 0x000F];
   /* Word at SP register : [SP] */
-  result[82] = hexa_digit[(pbs3->m[pbs3->r.SP+1] & 0xF0) >> 4]; 
-  result[83] = hexa_digit[pbs3->m[pbs3->r.SP+1] & 0x0F];
-  result[84] = hexa_digit[(pbs3->m[pbs3->r.SP] & 0xF0) >> 4]; 
-  result[85] = hexa_digit[pbs3->m[pbs3->r.SP] & 0x0F];
+  result[82] = hexa_digit[(bs3_bus_readByte(pbs3->r.SP+1) & 0xF0) >> 4]; 
+  result[83] = hexa_digit[bs3_bus_readByte(pbs3->r.SP+1) & 0x0F];
+  result[84] = hexa_digit[(bs3_bus_readByte(pbs3->r.SP) & 0xF0) >> 4]; 
+  result[85] = hexa_digit[bs3_bus_readByte(pbs3->r.SP) & 0x0F];
   /* W3 register | B7 and B6 registers */
   result[87] = hexa_digit[(pbs3->r.W[3] & 0xF000) >> 12]; 
   result[88] = hexa_digit[(pbs3->r.W[3] & 0x0F00) >> 8];

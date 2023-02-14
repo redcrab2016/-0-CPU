@@ -111,15 +111,15 @@ MEMORY MAP
 	0030 - 00FF: Hypervisor Event data (768 bytes)
 		0030 : 16 bits Event Id
 		0032-00FF : Event data, with structure depending of Event Id
-	0100 - 01FF : reserved for I/O (256 I/O ports)
+	0100 - 01FF : reserved for I/O (256 I/O ports) but I/O can be at any address (e.g other addresses can be used by memory bank device) 
 		0100 : byte input data
 		0101 : input data ready (==0 , 0100 is ready for a read operation, ==FF no input available, ==01 wait(about to come))
 		0102 : byte output data
 		0103 : output data ready (==0 , 0102 is ready for a write operation, ==FF no output available, ==01 wait(about to come))
 		0104 : byte secondary output data
 		0105 : secondary output data ready (==0, 0104 is ready for write operation, ==FF no output available, ==01 wait(about to come))
-		0106 : reserved byte I/O
-		0107 ; reserved byte I/O
+		0106 : reserved byte I/O (reserved for future ROM bank number)
+		0107 ; reserved byte I/O (reserved for future RAM bank number)
 		0108 : Timer clock count low  (microseconds 32 bits counters, set here from 0108 010B, the tick delay)
 		010A : Timer clock count high (microseconds high 16 bits : a word write operation at this address  (byte at 010B or word at 010A) will reset/restart the timer counter)
 		010C : Timer repeat(0) or once(1) (0 = when timer is complete then repreat the timer, 1= when timer is complete the timer is not re-armed)
@@ -144,7 +144,9 @@ MEMORY MAP
 		011F : RTC 72421 CF register
 		0120 - 01FF : other system I/O
 	0200 - 03FF : Default Stack(grow downward, SP initial value to 0400) / possible Data / possible Code		
-	0400 - FFFF : Code / Data(ROM, RAM System or shared with device) / possible stack
+	0400 - CFFF : Code / Data(ROM, RAM System or shared with device) / possible stack
+	D000 - DFFF : currently Code / data, but reserved for future RAM bank (4 KiB) bank number at [0107]
+	E000 - FFFF : currently Code / data, but reserved for future ROM bank (8 KiB) bank number at [0106]
 
 INSTRUCTION SET (fully qualified 225 CPU instruction)
 

@@ -12,6 +12,7 @@
 #include <fcntl.h>
 
 #include "bs3_asm.h"
+#include "bs3_bus.h"
 #include "bs3_debug.h"
 
 #define BS3_DEBUG_STATE_RUNNING 0
@@ -431,7 +432,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
             }
             for (i = 0; i <  bs3_asm.assemblyLength; i++)
             {
-                pbs3debug->pbs3->m[addr + i] = bs3_asm.assembly[i];
+                bs3_bus_writeByte((addr + i) & 0x0FFFF, bs3_asm.assembly[i] );
             }
             break;
         case 'u':
@@ -455,10 +456,10 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
             for (i = 0 ; i < 4 ; i++)
             {
                 pc = bs3_cpu_disassemble_(pc,
-                                        pbs3debug->pbs3->m[pc], 
-                                        pbs3debug->pbs3->m[(pc+1) & 0xFFFF], 
-                                        pbs3debug->pbs3->m[(pc+2) & 0xFFFF], 
-                                        pbs3debug->pbs3->m[(pc+3) & 0xFFFF], 
+                                        bs3_bus_readByte(pc), 
+                                        bs3_bus_readByte((pc+1) & 0xFFFF), 
+                                        bs3_bus_readByte((pc+2) & 0xFFFF), 
+                                        bs3_bus_readByte((pc+3) & 0xFFFF), 
                                         linebuffer);
                 strcat(linebuffer, "\n");
                 bs3_debug_comm_send(pbs3debug,linebuffer);
@@ -634,7 +635,8 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                 bs3_debug_comm_send(pbs3debug,"Incorrect byte values provided in 'e' command\n");
                 break;
             }
-            pbs3debug->pbs3->m[(WORD)(addr & 0xFFFF)] = (BYTE)(i & 0xFF);
+            bs3_bus_writeByte((WORD)(addr & 0xFFFF), (BYTE)(i & 0x0FF));
+
             bs3_debug_comm_send(pbs3debug,"Byte value is set to memory\n");
             break;
         case 'E':
@@ -655,8 +657,8 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
                 bs3_debug_comm_send(pbs3debug,"Incorrect word values provided in 'E' command\n");
                 break;
             }
-            pbs3debug->pbs3->m[(WORD)(addr & 0xFFFF)] = (BYTE)(i & 0xFF);
-            pbs3debug->pbs3->m[(WORD)((addr + 1) & 0xFFFF)] = (BYTE)((i >> 8) & 0xFF);
+            bs3_bus_writeByte((WORD)(addr & 0xFFFF), (BYTE)(i & 0xFF));
+            bs3_bus_writeByte((WORD)((addr + 1) & 0xFFFF), (BYTE)((i >> 8) & 0xFF));
             bs3_debug_comm_send(pbs3debug,"Word value is set to memory\n");
             break;
         case 'd':
@@ -741,7 +743,7 @@ void bs3_debug_comm_cmd(struct bs3_debug_data * pbs3debug)
             bs3_debug_comm_send(pbs3debug,"Unknown command. type 'h' for help\n");
     }
     pbs3debug->n = 0; /* command treated */
-    //bs3_debug_comm_prompt(pbs3debug);
+
 }
 
 

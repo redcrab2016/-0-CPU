@@ -344,20 +344,10 @@ struct bs3_cpu_data
   BYTE pending_interrupt;
 };
 
-
-
-void bs3_hyper_timerset(DWORD microseconds);
-void bs3_hyper_timerstop();
 void bs3_cpu_init(struct bs3_cpu_data * pbs3);
 void bs3_cpu_interrupt(struct bs3_cpu_data * pbs3, int intnum);
-void bs3_cpu_write_byte(struct bs3_cpu_data * pbs3, WORD address, BYTE data);
-BYTE bs3_cpu_read_byte(struct bs3_cpu_data * pbs3, WORD address);
-void bs3_cpu_write_word(struct bs3_cpu_data * pbs3, WORD address, WORD data);
-WORD bs3_cpu_read_word(struct bs3_cpu_data * pbs3, WORD address);
 void bs3_cpu_exec(struct bs3_cpu_data * pbs3);
-void bs3_hyper_reset_memory(struct bs3_cpu_data * pbs3);
 void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, struct bs3_asm_code_map * pcodemap);
-void bs3_hyper_coreIO(struct bs3_cpu_data * pbs3);
 void bs3_hyper_main(struct bs3_asm_code_map * pcodemap,void (*debugf)(struct bs3_cpu_data *));
 
 #endif
