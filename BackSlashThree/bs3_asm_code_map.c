@@ -1,7 +1,7 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "bs3_type.h"
 #include "bs3_asm_code_map.h"
-
 
 static const char bs3_asm_code_map_binsignature[] = "CT4CJO12"; /* "BS3BIN01" with next character  */ 
 static const char bs3_asm_code_map_hexsignature[] = "CT4IFY12"; /* "BS3HEX01" with next character  */ 
@@ -17,7 +17,10 @@ const char * bs3_asm_code_map_message[]=
   [BS3_ASM_CODE_MAP_ERR_LOADFILE]       = "Fail to open file for code loading",
   [BS3_ASM_CODE_MAP_ERR_LOADBADFILE]    = "Not a BS3 loadable file",
   [BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF]  = "Unexpected end of file during BS3 file loading",
-  [BS3_ASM_CODE_MAP_ERR_LOADOVERLAP]    = "Loading of BS3 files with overlap" 
+  [BS3_ASM_CODE_MAP_ERR_LOADOVERLAP]    = "Loading of BS3 files with overlap",
+  [BS3_ASM_CODE_MAP_ERR_EMBEDBADTARGET] = "Failed to access target bs3 file to add an embed file",
+  [BS3_ASM_CODE_MAP_ERR_BADEMBEDFILE]   = "Failed to access embed file",
+  [BS3_ASM_CODE_MAP_ERR_BADMETABLOCK]   = "Unknown announce block (bad metablock)"
 };
 
 
@@ -29,6 +32,99 @@ void bs3_asm_code_map_reset(struct bs3_asm_code_map * bs3codemap)
     bs3codemap->code[i]=0;
     bs3codemap->inUse[i] = 0;
   }
+  if (bs3codemap->next)
+  {
+    bs3_asm_code_map_free(bs3codemap->next);
+    bs3codemap->next = (struct bs3_asm_code_map *)0;
+  }
+}
+
+int bs3_asm_code_map_embed(const char * filename, const char * embedfile, BYTE rombank, BYTE rambank, int codemaptype)
+{
+    int err;
+    int i;
+    FILE * outfile;
+    FILE * infile;
+    err = BS3_ASM_CODE_MAP_ERR_OK;
+    if ( filename   == ((void *)0)  ||
+         embedfile  == ((void *)0)     ) return BS3_ASM_CODE_MAP_ERR_UNEXPECTED;
+    /* test if filename and embedfile files do exist */
+    infile = fopen(filename,"r");
+    if (infile == 0) return BS3_ASM_CODE_MAP_ERR_EMBEDBADTARGET;
+    fclose(infile);
+    infile = fopen(embedfile,"rb");
+    if (infile == 0) return BS3_ASM_CODE_MAP_ERR_BADEMBEDFILE;
+    /* append embed announce block */
+    outfile = fopen(filename,"ab"); /* open for appening data */
+    switch (codemaptype)
+    {
+        case BS3_ASM_CODE_MAP_TYPE_BINARY:
+            /* add signature */
+            for (i = 0 ; bs3_asm_code_map_binsignature[i] ; i++) fputc(bs3_asm_code_map_binsignature[i]-1, outfile);
+            /* address, length : announce data block signature */
+            fputc(0xFF, outfile); /* 0xFFFF address low byte*/
+            fputc(0xFF, outfile); /* 0xFFFF address high byte*/
+            fputc(0x03, outfile); /* 0xFFFF length low byte */
+            fputc(0x00, outfile); /* 0xFFFF length high byte */
+            /* announce data block */
+            fputc(0x00, outfile); /* 0 = rom and ram bank number */
+            fputc((int)rombank,outfile); /* rom bank number */
+            fputc((int)rambank,outfile); /* ram bank number */
+            /* end block stream */
+            fputc(0, outfile); /* zero address low byte*/
+            fputc(0, outfile); /* zero address high byte*/
+            fputc(0, outfile); /* zero length low byte */
+            fputc(0, outfile); /* zero length high byte */
+            break;
+        case BS3_ASM_CODE_MAP_TYPE_HEXA:
+            /* add signature */
+            for (i = 0 ; bs3_asm_code_map_hexsignature[i] ; i++) fputc(bs3_asm_code_map_hexsignature[i]-1, outfile);
+            fputc('\n', outfile);
+            /* address, length : announce data block signature */
+            fputc('F', outfile);
+            fputc('F', outfile);
+            fputc('F', outfile);
+            fputc('F', outfile);
+            fputc(',', outfile);
+            fputc('0', outfile);
+            fputc('0', outfile);
+            fputc('0', outfile);
+            fputc('3', outfile);
+            fputc('\n',outfile);
+            /* announce data block*/
+            fputc('0', outfile);
+            fputc('0', outfile); /* 0 = rom and ram bank number */
+            fputc(hexa_digit[(rombank >> 4) & 0x0F ], outfile);
+            fputc(hexa_digit[ rombank       & 0x0F ], outfile); /* rom bank number*/
+            fputc(hexa_digit[(rambank >> 4) & 0x0F ], outfile);
+            fputc(hexa_digit[ rambank       & 0x0F ], outfile); /* rom bank number*/
+            fputc('\n', outfile);
+            /* end block stream */
+            fputc('0', outfile); /* first hexa address  */
+            fputc('0', outfile); /* second hexa address */
+            fputc('0', outfile); /* third hexa address  */
+            fputc('0', outfile); /* fourth hexa address */
+            fputc(',', outfile); /* comma separator between address and length*/
+            fputc('0', outfile); /* first hexa length  */
+            fputc('0', outfile); /* second hexa length */
+            fputc('0', outfile); /* third hexa length  */
+            fputc('0', outfile); /* fourth hexa length */
+            fputc('\n', outfile); /* block separator ... for end of data*/
+            break;
+        default:
+            err = BS3_ASM_CODE_MAP_ERR_UNEXPECTED;
+            break;
+    }
+    /* append embed file */
+    while (! feof(infile))
+    {
+        i = fgetc(infile);
+        if (i >-1) fputc(i,outfile);
+    }
+    /* end of append */
+    fclose(outfile);
+    fclose(infile);
+    return err;
 }
 
 int bs3_asm_code_map_save(const char * filename ,struct bs3_asm_code_map * bs3codemap, int codemaptype )
@@ -199,6 +295,8 @@ static int bs3_asm_code_map_load_(FILE * infile, struct bs3_asm_code_map * bs3co
     int isok;
     int state;
     int foundSignatureOnce;
+    BYTE rombank;
+    BYTE rambank;
     foundSignatureOnce = 0;
 
     while (!feof(infile)) /* consume the file completly*/
@@ -227,13 +325,15 @@ static int bs3_asm_code_map_load_(FILE * infile, struct bs3_asm_code_map * bs3co
         {
             return BS3_ASM_CODE_MAP_ERR_UNEXPECTED;
         }
-
         foundSignatureOnce = 1;
         if (isBin)
         {
             isok    = 1;
             while (isok)
             {
+                bs3codemap->rombank = rombank;
+                bs3codemap->rambank = rambank;
+
                 address = 0;
                 length  = 0;
                 /* load address*/
@@ -258,22 +358,66 @@ static int bs3_asm_code_map_load_(FILE * infile, struct bs3_asm_code_map * bs3co
                 }
                 /* load byte block */
                 if (length == 0 ) break; /* detect logical end of file */
-                while (length)
+                if (address == 65535 && length > 1) /* it is an announce block */
                 {
-                    achar = fgetc(infile);
-                    isok    = isok && (achar != EOF);
-                    if (!isok) 
-                    {   
-                        return BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF;
-                    }
-                    if (bs3codemap->inUse[address] && acceptOverlap == 0) 
+                    switch(length)
                     {
-                        return BS3_ASM_CODE_MAP_ERR_LOADOVERLAP;
+                        case 3: /* should be (currently) rom/ram bank number annoucement */
+                            achar = fgetc(infile); /* read meta block type : 1 of 3 bytes  */
+                            isok = isok && (achar != EOF);
+                            if (!isok)
+                            {
+                                return BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF;
+                            }
+                            switch (achar) /* Meta block type selector */
+                            {
+                                case 0: /* 0 = ram/rom bank number announcement*/
+                                    /* get new rom bank number*/
+                                    achar = fgetc(infile); /* 2 of 3 bytes */
+                                    isok = isok && (achar != EOF);
+                                    if (!isok)
+                                    {
+                                        return BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF;
+                                    }       
+                                    rombank = (BYTE)achar;
+                                    /* get new ram bank number */
+                                    achar = fgetc(infile); /* 3 of 3 bytes */
+                                    isok = isok && (achar != EOF);
+                                    if (!isok)
+                                    {
+                                        return BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF;
+                                    }       
+                                    rambank = (BYTE)achar;
+                                    /* new code map */
+                                    bs3codemap = bs3_asm_code_map_new_(bs3codemap);
+                                    break;
+                                default: 
+                                    return BS3_ASM_CODE_MAP_ERR_BADMETABLOCK;
+                            }
+                            break;
+                        default:
+                            return BS3_ASM_CODE_MAP_ERR_BADMETABLOCK;
                     }
-                    bs3codemap->code[address] = (char)achar;
-                    bs3codemap->inUse[address] = 1;
-                    address++;
-                    length--;
+                }
+                else
+                {
+                    while (length)
+                    {
+                        achar = fgetc(infile);
+                        isok    = isok && (achar != EOF);
+                        if (!isok) 
+                        {   
+                            return BS3_ASM_CODE_MAP_ERR_UNEXPECTEDEOF;
+                        }
+                        if (bs3codemap->inUse[address] && acceptOverlap == 0) 
+                        {
+                            return BS3_ASM_CODE_MAP_ERR_LOADOVERLAP;
+                        }
+                        bs3codemap->code[address] = (char)achar;
+                        bs3codemap->inUse[address] = 1;
+                        address++;
+                        length--;
+                    }
                 }
             }
             
@@ -285,6 +429,8 @@ static int bs3_asm_code_map_load_(FILE * infile, struct bs3_asm_code_map * bs3co
             state   = BS3_ASM_CODE_MAP_LOAD_STATE_GETADDRESS;
             while (isok)
             {
+                bs3codemap->rombank = rombank;
+                bs3codemap->rambank = rambank;                
                 /* read a byte en hexa
                 take two hexa digit et get the byte value, other character are ignotred */
                 achar = fgetc(infile);
@@ -295,9 +441,9 @@ static int bs3_asm_code_map_load_(FILE * infile, struct bs3_asm_code_map * bs3co
                     case '0' ... '9':
                         achar -= '0';
                         break;
-                    case 'a' ... 'z':
+                    case 'a' ... 'f':
                         achar -= 32;
-                    case 'A' ... 'Z':
+                    case 'A' ... 'F':
                         achar -= 'A' ;
                         achar += 10;
                         break;
@@ -339,7 +485,59 @@ static int bs3_asm_code_map_load_(FILE * infile, struct bs3_asm_code_map * bs3co
                                 break;
                             }
                             state = BS3_ASM_CODE_MAP_LOAD_STATE_GETBLOCK;
+                            if (address == 65535 && length > 1) state = BS3_ASM_CODE_MAP_LOAD_STATE_METABLOCK;
                         }   
+                        break;
+                    case BS3_ASM_CODE_MAP_LOAD_STATE_METABLOCK:
+                        if (length != 3 ) return BS3_ASM_CODE_MAP_ERR_BADMETABLOCK;
+                        if (i == 0)
+                        {
+                            abyte = 0;
+                        }
+                        abyte = (abyte << 4) | achar;
+                        i++;
+                        if (i == 2) /* 1 of 3 bytes */
+                        {
+                            i = 0;
+                            switch(abyte)
+                            {
+                                case 0: /*rom/ram bank number */
+                                    state = BS3_ASM_CODE_MAP_LOAD_STATE_METABLOCK_ROMBANK;
+                                    break;
+                                default:
+                                    return BS3_ASM_CODE_MAP_ERR_BADMETABLOCK;
+                            }
+                        }
+                        break;
+                    case BS3_ASM_CODE_MAP_LOAD_STATE_METABLOCK_ROMBANK:
+                        if (i == 0)
+                        {
+                            abyte = 0;
+                        }
+                        abyte = (abyte << 4) | achar;
+                        i++;
+                        if (i == 2) /* 2 of 3 bytes */
+                        {
+                            i = 0;
+                            rombank = abyte;
+                            state = BS3_ASM_CODE_MAP_LOAD_STATE_METABLOCK_RAMBANK;
+                        }
+                        break;
+                    case BS3_ASM_CODE_MAP_LOAD_STATE_METABLOCK_RAMBANK:
+                        if (i == 0)
+                        {
+                            abyte = 0;
+                        }
+                        abyte = (abyte << 4) | achar;
+                        i++;
+                        if (i == 2) /* 3 of 3 bytes */
+                        {
+                            i = 0;
+                            rambank = abyte;
+                            /* new code map */
+                            bs3codemap = bs3_asm_code_map_new_(bs3codemap);
+                            state = BS3_ASM_CODE_MAP_LOAD_STATE_GETADDRESS;
+                        }
                         break;
                     case BS3_ASM_CODE_MAP_LOAD_STATE_GETBLOCK:
                         if (i == 0)
@@ -398,4 +596,46 @@ int bs3_asm_code_map_load(const char * filename ,struct bs3_asm_code_map * bs3co
     err = bs3_asm_code_map_load_(infile, bs3codemap, acceptOverlap);
     fclose(infile);
     return err;
+}
+
+int bs3_asm_code_map_isvalid(const char * filename)
+{
+    struct bs3_asm_code_map * temp;
+    int result;
+    temp = bs3_asm_code_map_new();
+    if (temp == 0) return BS3_ASM_CODE_MAP_ERR_UNEXPECTED;
+    result = bs3_asm_code_map_load(filename,temp,0);
+    bs3_asm_code_map_free(temp);
+    return result;
+}
+
+
+struct bs3_asm_code_map * bs3_asm_code_map_new_(struct bs3_asm_code_map * current )
+{
+    struct bs3_asm_code_map * newmap;
+    newmap =  (struct bs3_asm_code_map *)calloc(1,sizeof(struct bs3_asm_code_map));
+    if (current)
+    {
+        current->next = newmap;
+    }
+    newmap->dynamic=1; /* indicat that object has been created dynamically */
+    newmap->next = (struct bs3_asm_code_map *)0; /* be sure there is no next map */
+    return newmap;
+}
+
+
+struct bs3_asm_code_map * bs3_asm_code_map_new()
+{
+    return bs3_asm_code_map_new_(0);
+}
+
+void bs3_asm_code_map_free(struct bs3_asm_code_map * bs3codemap)
+{
+     struct bs3_asm_code_map * nextmap;
+    while (bs3codemap != 0)
+    {
+        nextmap = bs3codemap->next;
+        if (bs3codemap->dynamic) free(bs3codemap);
+        bs3codemap = nextmap;
+    }
 }

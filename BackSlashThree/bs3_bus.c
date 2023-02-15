@@ -13,6 +13,23 @@ int bs3_bus_interrupt_FIFO[16];
 int bs3_bus_interrupt_FIFO_front = 0;
 int bs3_bus_interrupt_FIFO_rear = -1;
 int bs3_bus_interrupt_FIFO_count = 0;
+int bs3_bus_romflash_enabled = 0;
+
+void bs3_bus_romflash_enable()
+{
+    bs3_bus_romflash_enabled = 1;
+}
+
+void bs3_bus_romflash_disable()
+{
+    bs3_bus_romflash_enabled = 0;
+}
+
+int  bs3_bus_romflash()
+{
+    return bs3_bus_romflash_enabled;
+}
+
 
 int bs3_bus_interrupt_enqueue(int interrupt) {
   int i;

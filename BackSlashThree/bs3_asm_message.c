@@ -44,5 +44,9 @@ const char * bs3_asm_message[]=
   [BS3_ASM_PASS2_ERR_LABELNOTFOUND]        = "Pass 2 label not found",
   [BS3_ASM_PASS2_ERR_LABEL2FAR]            = "Pass 2 label too far",
   [BS3_ASM_PASS1_PARSE_ERR_BADALIGN]       = "Incorrect or not a power of two 'align' directive",
-  [BS3_ASM_PASS1_PARSE_ERR_TOOBIGSPACE]    = "Incorrect value or not enough address for 'space' directive"
+  [BS3_ASM_PASS1_PARSE_ERR_TOOBIGSPACE]    = "Incorrect value or not enough address for 'space' directive",
+  [BS3_ASM_PASS1_PARSE_ERR_EMBEDNOTFOUND]  = "Embed file not found",
+  [BS3_ASM_PASS1_ERR_TOOMANYEMBED]         = "Too many embed file",
+  [BS3_ASM_PASS1_ERR_ALREADY_EMBEDDED]     = "Duplicate embed file",
+  [BS3_ASM_PASS1_ERR_INVALIDEMBEDFILE]     = "Invalid embed file"
 };

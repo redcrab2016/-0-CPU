@@ -6,6 +6,9 @@
 #include <libgen.h>
 
 #include "bs3_asm.h"
+#include "bs3_asm_code_map.h"
+
+struct bs3_asm_embed_file_list bs3_asm_embedlist;
 
 char bs3_asm_tmppath[256];
 /* get effective name based on current file name , wish file name and list of include path */
@@ -47,6 +50,31 @@ int bs3_asm_effectivefilename(const char * currfilename, const char * wishfilena
   /* stcpy wishfilename to finalFilename !!! handle if same address */
   if (finalFilename != wishfilename && finalFilename && wishfilename) strcpy(finalFilename, wishfilename);
   return 0;
+}
+
+/* add an embed file to the list if it does not already exist 
+  return error code 
+*/
+int bs3_asm_embed_addfile(const char * embedfile, BYTE rombank, BYTE rambank)
+{
+  int i;
+  
+  /* search if it does not already exist in the list */
+  for (i = 0 ; i < bs3_asm_embedlist.size ; i++)
+  {
+    if (strcmp(embedfile, bs3_asm_embedlist.embed[i].embedfile) == 0) return BS3_ASM_PASS1_ERR_ALREADY_EMBEDDED;
+  }
+  /* check if file is valid */
+  i = bs3_asm_code_map_isvalid(embedfile);
+  if (i != BS3_ASM_CODE_MAP_ERR_OK) return BS3_ASM_PASS1_ERR_INVALIDEMBEDFILE;
+  /* do we have enough space in embed file list */
+  if (bs3_asm_embedlist.size >= BS3_MAX_EMBEDFILE) return BS3_ASM_PASS1_ERR_TOOMANYEMBED;
+  /* add the embed file in the list */
+  strcpy(bs3_asm_embedlist.embed[bs3_asm_embedlist.size].embedfile, embedfile);
+  bs3_asm_embedlist.embed[bs3_asm_embedlist.size].rambank = rambank;
+  bs3_asm_embedlist.embed[bs3_asm_embedlist.size].rombank = rombank;
+  bs3_asm_embedlist.size++;
+  return BS3_ASM_PASS1_PARSE_ERR_OK;
 }
 
 /* check label in provided bs3line for duplicate, then attach local label to last encounter global label */
@@ -2156,7 +2184,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
                 bs3_asm_report(filename, linenum, pbs3_asm->column, err);
             }
             break;
-        case BS3_ASM_OPETYPE_DIRECTIVE: /* INCLUDE/ MACRO/ENDM/ORG */
+        case BS3_ASM_OPETYPE_DIRECTIVE: /* EMBED/ALIGN/SPACE/INCLUDE/MACRO/ENDM/ORG */
             switch (pbs3_asm->opeCode)
             {
             case BS3_INSTR_ALIGN:
@@ -2229,6 +2257,39 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
                 isMacroRecording = 0;  
                 fclose(macroFile);  
                 macroFile = 0;        
+                break;
+            case BS3_INSTR_EMBED: /* EMBED "file", rom bank number, ram bank number */
+                err = bs3_asm_line_commit(pbs3_asm);
+                if (err != BS3_ASM_PASS1_PARSE_ERR_OK) 
+                {
+                    bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+                    break;
+                }
+                /* check if provided name exist */
+                i=0;
+                while (pbs3_asm->line[pbs3_asm->param[0]+i+1] != '"' && i <BS3_ASM_LINE_BUFFER-1)
+                {
+                    includefilename[i] = pbs3_asm->line[pbs3_asm->param[0]+i+1];
+                    i++;
+                }
+                includefilename[i] = 0;
+                /* effective filename */
+                if (bs3_asm_effectivefilename(filename, includefilename, includefilename)) /* file found*/
+                {
+                    /* Add filename and bank rom/ram number in list of embed */
+                    err = bs3_asm_embed_addfile(includefilename, pbs3_asm->paramValue[1] /* rom bank */, pbs3_asm->paramValue[2] /* ram bank */);
+                    if (err != BS3_ASM_PASS1_PARSE_ERR_OK) /* embed file addition failed */
+                    {
+                        bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+                        break;
+                    }
+                } 
+                else /* Embed File not found error */
+                {
+                    err = BS3_ASM_PASS1_PARSE_ERR_EMBEDNOTFOUND;
+                    bs3_asm_report(filename, linenum, pbs3_asm->column, err);
+                    break;
+                }
                 break;
             case BS3_INSTR_INCLUDE:
                 err = bs3_asm_line_commit(pbs3_asm);

@@ -5,7 +5,7 @@
 #define _BS3_H 1
 
 /* Instruction set */
-#define BS3_INSTR_LAST 0x109
+#define BS3_INSTR_LAST 0x10A
 
 #define BS3_INSTR_NOP 0x00
 #define BS3_INSTR_INB 0x01
@@ -243,6 +243,7 @@
 #define BS3_INSTR_INCLUDE 0x107
 #define BS3_INSTR_ALIGN 0x108
 #define BS3_INSTR_SPACE 0x109
+#define BS3_INSTR_EMBED 0x10A
 
 /* BS3 CPU Status */
 #define BS3_STATUS_DEFAULT  0

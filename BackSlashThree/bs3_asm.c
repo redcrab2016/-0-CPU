@@ -38,6 +38,26 @@ int bs3_asm_file( const char * filename, const char * filenameout, const char * 
 
 /* Generate binary file */
   err = bs3_asm_code_map_save(filenameout ,&bs3_asm_map, format );
+  if (err == BS3_ASM_CODE_MAP_ERR_OK)
+  {
+    for (i= 0; i < bs3_asm_embedlist.size; i++) /* add embed file */
+    {
+      err = bs3_asm_code_map_embed( filenameout, 
+                                    bs3_asm_embedlist.embed[i].embedfile,
+                                    bs3_asm_embedlist.embed[i].rombank,
+                                    bs3_asm_embedlist.embed[i].rambank,
+                                    format);
+      if (err != BS3_ASM_CODE_MAP_ERR_OK)
+      {
+        fprintf(stderr, "Failed to embed file %s for rom bank #%d ram bank#%d : error %s\n",
+                bs3_asm_embedlist.embed[i].embedfile, 
+                (int)bs3_asm_embedlist.embed[i].rombank, 
+                (int)bs3_asm_embedlist.embed[i].rambank,
+                bs3_asm_code_map_message[err]);
+        break;
+      }
+    }
+  }
   if (err == BS3_ASM_CODE_MAP_ERR_OK) /* if ok then  generate the report */
   {
     freport = fopen(filenamereport, "wt");

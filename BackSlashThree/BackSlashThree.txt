@@ -118,8 +118,8 @@ MEMORY MAP
 		0103 : output data ready (==0 , 0102 is ready for a write operation, ==FF no output available, ==01 wait(about to come))
 		0104 : byte secondary output data
 		0105 : secondary output data ready (==0, 0104 is ready for write operation, ==FF no output available, ==01 wait(about to come))
-		0106 : reserved byte I/O (reserved for future ROM bank number)
-		0107 ; reserved byte I/O (reserved for future RAM bank number)
+		0106 : ROM bank number selection (5 bits : 0 to 31 : 32 ROM banks for 32*8KiB = 256 KiB ROM )
+		0107 ; RAM bank number selection (6 bits : 0 to 63 : 64 RAM banks for 64*4KiB = 256 KiB RAM )
 		0108 : Timer clock count low  (microseconds 32 bits counters, set here from 0108 010B, the tick delay)
 		010A : Timer clock count high (microseconds high 16 bits : a word write operation at this address  (byte at 010B or word at 010A) will reset/restart the timer counter)
 		010C : Timer repeat(0) or once(1) (0 = when timer is complete then repreat the timer, 1= when timer is complete the timer is not re-armed)
@@ -145,8 +145,8 @@ MEMORY MAP
 		0120 - 01FF : other system I/O
 	0200 - 03FF : Default Stack(grow downward, SP initial value to 0400) / possible Data / possible Code		
 	0400 - CFFF : Code / Data(ROM, RAM System or shared with device) / possible stack
-	D000 - DFFF : currently Code / data, but reserved for future RAM bank (4 KiB) bank number at [0107]
-	E000 - FFFF : currently Code / data, but reserved for future ROM bank (8 KiB) bank number at [0106]
+	D000 - DFFF : RAM bank (4 KiB) bank number at [0107]
+	E000 - FFFF : ROM bank (8 KiB) bank number at [0106]
 
 INSTRUCTION SET (fully qualified 225 CPU instruction)
 

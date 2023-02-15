@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
     }
   }
   bs3_hyper_main(&codemap,((void *)0)); /* Execute code with no debugger handler */
+  bs3_asm_code_map_free(&codemap);
   return 0;
 }
 
@@ -435,6 +436,7 @@ int main(int argc, char *argv[])
     }
     if (!noDebug) bs3_debug_prepare(bindaddr, port, debugStop); /* 0 for default port 35853*/
     bs3_hyper_main(&codemap,(noDebug)?((void *)0):&bs3_debug);
+    bs3_asm_code_map_free(&codemap);
     if (!noDebug) bs3_debug_end();
   }
   return 0;

@@ -120,6 +120,10 @@
 #define BS3_ASM_PASS2_ERR_LABEL2FAR            41
 #define BS3_ASM_PASS1_PARSE_ERR_BADALIGN       42
 #define BS3_ASM_PASS1_PARSE_ERR_TOOBIGSPACE    43
+#define BS3_ASM_PASS1_PARSE_ERR_EMBEDNOTFOUND  44
+#define BS3_ASM_PASS1_ERR_TOOMANYEMBED         45
+#define BS3_ASM_PASS1_ERR_ALREADY_EMBEDDED     46
+#define BS3_ASM_PASS1_ERR_INVALIDEMBEDFILE     47
 
 /* Symbol type */
 #define BS3_ASM_SYMBOLTYPE_UNKNOWN             0x00
@@ -154,7 +158,7 @@
 #define BS3_MAX_FILENAME_SIZE 256
 #define BS3_MAX_INCLUDEPATH 32
 #define BS3_BUFFER_SIZE 4096
-
+#define BS3_MAX_EMBEDFILE 256
 
 struct bs3_asm_line
 {
@@ -192,12 +196,28 @@ struct bs3_asm_include_paths
   int size;
 };
 
+struct bs3_asm_embed_file
+{
+  char embedfile[BS3_MAX_FILENAME_SIZE];
+  BYTE rombank;
+  BYTE rambank;
+};
+
+struct bs3_asm_embed_file_list
+{
+  struct bs3_asm_embed_file embed[BS3_MAX_EMBEDFILE];
+  int size;
+};
+
+extern struct bs3_asm_embed_file_list bs3_asm_embedlist;
 extern struct bs3_asm_code_map  bs3_asm_map; 
 extern struct bs3_asm_include_paths * bs3_asm_includepaths;
 extern const char * bs3_asm_message[];
 extern char bs3_asm_tmppath[];
 extern struct bs3_asm_line bs3_asm[]; /* to be managed as a sequential third party resource ( as a file) */
 extern long bs3_asm_nbline; /* current size of bs3_asm usage */
+
+int bs3_asm_embed_addfile(const char * embedfile, BYTE rombank, BYTE rambank);
 
 int bs3_asm_pass1_addmacro(const char * macrofilename);
 void bs3_asm_pass1_removemacrofiles();

@@ -29,6 +29,10 @@ extern struct bs3_device dev_rtc72421;
 extern struct bs3_device dev_bs3irqctrl;
 extern struct bs3_device dev_bs3inout;
 extern struct bs3_device dev_bs3timer;
+extern struct bs3_device dev_bs3_rambank;
+extern struct bs3_device dev_bs3_rambankselect;
+extern struct bs3_device dev_bs3_rombank;
+extern struct bs3_device dev_bs3_rombankselect;
 
 void bs3_hyper_device_prepare()
 {
@@ -36,6 +40,10 @@ void bs3_hyper_device_prepare()
   bs3_bus_plugdevice(&dev_bs3inout);
   bs3_bus_plugdevice(&dev_bs3timer);
   bs3_bus_plugdevice(&dev_rtc72421);
+  bs3_bus_plugdevice(&dev_bs3_rambank);
+  bs3_bus_plugdevice(&dev_bs3_rambankselect);
+  bs3_bus_plugdevice(&dev_bs3_rombank);
+  bs3_bus_plugdevice(&dev_bs3_rombankselect);
   bs3_bus_plugdevice(&dev_bs3irqctrl);
 }
 
@@ -1801,10 +1809,23 @@ void bs3_hyper_reset_memory(struct bs3_cpu_data * pbs3)
 void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, struct bs3_asm_code_map * pcodemap)
 {
   long i;
-  for (i=0; i < 65536; i++) 
-  { 
-    if (pcodemap->inUse[i])  bs3_bus_writeByte(i & 0x0FFFF, pcodemap->code[i]);
+  /* set bs3 bus romflash signal */
+  bs3_bus_romflash_enable();
+  while (pcodemap)
+  {
+    bs3_bus_writeByte(0x0106, pcodemap->rombank); /* set rom bank */
+    bs3_bus_writeByte(0x0107, pcodemap->rambank); /* set ram bank */
+    for (i=0; i < 65536; i++) 
+    { 
+        if (pcodemap->inUse[i])  bs3_bus_writeByte(i & 0x0FFFF, pcodemap->code[i]);
+    }
+    pcodemap = pcodemap->next;
   }
+  /* unset bs3 bus romflash signal */
+  bs3_bus_romflash_disable();
+  /* set default ROM/RAm bank number*/
+  bs3_bus_writeByte(0x0106, 0); /* set rom bank default */
+  bs3_bus_writeByte(0x0107, 0); /* set ram bank default */
 }
 
 void bs3_hyper_main(struct bs3_asm_code_map * pcodemap, void (*debugf)(struct bs3_cpu_data *)) /* BYTE * program, WORD programsize) */

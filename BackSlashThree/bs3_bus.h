@@ -26,4 +26,7 @@ WORD bs3_bus_readWord(WORD address);
 void bs3_bus_writeWord(WORD address, WORD data);
 int  bs3_bus_setinterrupt(int interrupt);
 int  bs3_bus_getinterrupt();
+void bs3_bus_romflash_enable();
+void bs3_bus_romflash_disable();
+int  bs3_bus_romflash();
 #endif
