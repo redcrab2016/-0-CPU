@@ -3,6 +3,9 @@
 #ifndef _BS3_BUS_H
 #define _BS3_BUS_H 1
 
+#define BS3_BUS_NOPORT_ADDR 0xFFFF
+#define BS3_BUS_NOPORT_MASK 0x0000
+
 struct bs3_device
 {
     const char * name;
@@ -20,6 +23,7 @@ struct bs3_device
 void bs3_bus_start();
 void bs3_bus_stop();
 int  bs3_bus_plugdevice(struct bs3_device * ptrdevice);
+void bs3_bus_clock_wait();
 BYTE bs3_bus_readByte(WORD address);
 void bs3_bus_writeByte(WORD address, BYTE data);
 WORD bs3_bus_readWord(WORD address);

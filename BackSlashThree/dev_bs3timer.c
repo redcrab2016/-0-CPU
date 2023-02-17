@@ -140,5 +140,7 @@ struct bs3_device dev_bs3timer =
     .stopdevice = &dev_bs3timer_stop,
     .readByte = &dev_bs3timer_read,
     .writeByte = &dev_bs3timer_write,
+    .readWord = NULL,
+    .writeWord = NULL,
     .interruptNumber = 3 /* interrupt vector 3 */
 };

@@ -469,5 +469,7 @@ struct bs3_device dev_bs3inout =
     .stopdevice = &dev_bs3inout_stop,
     .readByte = &dev_bs3inout_read,
     .writeByte = &dev_bs3inout_write,
+    .readWord = NULL,
+    .writeWord = NULL,
     .interruptNumber = 4 /* interrupt vector 4 */
 };

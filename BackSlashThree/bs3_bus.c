@@ -1,19 +1,28 @@
-#include <pthread.h>
 #include <stdio.h>
+#include <pthread.h>
+#include <signal.h>
+#include <time.h>
+#include <errno.h>
 #include "bs3_bus.h"
 
 #define INTERRUPT_QUEUE_SIZE 16
-
+#define BUS_FREQ_MHZ 20
 struct bs3_device * bs3_devices[256];
 int nb_bs3_device = 0;
 struct bs3_device * bs3_bus_addresses[65536];
 pthread_mutex_t lockbus = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lockirq = PTHREAD_MUTEX_INITIALIZER;
+pthread_t thread_busClock;
+pthread_mutex_t lockBusClock =  PTHREAD_MUTEX_INITIALIZER;
+int created_thread_busClock = 0;
+int endClock = 0;
+unsigned long bs3_clock = 0;
 int bs3_bus_interrupt_FIFO[16];
 int bs3_bus_interrupt_FIFO_front = 0;
 int bs3_bus_interrupt_FIFO_rear = -1;
 int bs3_bus_interrupt_FIFO_count = 0;
 int bs3_bus_romflash_enabled = 0;
+unsigned long long clock_tick_delay;
 
 void bs3_bus_romflash_enable()
 {
@@ -119,9 +128,15 @@ void bs3_bus_stop()
 
 int  bs3_bus_plugdevice(struct bs3_device * ptrdevice)
 {
+    long addr;
+
     if (nb_bs3_device >= 256) return 1; /* error ... too many devices */
     bs3_devices[nb_bs3_device++] = ptrdevice;
-    long addr;
+
+    if (ptrdevice->mask == BS3_BUS_NOPORT_MASK &&
+        ptrdevice->address == BS3_BUS_NOPORT_ADDR)
+        return 0; /* if device do not handle any address */
+
     for (addr = 0; addr < 65536; addr++)
     {
         if ((addr & ptrdevice->mask) == (ptrdevice->address & ptrdevice->mask))
@@ -132,7 +147,8 @@ int  bs3_bus_plugdevice(struct bs3_device * ptrdevice)
     return 0;
 }
 
-BYTE bs3_bus_readByte(WORD address)
+/* bus access without clock consumption */
+BYTE bs3_bus_readByte_(WORD address)
 {
     BYTE value;
     if (bs3_bus_addresses[address] == 0) return 0;
@@ -143,7 +159,15 @@ BYTE bs3_bus_readByte(WORD address)
     return value;
 }
 
-void bs3_bus_writeByte(WORD address, BYTE data)
+BYTE bs3_bus_readByte(WORD address)
+{
+    BYTE value;
+    bs3_bus_clock_wait();
+    return bs3_bus_readByte_(address);
+}
+
+/* bus access without clock consumption */
+void bs3_bus_writeByte_(WORD address, BYTE data)
 {
     if (bs3_bus_addresses[address] == 0) return;
     if (bs3_bus_addresses[address]->writeByte == 0) return;
@@ -152,13 +176,25 @@ void bs3_bus_writeByte(WORD address, BYTE data)
 //    pthread_mutex_unlock(&lockbus); 
 }
 
+void bs3_bus_writeByte(WORD address, BYTE data)
+{
+    bs3_bus_clock_wait();
+    bs3_bus_writeByte_(address, data);
+}
+
 WORD bs3_bus_readWord(WORD address)
 {
     WORD value;
+    bs3_bus_clock_wait();    
     if (bs3_bus_addresses[address] == 0) return 0;
     if (bs3_bus_addresses[address]->readWord == 0) 
     {
-        return bs3_bus_readByte(address) | (bs3_bus_readByte(address+1) << 8 );
+        value = bs3_bus_readByte_(address) ;
+        if (address & 0x0001 == 0)
+            value = value | (bs3_bus_readByte_(address+1) << 8 );
+        else
+            value = value | (bs3_bus_readByte(address+1) << 8 ); /* read word on odd address consume one more bus clock */
+        return value;    
     }
 //    pthread_mutex_lock(&lockbus); 
     value = (*(bs3_bus_addresses[address]->readWord))(address);
@@ -168,11 +204,15 @@ WORD bs3_bus_readWord(WORD address)
 
 void bs3_bus_writeWord(WORD address, WORD data)
 {
+    bs3_bus_clock_wait();
     if (bs3_bus_addresses[address] == 0) return;
     if (bs3_bus_addresses[address]->writeWord == 0) 
     {
-        bs3_bus_writeByte(address, (BYTE)(data & 0x00FF));
-        bs3_bus_writeByte(address + 1, (BYTE)((data >> 8) & 0x00FF));
+        bs3_bus_writeByte_(address, (BYTE)(data & 0x00FF));
+        if ((address & 0x0001) == 0) /* if address is even use same clock bus time */
+            bs3_bus_writeByte_(address + 1, (BYTE)((data >> 8) & 0x00FF));
+        else
+            bs3_bus_writeByte(address + 1, (BYTE)((data >> 8) & 0x00FF)); /* word access on odd address consume one more bus clock */
         return;
     }
 //    pthread_mutex_lock(&lockbus); 
@@ -196,7 +236,7 @@ int bs3_bus_getinterrupt()
     return interrupt;
 }
 
-/* Interrupt controler */
+/* Interrupt controler device */
 
 BYTE bs3_bus_intctrl_readbyte(WORD address)
 {
@@ -208,6 +248,97 @@ void bs3_bus_intctrl_writebyte(WORD address, BYTE data)
     while (bs3_bus_interrupt_dequeue() != -1 );/* empty the FIFO IRQ queue */
 }
 
+/* Bus clock device */
+
+/* duration of execution of this function must be at most the time delay of the clock */
+void bs3_bus_clock_wait()
+{
+    pthread_mutex_lock(&lockBusClock);
+    pthread_mutex_unlock(&lockBusClock);
+}
+
+/* this function is invoked by an independant thread */
+static void * bs3_bus_clock_run(void * bs3_device_bus)
+{
+    int response;
+    unsigned long long ticker;
+    endClock = 0;
+    while (!endClock)
+    {
+        pthread_mutex_lock(&lockBusClock);
+        ticker = clock_tick_delay;
+        while (ticker) ticker--;
+        bs3_clock++;      
+        pthread_mutex_unlock(&lockBusClock);
+
+    }
+    return NULL;
+}
+
+int bs3_bus_clock_stop()
+{
+    int result;
+    if (!created_thread_busClock) return 0;
+    result = pthread_kill(thread_busClock, 0);
+    created_thread_busClock = 0;
+    endClock = 1;
+
+    if (result == ESRCH) 
+    {
+        return result;
+    } 
+    else if (result == 0) 
+    {
+        pthread_join(thread_busClock, NULL);
+        return 0;
+    }    
+}
+
+int bs3_bus_clock_start()
+{
+    if (created_thread_busClock) bs3_bus_clock_stop();
+    bs3_clock = 0;
+    endClock = 0;
+    /* calibration strategy */
+    struct timespec tS;
+    unsigned long long ticker;
+    tS.tv_sec = 0;
+    tS.tv_nsec = 0;
+    ticker = 1000000000UL;
+    clock_settime(CLOCK_THREAD_CPUTIME_ID /*CLOCK_PROCESS_CPUTIME_ID */, &tS);
+    while (ticker) ticker--;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID /* CLOCK_PROCESS_CPUTIME_ID */, &tS); 
+    long double period = 1000000000.0/(BUS_FREQ_MHZ * 1000000.0);
+    clock_tick_delay = (unsigned long long)(((long double)(1000000000.0) * period)/  ((long double)tS.tv_sec * (long double)(1000000000UL) + (long double)tS.tv_nsec));   
+    /* for debug : 
+    fprintf(stdout, "Clock calibration time spent for 1000000000 cyles\n Duration: %lu s and %ld nanosecond\n Period: %Lf ns for %d Mhz\n %llu loops/period\n", 
+            tS.tv_sec, tS.tv_nsec,period, BUS_FREQ_MHZ,clock_tick_delay);
+    */
+    /* end of calibration */
+
+
+
+    int result = pthread_create(&thread_busClock, NULL, &bs3_bus_clock_run, NULL); 
+    if (result == 0) created_thread_busClock = 1;
+    return result;
+}
+
+
+
+struct bs3_device dev_bs3busclock =
+{
+    .name = "BS3 Bus Clock",
+    .address = BS3_BUS_NOPORT_ADDR,
+    .mask = BS3_BUS_NOPORT_MASK,
+    .startdevice = &bs3_bus_clock_start,
+    .stopdevice = &bs3_bus_clock_stop,
+    .writeByte = NULL,
+    .readByte = NULL,
+    .writeWord = NULL,
+    .readWord = NULL,
+    .interruptNumber = 0 /* no interrupt */
+};
+
 struct bs3_device dev_bs3irqctrl = 
 {
     .name="BS3 IRQ-Controller",
@@ -217,5 +348,7 @@ struct bs3_device dev_bs3irqctrl =
     .stopdevice = NULL,
     .readByte = &bs3_bus_intctrl_readbyte,
     .writeByte = &bs3_bus_intctrl_writebyte,
+    .readWord = NULL,
+    .writeWord = NULL,
     .interruptNumber = 0 /* No interrupt (BS3 CPU IRQ pin emulated) */
 };

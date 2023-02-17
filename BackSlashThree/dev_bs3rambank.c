@@ -68,11 +68,13 @@ int dev_bs3_rambank_start()
     for ( i = 0 ; i < BANK_SIZE; i++ )
         for ( j = 0 ; j < BANK_WIDTH ; j++ )
             rambank[i][j] = 0;
+    return 0;
 }
 
 int dev_bs3_rambank_stop()
 {
     /* Nothing to do*/
+    return 0;
 }
 
 /* declare BS3 ram bank device */

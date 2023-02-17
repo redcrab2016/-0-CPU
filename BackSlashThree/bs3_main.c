@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
   }
 
   struct bs3_asm_code_map codemap;
-  
+  codemap.dynamic =0;
   if (toCompile)
   {
     bs3_asm_includepaths = &inc; /* provides the include paths */

@@ -383,5 +383,7 @@ struct bs3_device dev_rtc72421 =
     .stopdevice = &dev_rtc72421_stop,
     .readByte = &dev_rtc72421_read,
     .writeByte = &dev_rtc72421_write,
+    .readWord = NULL,
+    .writeWord = NULL,
     .interruptNumber = 8 /* interrupt vector 8 */
 };

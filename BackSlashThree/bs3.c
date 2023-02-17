@@ -24,6 +24,7 @@ static void sighandler(int signo)
 
 struct bs3_cpu_data * bs3_cpu = NULL; /* bs3 cpu used by bs3 bus when cpu memory need to be access by the bus*/
 
+extern struct bs3_device dev_bs3busclock;
 extern struct bs3_device dev_memory;
 extern struct bs3_device dev_rtc72421;
 extern struct bs3_device dev_bs3irqctrl;
@@ -36,6 +37,7 @@ extern struct bs3_device dev_bs3_rombankselect;
 
 void bs3_hyper_device_prepare()
 {
+  bs3_bus_plugdevice(&dev_bs3busclock);
   bs3_bus_plugdevice(&dev_memory);
   bs3_bus_plugdevice(&dev_bs3inout);
   bs3_bus_plugdevice(&dev_bs3timer);
