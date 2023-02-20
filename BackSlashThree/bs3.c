@@ -1800,14 +1800,6 @@ void bs3_cpu_exec(struct bs3_cpu_data * pbs3)
 
 /* Hypervisor */
 
-/*
-void bs3_hyper_reset_memory(struct bs3_cpu_data * pbs3)
-{
-  long i;
-  for (i=0; i < 65536; i++) pbs3->m[i] = 0;
-}
-*/
-
 void bs3_hyper_load_memory(struct bs3_cpu_data * pbs3, struct bs3_asm_code_map * pcodemap)
 {
   long i;

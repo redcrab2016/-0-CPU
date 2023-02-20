@@ -1,0 +1,324 @@
+BS3 Graphic device
+Maximum 160x100 8bits per pixel view port
+Videoram : 2 x 64KiB : 2 x (256 width x 256 Height pixels)
+
+Internally there is 2 surfaces of 256x256 pixels 
+Surface coordinates are expressed by a word : MSB Y coordinate (0 to 255) LSB X coordinate (0 to 255)
+Only a viewport of maximum 160x100 pixels is visible on screen
+Only the REFRESH command can display the current content of the viewport to the screen
+At any time a view port is defined by:
+    surface number
+         0 or 1 (0 is default after RESET command)
+    coordinate of top left corner of the view port in the selected surface
+        16 bits : MSB Y coordinate (from 0 to 255) LSB X coordinate (from 0 to 255)
+    viewport width
+        from 1 to 160 (160 is default after RESET command)
+    viewport height
+        from 1 to 100 (100 is default after RESET command)
+    PB7 = 0 (no automatic REFERSh command )
+
+color palette:
+    color index from 0 to 31 is mapped to the IBM PC VGA default palette
+    color index from 32 to 255 is mapped to ANSI terminal 256 colors palette.
+
+I/O : 0120 to 0127 (height registers 8/16 bits registers )
+    0120        : write         : 8 bits command
+    0120        : read          : 8 bits status  : BUSY:7, WAITFORDATA:6, COMMAND_STATUS_CODE:5-0
+    0121..0127  : read/write    : 8/16 bits registers : Input parameters / Output results (referenced as PB1 to PB7 for Byte value, and PW1 to PW7 for word value)
+        0121 : PB1 or PW1
+        0122 : PB2 or PW2
+        0123 : PB3 or PW3
+        0124 : PB4 or PW4
+        0125 : PB5 or PW5
+        0126 : PB6 or PW6
+        0127 : PB7 or PW7
+   example : a byte write to 0121 is a write to PB1 register
+             a word wrtite to 0121 is a write to PW1 register
+            PW1 does not contains PB1 , it is two separated registers in the device 
+            ; code to illustrate the separation of registers
+            mov b0, $F4
+            mov w1, $AB54
+            sr  b0, [$0121] ; PB1 = $F4
+            sr  w1, [$0121] ; PW1 = $AB54
+            ld  b0, [$0121] ; b0 == $F4
+            ld  w1, [$0121] ; w1 == $AB54 , no overlap of PB1 and PW1
+
+If BUSY == 1 then device is doing something, then the device can't accept any command or write on "Parameters"
+If BUSY == 0 and WAITFORDATA == 1 then device is waiting for data reading or data writing from the bus host (e.g CPU)
+if BUSY == 0 and WAITFORDATA == 1 then only RESET command can be accepted.
+If BUSY == 0 and WAITFORDATA == 0 then device is ready to receive new command , and COMMAND_STATUS_CODE is valid indicating the status of last command
+a COMMAND_STATUS_CODE equal to 0 means success, other value express an error on previous executed command
+a COMMAND_STATUS_CODE == 31 means that previous command execution failed because the command code is unknown
+
+Command starts its execution at write operation to regsiter 0120
+All needed parameters has to be written to their respective register before the write to Command register (0120)
+
+Before to request any graphical command, a RESET command must occurs before hand (executed only once before all the other commands ) and
+terminated with a success status
+the RESET command is like a "Enter graphical mode"
+To end properly the use of the device, a command END must be performed and terminated.
+The END command is like a "Leave graphical mode"
+
+when writing 1 to PB7, it means that all COMMAND will be terminated by executing a REFRESH commmand (when command modify surface content)
+when writing 0 to PB7, it means that not automatic REFRESH command is performed after COMMAND execution.
+
+BS3 Gfx commands
+
+RESET 
+Command $00
+Parameter : N/A 
+Description:
+    Enter in graphical mode, device is reset to its default values
+        Viewport size 160x100
+        Viewport location in surface (x:00,y:00)
+        Viewport surface number : 0
+        video memory surface 0 and 1 reset to value 0 (black)
+        Screen refreshed at the end of the reset command
+Status
+    COMMAND_STATUS_CODE:
+        0 , reset ok
+        1 , reset failed
+
+
+END
+Command $FF
+Parameter : N/a
+Description:
+    Leave graphical mode
+Status
+    COMMAND_STATUS_CODE
+        0, End ok
+        1, End failed (device was not reset)
+
+REFRESH
+Command $01
+Parameter : N/A 
+Description:
+    Show the viewport content to the screen
+    . After you made some changes on the content of surfaces, this command will reflect the change on screen
+Status
+    COMMAND_STATUS_CODE
+        0 End ok
+        1 Device not initialized ( device was not reset)
+
+VIEWPORT_CONFIG
+Command $02
+Parameter :
+    Input
+        PB1 : surface number (0: 1)
+        PW2 : top left corner Coordinates $YYXX  MSB YY: vertical coordinate, LSB XX: horizontal coordinate
+                coordinate from 0 to 255
+        PW3 : view port size $HHWW : MSB HH : height (1 to 100), LSB WW : width ( 1 to 160)
+    Output  
+        N/A
+Description:
+    Configure the viewport surface number, top left corner coordinates and size (Height, width)
+    Height is between 1 and 100
+    Width is between 1 and 160
+    if Height and Width change from previous config, a screen reset and refresh is executed after successful settings
+    if Height and Width does not change from current viewport configation , then a REFRESH command is needed to see the result on screen
+Status
+    COMMAND_STATUS_CODE
+        0 : Viewport config success
+        1 : Device not initialized (device was not reset)
+        2 : incorrect size (width == 0 or > 160, height == 0 or > 100) (viewport configuration unchanged)
+        3 : incorrect surface number (not 0 nor 1 )
+
+VIEWPORT_CLEAR
+Command $03
+Parameter :
+    Input
+        PB1 : clear color (0 to 255)
+    Output  
+        N/A 
+Description:
+    Erase the surface and area defined by current viewport configuration with a chosen color
+    Change is not reflected on screen : need a REFRESH command
+Status
+    COMMAND_STATUS_CODE
+        0 : viewport surface area cleared with chosen color 
+        1 : Device not initialized (device was not reset)
+        3 : Incorrect surface number (not 0 nor 1)
+
+SURFACE_GETPIXEL
+Command $04
+parameter:
+    Input
+        PB1 : surface number (O or 1)
+        PW2 : pixel coordinates ($YYXX : MSB Y coordinate, LSB X coordinate) on surface
+    Output  
+        PB3 : pixel color
+Description
+    Get the pixel color on chosen surface and coordinates
+Status
+    COMMAND_STATUS_CODE
+        0 : pixel color retrieved (in PB3)
+        1 : Device not initialized (device was not reset)
+        3 : Incorrect surface number (not 0 nor 1)
+
+SURFACE_SETPIXEL
+Command $05
+Parameter:
+    Input
+        PB1 : Surface number (0 or 1)
+        PW2 : pixel coordinates ($YYXX : MSB Y coordinate, LSB X coordinate) on surface
+        PB3 : pixel color
+    Output
+        N/A 
+Description 
+    Set pixel color on chosen surface and coordinates. Change is not see on screen, a REFRESH command is needed to see the change
+    the change is visible (after REFRESH) if the pixel is on the same surface and inside the area of the current view port configuration.
+Status  
+    COMMAND_STATUS_CODE
+        0 : pixel color set at chosen coordinatesand surface
+        1 : Device not initialized (device was not reset)
+        3 : Incorrect surface number (not 0 nor 1)
+
+SURFACE_DRAW_HLINE
+Command $06
+Parameter
+    Input
+        PB1 : Surface number (0 or 1)
+        PW2 : first (left most pixel of the horizontal line) pixel coordinates ($YYXX : MSB Y coordinate, LSB X coordinate) on surface
+        PB3 : pixel color
+        PB4 : Line length (from 1 to 255 : 0 = 256 )
+    Output
+        N/A
+Description
+    Draw a line from left to right, by providing first pixel coordinates, color and line length.
+Status
+    COMMAND_STATUS_CODE
+        0 : horizontal line drawn
+        1 : Device not initialized (device was not reset)
+        3 : Incorrect surface number (not 0 nor 1)
+
+SURFACE_DRAW_VLINE
+Command $07
+Parameter
+    Input
+        PB1 : Surface number (0 or 1)
+        PW2 : first (top most pixel of the vertical line) pixel coordinates ($YYXX : MSB Y coordinate, LSB X coordinate) on surface
+        PB3 : pixel color
+        PB4 : Line length (from 1 to 255 : 0 = 256 )
+    Output
+        N/A
+Description
+    Draw a line from top to bottom, by providing first pixel coordinates, color and line length.
+Status
+    COMMAND_STATUS_CODE
+        0 : verticalline drawn
+        1 : Device not initialized (device was not reset)
+        3 : Incorrect surface number (not 0 nor 1)
+
+SURFACE_DRAW_BOX
+Command $08
+Parameter
+    input
+        PB1 : Surface number (0 or 1)
+        PW2 : top left corder of the box coordinate ($YYXX : MSB Y coordinate, LSB X coordinate) on surface
+        PB3 : pixel color
+        PW4 : box size ($HHWW : MSB HH height (if 0 then 256) , LSB WW Width (if 0 then 256))
+    Output
+        N/A 
+Description
+    Draw a box with a given color, surface number, top left coordinate and a size (1 to 256) provide a 0 for a size of 256 (height or width)
+Status
+    COMMAND_STATUS_CODE
+        0 : box drawn
+        1 : Device not initialized (device was not reset)
+        3 : Incorrect surface number (not 0 nor 1)        
+
+SURFACE_DRAW_BOXFULL
+Command $09
+Parameter
+    input
+        PB1 : Surface number (0 or 1)
+        PW2 : top left corder of the box coordinate ($YYXX : MSB Y coordinate, LSB X coordinate) on surface
+        PB3 : pixel color
+        PW4 : box size ($HHWW : MSB HH height (if 0 then 256) , LSB WW Width (if 0 then 256))
+    Output
+        N/A 
+Description
+    Draw a full box with a given color, surface number, top left coordinate and a size (1 to 256) provide a 0 for a size of 256 (height or width)
+Status
+    COMMAND_STATUS_CODE
+        0 : full box drawn
+        1 : Device not initialized (device was not reset)
+        3 : Incorrect surface number (not 0 nor 1)        
+
+SURFACE_BLIT_OPERATOR
+Command $0A
+Parameter
+    Input
+        PB1 : Source Surface number (0 or 1)
+        PW2 : Source top left corner coordinates ($YYXX : MSB Y coordinate, LSB X coordinate) on source surface
+        PB3 : operator between source and target (0: COPY, 1: OR, 2: EOR, 3: AND, 4: ADD, 5: SUB, 6:MUL)
+        PW4 : source blit rectangle size ($HHWW : MSB HH height (if 0 then 256) , LSB WW Width (if 0 then 256))
+        PB5 : target Surface number (0 or 1)
+        PW6 : Target top left corner coordinates ($YYXX : MSB Y coordinate, LSB X coordinate) on target surface
+    Output
+        N/A 
+Description 
+    Blit the bitmap rectangle defined by source surface, source top left corner coordinate and rectangle size,
+    to the target surface at target coordinate with a chosen operation 
+        0 : target = source (COPY)
+        1 : target = target OR source (binary bit operation)
+        2 : target = target ExclusivOr source (EOR) (binary bit operation)
+        3 : target = target AND source (binary bit operation)
+        4 : target = target ADD source (no cap value , may overflow)
+        5 : target = target SUB source (no cap value, may underflow )
+        6 : target = target MUL source (no cap value , may overflow  )
+Status
+    COMMAND_STATUS_CODE
+        0 : Blit completed
+        1 : Device not initialized (device was not reset)
+        3 : Incorrect surface number (not 0 nor 1) in source and/or target
+        4 : Incorrect operator (unknown operator > 6 )
+        
+SURFACE_BLIT_KEYCOLOR
+Command $0A
+Parameter
+    Input
+        PB1 : Source Surface number (0 or 1)
+        PW2 : Source top left corner coordinates ($YYXX : MSB Y coordinate, LSB X coordinate) on source surface
+        PB3 : Key color 
+        PW4 : source blit rectangle size ($HHWW : MSB HH height (if 0 then 256) , LSB WW Width (if 0 then 256))
+        PB5 : target Surface number (0 or 1)
+        PW6 : Target top left corner coordinates ($YYXX : MSB Y coordinate, LSB X coordinate) on target surface
+    Output
+        N/A 
+Description 
+    Blit the bitmap rectangle defined by source surface, source top left corner coordinate and rectangle size,
+    to the target surface at target coordinate with a chosen by respecting the key color as follow:
+    if source pixel to blit == keycolor , then pixel is not blit (key color = transparency color)
+Status
+    COMMAND_STATUS_CODE
+        0 : Blit completed
+        1 : Device not initialized (device was not reset)
+        3 : Incorrect surface number (not 0 nor 1) in source and/or target
+        
+
+SURFACE_BLIT_TRANSFER
+Command $010B
+Parameter
+    Input 
+        PB1 : surface number (0 or 1)
+        PW2 : surface top left corner coordinates  ($YYXX : MSB Y coordinate, LSB X coordinate)
+        PW4 : rectangle size ($HHWW : MSB HH height (if 0 then 256) , LSB WW Width (if 0 then 256))
+    Output
+        N/A
+Description
+    transfer a rectangle(top left corner coordinates and size) of pixels from CPU to device chosen surface.
+    after Command write the status BUSY bit should be 0 and WAITFORDATA must be 1
+    write a color on PB3 X times (X = PW4:HH * PW4:WW (if HH = 0 then HH = 256, if WW = 0 the W == 256 ))
+    Any write to PW3 will interrupt the data transfer
+    the pixel stored on the surface is at progrssive coordinate starting from PW2 coordinate left to right and topto bottom
+    when all color is received the end of completion is done when WAITFORDATA == 0 and BUSY == 0
+    During pixel transfer process, no new command is accepted (write COMMAND is ignored except for RESET).
+        you may break the transfert by writing anything on PW3 (word write instead of byte write on PB3) or by executing a RESET command
+Status  
+    COMMAND_STATUS_CODE when BUSY == 0 and WAITFORDATA == 0
+        0 : transfer is done
+        1 : Device not initialiazed (device was not reset)
+        3 : incorrect surface number (not 0 nor 1)
+        5 : broken data transfer
