@@ -1,13 +1,13 @@
 BS3 Graphic device
-Maximum 160x100 8bits per pixel view port (view port is what is seen on screen after REFRESH command)
+Maximum 160x100 8bits (1 byte color index from 0 to 255) per pixel view port (view port is what is seen on screen after REFRESH command)
 Videoram : 2 x 64KiB : 2 x (256 width x 256 Height pixels)
 
-Internally there is 2 surfaces of 256x256 pixels (2 x 64 KiB video ram)
-Surface coordinates are expressed by a word : MSB Y coordinate (0 to 255) LSB X coordinate (0 to 255)
-Only a viewport of maximum 160x100 pixels is visible on screen
-Only the REFRESH command can display the current content of the viewport to the screen
+Internally there are 2 surfaces of 256x256 pixels (2 x 64 KiB video ram)
+Surface coordinates are expressed by a word (16 bits) : MSB Y coordinate (0 to 255) LSB X coordinate (0 to 255)
+Only one viewport of maximum 160x100 pixels is visible on screen
+Only the REFRESH command can display the current content of the viewport to the screen (except if automatic REFRESH is set on PB7 )
 At any time a view port is defined by:
-    surface number
+    surface number (wich video ram)
          0 or 1 (0 is default after RESET command)
     coordinates of top left corner of the view port in the selected surface
         16 bits : MSB Y coordinate (from 0 to 255) LSB X coordinate (from 0 to 255) (0,0 by default at RESET time)
@@ -15,11 +15,45 @@ At any time a view port is defined by:
         from 1 to 160 (160 is default after RESET command)
     viewport height
         from 1 to 100 (100 is default after RESET command)
-    PB7 = 0 (no automatic REFERSH command )
 
-color palette:
-    color index from 0 to 31 is mapped to the IBM PC VGA default palette
-    color index from 32 to 255 is mapped to ANSI terminal 256 colors palette.
+Color palette:
+    Each color is represented by 1 byte (8 bits) with value from 0 to 255.
+    Each color index is represented by an standard color
+    The BS3 GFX device use two standards : IBM 16 colors and ANSI 256 colors (256 - 16 ANSI colors).
+    Color index from 0 to 15 are mapped to the IBM PC VGA default color palette
+        index   Name (IBM)      Red (0..5)	Green(0..5) Blue(0..5)  (equivalent to ANSI Color Index)
+        $00     Black	        0	        0           0           16
+        $01     Blue	        0	        0           3           19
+        $02     Green	        0	        3           0           34
+        $03     Cyan	        0	        3           3           37
+        $04     Red	            3	        0           0           124
+        $05     Magenta	        3	        0           3           127
+        $06     Brown* 	        3	        2           0           136
+        $07     White	        3	        3           3           145
+        $08     Gray	        2	        2           2           102
+        $09     Light Blue	    2	        2           5           105
+        $0A     Light Green	    2	        5           2           120
+        $0B     Light Cyan	    2	        5           5           123
+        $0C     Light Red	    5	        2           2           210
+        $0D     Light Magenta	5	        2           5           213
+        $0E     Yellow	        5	        5           2           228
+        $0F     Bright White	5	        5           5           231
+
+    Color index from 16 to 255 are mapped to ANSI terminal 256 colors palette.
+    ANSI 256 colors palette integrate 216 RGB colors
+      6 values of Red Green Blue (from 0 to 5)
+      To compute the color index with a RGB (6 values per channel) apply this computation
+      color index = 16 + (Red * 36 + Green * 6 + Blue)
+      A possible conversion RGB 888 (24 bits) to ANSI RGB 216 colors can be done by mapping each channel value as follow
+        from 0 to 26    : 0
+        from 27 to 77   : 1
+        from 78 to 128  : 2
+        from 129 to 179 : 3
+        from 180 to 230 : 4
+        from 231 to 255 : 5
+    ANSI 256 colors palette integrate 24 shades of Gray (Gray value from 0 to 23 : black to white)
+      to compute the color index with Gray (24 values) apply this computation
+      color index = 232 +  Gray (color index from 232 to 255)
 
 I/O : 0120 to 0127 (height registers 8/16 bits registers )
     0120        : write         : 8 bits command
@@ -43,12 +77,12 @@ I/O : 0120 to 0127 (height registers 8/16 bits registers )
             ld  b0, [$0121] ; b0 == $F4
             ld  w1, [$0121] ; w1 == $AB54 , no overlap of PB1 and PW1
 
-If BUSY == 1 then device is doing something, then the device can't accept any command or write on "Parameters"
+If BUSY == 1 then device is busy, therefore the device can't accept any command (write on 0120) or write on PBx or PWx (x from 1 to 7)
 If BUSY == 0 and WAITFORDATA == 1 then device is waiting for data reading or data writing from the bus host (e.g CPU)
 if BUSY == 0 and WAITFORDATA == 1 then only RESET command can be accepted.
 If BUSY == 0 and WAITFORDATA == 0 then device is ready to receive new command , and COMMAND_STATUS_CODE is valid indicating the status of last command
 a COMMAND_STATUS_CODE equal to 0 means success, other value express an error on previous executed command
-a COMMAND_STATUS_CODE == 31 means that previous command execution failed because the command code is unknown
+a COMMAND_STATUS_CODE == 31 means that previous command execution failed because the command code is unknown.
 
 Command starts its execution at write operation to regsiter 0120
 All needed parameters has to be written to their respective register before the write to Command register (0120)
@@ -62,9 +96,10 @@ The END command is like a "Leave graphical mode"
 when writing 1 to PB7, it means that all COMMAND will be terminated by executing a REFRESH commmand (when command modify surface content sucessfully)
 when writing 0 to PB7, it means that no automatic REFRESH command is performed after COMMAND execution.
 
+===================================
 BS3 Gfx commands
 
-RESET 
+>>> RESET 
 Command $00
 Parameter : N/A 
 Description:
@@ -74,13 +109,14 @@ Description:
         Viewport surface number : 0
         video memory surface 0 and 1 reset to value 0 (black)
         Screen refreshed at the end of the reset command
+        PB7 = 0 (no automatic REFERSH command )
 Status
     COMMAND_STATUS_CODE:
         0 , reset ok
         1 , reset failed
 
 
-END
+>>> END
 Command $FF
 Parameter : N/a
 Description:
@@ -90,7 +126,7 @@ Status
         0, End ok
         1, End failed (device was not reset)
 
-REFRESH
+>>> REFRESH
 Command $01
 Parameter : N/A 
 Description:
@@ -101,7 +137,7 @@ Status
         0 End ok
         1 Device not initialized ( device was not reset)
 
-VIEWPORT_CONFIG
+>>> VIEWPORT_CONFIG
 Command $02
 Parameter :
     Input
@@ -124,7 +160,7 @@ Status
         2 : incorrect size (width == 0 or > 160, height == 0 or > 100) (viewport configuration unchanged)
         3 : incorrect surface number (not 0 nor 1 )
 
-VIEWPORT_CLEAR
+>>> VIEWPORT_CLEAR
 Command $03
 Parameter :
     Input
@@ -140,7 +176,7 @@ Status
         1 : Device not initialized (device was not reset)
         3 : Incorrect surface number (not 0 nor 1)
 
-SURFACE_GETPIXEL
+>>> SURFACE_GETPIXEL
 Command $04
 parameter:
     Input
@@ -156,7 +192,7 @@ Status
         1 : Device not initialized (device was not reset)
         3 : Incorrect surface number (not 0 nor 1)
 
-SURFACE_SETPIXEL
+>>> SURFACE_SETPIXEL
 Command $05
 Parameter:
     Input
@@ -174,7 +210,7 @@ Status
         1 : Device not initialized (device was not reset)
         3 : Incorrect surface number (not 0 nor 1)
 
-SURFACE_DRAW_HLINE
+>>> SURFACE_DRAW_HLINE
 Command $06
 Parameter
     Input
@@ -192,7 +228,7 @@ Status
         1 : Device not initialized (device was not reset)
         3 : Incorrect surface number (not 0 nor 1)
 
-SURFACE_DRAW_VLINE
+>>> SURFACE_DRAW_VLINE
 Command $07
 Parameter
     Input
@@ -210,7 +246,7 @@ Status
         1 : Device not initialized (device was not reset)
         3 : Incorrect surface number (not 0 nor 1)
 
-SURFACE_DRAW_BOX
+>>> SURFACE_DRAW_BOX
 Command $08
 Parameter
     input
@@ -228,7 +264,7 @@ Status
         1 : Device not initialized (device was not reset)
         3 : Incorrect surface number (not 0 nor 1)        
 
-SURFACE_DRAW_BOXFULL
+>>> SURFACE_DRAW_BOXFULL
 Command $09
 Parameter
     input
@@ -246,7 +282,7 @@ Status
         1 : Device not initialized (device was not reset)
         3 : Incorrect surface number (not 0 nor 1)        
 
-SURFACE_BLIT_OPERATOR
+>>> SURFACE_BLIT_OPERATOR
 Command $0A
 Parameter
     Input
@@ -275,7 +311,7 @@ Status
         3 : Incorrect surface number (not 0 nor 1) in source and/or target
         4 : Incorrect operator (unknown operator > 6 )
         
-SURFACE_BLIT_KEYCOLOR
+>>> SURFACE_BLIT_KEYCOLOR
 Command $0B
 Parameter
     Input
@@ -298,7 +334,7 @@ Status
         3 : Incorrect surface number (not 0 nor 1) in source and/or target
         
 
-SURFACE_BLIT_TRANSFER
+>>> SURFACE_BLIT_TRANSFER
 Command $0C
 Parameter
     Input 
