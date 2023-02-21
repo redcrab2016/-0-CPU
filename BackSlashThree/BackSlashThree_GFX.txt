@@ -1,21 +1,21 @@
 BS3 Graphic device
-Maximum 160x100 8bits per pixel view port
+Maximum 160x100 8bits per pixel view port (view port is what is seen on screen after REFRESH command)
 Videoram : 2 x 64KiB : 2 x (256 width x 256 Height pixels)
 
-Internally there is 2 surfaces of 256x256 pixels 
+Internally there is 2 surfaces of 256x256 pixels (2 x 64 KiB video ram)
 Surface coordinates are expressed by a word : MSB Y coordinate (0 to 255) LSB X coordinate (0 to 255)
 Only a viewport of maximum 160x100 pixels is visible on screen
 Only the REFRESH command can display the current content of the viewport to the screen
 At any time a view port is defined by:
     surface number
          0 or 1 (0 is default after RESET command)
-    coordinate of top left corner of the view port in the selected surface
-        16 bits : MSB Y coordinate (from 0 to 255) LSB X coordinate (from 0 to 255)
+    coordinates of top left corner of the view port in the selected surface
+        16 bits : MSB Y coordinate (from 0 to 255) LSB X coordinate (from 0 to 255) (0,0 by default at RESET time)
     viewport width
         from 1 to 160 (160 is default after RESET command)
     viewport height
         from 1 to 100 (100 is default after RESET command)
-    PB7 = 0 (no automatic REFERSh command )
+    PB7 = 0 (no automatic REFERSH command )
 
 color palette:
     color index from 0 to 31 is mapped to the IBM PC VGA default palette
@@ -31,7 +31,7 @@ I/O : 0120 to 0127 (height registers 8/16 bits registers )
         0124 : PB4 or PW4
         0125 : PB5 or PW5
         0126 : PB6 or PW6
-        0127 : PB7 or PW7
+        0127 : PB7 or PW7 (PB7 reserved for auto REFRESH command)
    example : a byte write to 0121 is a write to PB1 register
              a word wrtite to 0121 is a write to PW1 register
             PW1 does not contains PB1 , it is two separated registers in the device 
@@ -59,8 +59,8 @@ the RESET command is like a "Enter graphical mode"
 To end properly the use of the device, a command END must be performed and terminated.
 The END command is like a "Leave graphical mode"
 
-when writing 1 to PB7, it means that all COMMAND will be terminated by executing a REFRESH commmand (when command modify surface content)
-when writing 0 to PB7, it means that not automatic REFRESH command is performed after COMMAND execution.
+when writing 1 to PB7, it means that all COMMAND will be terminated by executing a REFRESH commmand (when command modify surface content sucessfully)
+when writing 0 to PB7, it means that no automatic REFRESH command is performed after COMMAND execution.
 
 BS3 Gfx commands
 
@@ -166,7 +166,7 @@ Parameter:
     Output
         N/A 
 Description 
-    Set pixel color on chosen surface and coordinates. Change is not see on screen, a REFRESH command is needed to see the change
+    Set pixel color on chosen surface and coordinates. Change is not seen on screen, a REFRESH command is needed to see the change
     the change is visible (after REFRESH) if the pixel is on the same surface and inside the area of the current view port configuration.
 Status  
     COMMAND_STATUS_CODE
@@ -276,7 +276,7 @@ Status
         4 : Incorrect operator (unknown operator > 6 )
         
 SURFACE_BLIT_KEYCOLOR
-Command $0A
+Command $0B
 Parameter
     Input
         PB1 : Source Surface number (0 or 1)
@@ -299,7 +299,7 @@ Status
         
 
 SURFACE_BLIT_TRANSFER
-Command $010B
+Command $0C
 Parameter
     Input 
         PB1 : surface number (0 or 1)
@@ -308,17 +308,18 @@ Parameter
     Output
         N/A
 Description
-    transfer a rectangle(top left corner coordinates and size) of pixels from CPU to device chosen surface.
+    transfer a rectangle(top left corner coordinates and size) of pixels from CPU/host to device chosen surface.
     after Command write the status BUSY bit should be 0 and WAITFORDATA must be 1
-    write a color on PB3 X times (X = PW4:HH * PW4:WW (if HH = 0 then HH = 256, if WW = 0 the W == 256 ))
+    write a byte color index on PB3 X times (X = PW4:HH * PW4:WW (if HH = 0 then HH = 256, if WW = 0 the WW == 256 ))
     Any write to PW3 will interrupt the data transfer
-    the pixel stored on the surface is at progrssive coordinate starting from PW2 coordinate left to right and topto bottom
-    when all color is received the end of completion is done when WAITFORDATA == 0 and BUSY == 0
+    the pixel stored on the surface is at progrssive coordinate starting from PW2 coordinate, then progress from left to right and top to bottom
+    when all pixels are received, the end of transfer is indicated by WAITFORDATA == 0 and BUSY == 0
     During pixel transfer process, no new command is accepted (write COMMAND is ignored except for RESET).
         you may break the transfert by writing anything on PW3 (word write instead of byte write on PB3) or by executing a RESET command
-Status  
+Status 
+    BUSY == 0 and WAITFORDATA == 1 when the device is ready to receive the data
     COMMAND_STATUS_CODE when BUSY == 0 and WAITFORDATA == 0
         0 : transfer is done
         1 : Device not initialiazed (device was not reset)
         3 : incorrect surface number (not 0 nor 1)
-        5 : broken data transfer
+        5 : broken data transfer (by host word write to PW3)
