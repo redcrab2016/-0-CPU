@@ -145,7 +145,8 @@ Parameter :
         PB1 : surface number (0: 1)
         PW2 : top left corner Coordinates $YYXX  MSB YY: vertical coordinate, LSB XX: horizontal coordinate
                 coordinate from 0 to 255
-        PW3 : view port size $HHWW : MSB HH : height (1 to 100), LSB WW : width ( 1 to 160)
+        PW3 : view port size $HHWW : MSB HH : height (even size from 2 to 100), LSB WW : width (even size 2 to 160)
+              if the size is odd then below even size is taken
     Output  
         N/A
 Description:
@@ -175,7 +176,6 @@ Status
     COMMAND_STATUS_CODE
         0 : viewport surface area cleared with chosen color 
         1 : Device not initialized (device was not reset)
-        3 : Incorrect surface number (not 0 nor 1)
 
 >>> SURFACE_GETPIXEL
 Command $04
