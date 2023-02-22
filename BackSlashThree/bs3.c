@@ -34,6 +34,7 @@ extern struct bs3_device dev_bs3_rambank;
 extern struct bs3_device dev_bs3_rambankselect;
 extern struct bs3_device dev_bs3_rombank;
 extern struct bs3_device dev_bs3_rombankselect;
+extern struct bs3_device dev_bs3gfx;
 
 void bs3_hyper_device_prepare()
 {
@@ -46,12 +47,14 @@ void bs3_hyper_device_prepare()
   bs3_bus_plugdevice(&dev_bs3_rambankselect);
   bs3_bus_plugdevice(&dev_bs3_rombank);
   bs3_bus_plugdevice(&dev_bs3_rombankselect);
+  bs3_bus_plugdevice(&dev_bs3_rombankselect);
+  bs3_bus_plugdevice(&dev_bs3gfx);
   bs3_bus_plugdevice(&dev_bs3irqctrl);
 }
 
 void bs3_hyper_device_start()
 {
-  /* if call twice without stop, then it is a restart*/
+  /* if call twice without stop, then it is a restart ( like a hard reset)*/
   bs3_bus_start();
 }
 

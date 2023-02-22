@@ -21,7 +21,7 @@ Color palette:
     Each color index is represented by an standard color
     The BS3 GFX device use two standards : IBM 16 colors and ANSI 256 colors (256 - 16 ANSI colors).
     Color index from 0 to 15 are mapped to the IBM PC VGA default color palette
-        index   Name (IBM)      Red (0..5)	Green(0..5) Blue(0..5)  (equivalent to ANSI Color Index)
+        index   Name (IBM)      Red (0..5)	Green(0..5) Blue(0..5)  (equivalent to ANSI 256 colors Index)
         $00     Black	        0	        0           0           16
         $01     Blue	        0	        0           3           19
         $02     Green	        0	        3           0           34
@@ -57,7 +57,7 @@ Color palette:
 
 I/O : 0120 to 0127 (height registers 8/16 bits registers )
     0120        : write         : 8 bits command
-    0120        : read          : 8 bits status  : BUSY:7, WAITFORDATA:6, COMMAND_STATUS_CODE:5-0
+    0120        : read          : 8 bits status  : BUSY:7, WAITFORDATA:6, ENABLE:5, COMMAND_STATUS_CODE:4-0
     0121..0127  : read/write    : 8/16 bits registers : Input parameters / Output results (referenced as PB1 to PB7 for Byte value, and PW1 to PW7 for word value)
         0121 : PB1 or PW1
         0122 : PB2 or PW2
@@ -83,7 +83,8 @@ if BUSY == 0 and WAITFORDATA == 1 then only RESET command can be accepted.
 If BUSY == 0 and WAITFORDATA == 0 then device is ready to receive new command , and COMMAND_STATUS_CODE is valid indicating the status of last command
 a COMMAND_STATUS_CODE equal to 0 means success, other value express an error on previous executed command
 a COMMAND_STATUS_CODE == 31 means that previous command execution failed because the command code is unknown.
-
+ENABLE bit status == 0 if no RESET command has been executing successfully or a END command has been executed successfully
+ENABLE bit status == 1 gfx device is initialized (RESET command has been executed successfully)
 Command starts its execution at write operation to regsiter 0120
 All needed parameters has to be written to their respective register before the write to Command register (0120)
 
@@ -348,6 +349,7 @@ Description
     after Command write the status BUSY bit should be 0 and WAITFORDATA must be 1
     write a byte color index on PB3 X times (X = PW4:HH * PW4:WW (if HH = 0 then HH = 256, if WW = 0 the WW == 256 ))
     Any write to PW3 will interrupt the data transfer
+    Before to write to PB3 register, be sure that BUSY == 0, otherwise the write is ignored.
     the pixel stored on the surface is at progrssive coordinate starting from PW2 coordinate, then progress from left to right and top to bottom
     when all pixels are received, the end of transfer is indicated by WAITFORDATA == 0 and BUSY == 0
     During pixel transfer process, no new command is accepted (write COMMAND is ignored except for RESET).
