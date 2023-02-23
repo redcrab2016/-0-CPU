@@ -8,6 +8,7 @@
 
 #include "bs3_bus.h"
 
+
 struct dev_bs3gfx
 {
     union 
@@ -30,7 +31,7 @@ struct dev_bs3gfx
         WORD pw[8];
         struct 
         {
-            WORD cmdw;
+            WORD cmdw; /* write forbidden */
             WORD pw1;
             WORD pw2;
             WORD pw3;
@@ -52,11 +53,11 @@ struct dev_bs3gfx
         };
         
     };
-    BYTE videoram [2][65536]; /* 2 surfaces of 64KiB (256 width x 256 height  x 8bpp)*/
-    WORD viewport_location; /* MSB Y location (0 to 255), LSB X location (0 to 255)*/
-    WORD viewport_size; /* MSB Height (1 to 100) LSB Width (1 to 160) */
+    BYTE videoram [2][65536];       /* 2 surfaces of 64KiB (256 width x 256 height  x 8bpp) */
+    WORD viewport_location;         /* MSB Y location (0 to 255), LSB X location (0 to 255) */
+    WORD viewport_size;             /* MSB Height (1 to 100) LSB Width (1 to 160)           */
     BYTE viewport_surface;
-    BYTE viewport_shadow[16000]; /* shadow of what is on screen */
+    BYTE viewport_shadow[16000];    /* shadow of what is on screen                          */
     BYTE colorPalette[256];
 };
 
@@ -83,30 +84,30 @@ struct dev_bs3gfx
 #define BS3_GFX_COMMAND_BLIT_OPERATOR_SUB       0x05
 #define BS3_GFX_COMMAND_BLIT_OPERATOR_MUL       0x06
 
-#define BS3_GFX_REGISTER_COMMAND    0x00
-#define BS3_GFX_REGISTER_PB1        0x01
-#define BS3_GFX_REGISTER_PB2        0x02
-#define BS3_GFX_REGISTER_PB3        0x03
-#define BS3_GFX_REGISTER_PB4        0x04
-#define BS3_GFX_REGISTER_PB5        0x05
-#define BS3_GFX_REGISTER_PB6        0x06
-#define BS3_GFX_REGISTER_PB7        0x07
+#define BS3_GFX_REGISTER_COMMAND                0x00
+#define BS3_GFX_REGISTER_PB1                    0x01
+#define BS3_GFX_REGISTER_PB2                    0x02
+#define BS3_GFX_REGISTER_PB3                    0x03
+#define BS3_GFX_REGISTER_PB4                    0x04
+#define BS3_GFX_REGISTER_PB5                    0x05
+#define BS3_GFX_REGISTER_PB6                    0x06
+#define BS3_GFX_REGISTER_PB7                    0x07
 
-#define BS3_GFX_REGISTER_PW1        0x01
-#define BS3_GFX_REGISTER_PW2        0x02
-#define BS3_GFX_REGISTER_PW3        0x03
-#define BS3_GFX_REGISTER_PW4        0x04
-#define BS3_GFX_REGISTER_PW5        0x05
-#define BS3_GFX_REGISTER_PW6        0x06
-#define BS3_GFX_REGISTER_PW7        0x07
+#define BS3_GFX_REGISTER_PW1                    0x01
+#define BS3_GFX_REGISTER_PW2                    0x02
+#define BS3_GFX_REGISTER_PW3                    0x03
+#define BS3_GFX_REGISTER_PW4                    0x04
+#define BS3_GFX_REGISTER_PW5                    0x05
+#define BS3_GFX_REGISTER_PW6                    0x06
+#define BS3_GFX_REGISTER_PW7                    0x07
 
-#define BS3_GFX_STATUS_OK               0x00
-#define BS3_GFX_STATUS_UNKNOWN_CMD      0x1F
-#define BS3_GFX_STATUS_NOTENABLED       0x01
-#define BS3_GFX_STATUS_BADVPSIZE        0x02
-#define BS3_GFX_STATUS_BADSURFACE       0x03
-#define BS3_GFX_STATUS_BADOPERATOR      0x04
-#define BS3_GFX_STATUS_BROKENTRANSFER   0x05
+#define BS3_GFX_STATUS_OK                       0x00
+#define BS3_GFX_STATUS_UNKNOWN_CMD              0x1F
+#define BS3_GFX_STATUS_NOTENABLED               0x01
+#define BS3_GFX_STATUS_BADVPSIZE                0x02
+#define BS3_GFX_STATUS_BADSURFACE               0x03
+#define BS3_GFX_STATUS_BADOPERATOR              0x04
+#define BS3_GFX_STATUS_BROKENTRANSFER           0x05
 
 /* set of BS3 GFX command function declaration*/
 void bs3_gfx_command_reset();
@@ -133,295 +134,6 @@ int created_thread_bs3gfx = 0;
 struct dev_bs3gfx reg_bs3gfx;
 static pthread_cond_t condWakeUp = PTHREAD_COND_INITIALIZER; 
 pthread_mutex_t lockGfx = PTHREAD_MUTEX_INITIALIZER; 
-
-/* terminal ANSI macro commands */
-#define _out(c) putc((int)c,stdout)
-#define _outStr(str) fprintf(stdout,str)
-#define _outFlush() fflush(stdout)
-#define ansi_esc(e)         _out(27);_out(e)
-
-/*    ## Single Shift Two */
-#define _bs3_ansi_SS2()     ansi_esc('N')
-
-/*    ##  Single Shift Three */
-#define ansi_SS3()          ansi_esc('O')
-
-/*    ## Device Control String */
-#define ansi_DCS()          ansi_esc('P')
-
-/*    ## Control Sequence Introducer */
-#define ansi_CSI()          ansi_esc('[')
-
-/*    ##  String Terminator */
-#define ansi_ST()           ansi_esc('\\')
-
-/*    ## Operating System Command */
-#define ansi_OSC()          ansi_esc(']')
-
-/*    ## Start of String */
-#define ansi_SOS()          ansi_esc('X')
-
-/*    ## Privacy Message */
-#define ansi_PM()           ansi_esc('^')
-
-/*    ##  Application Program Command */
-#define ansi_APC()          ansi_esc('_')
-
-/*    ## Reset to Initial State */
-#define ansi_RIS()          ansi_esc('c')
-
-/*####################
-  # ANSI CSI sequences
-  #################### */
-
-#define _outByteStr(x) fprintf(stdout,"%d",(int)x)
-
-/*    ## Cursor Up */
-#define ansi_CUU(x)         ansi_CSI();_outByteStr(x);_out('A')
-
-/*    ## Cursor Down */
-#define ansi_CUD(x)         ansi_CSI();if ((x) > 1) _outByteStr(x);_out('B')
-
-/*    ## Cursor Forward */
-#define ansi_CUF(x)         ansi_CSI();_outByteStr(x);_out('C')
-
-/*    ## Cursor Back */
-#define ansi_CUB(x)         ansi_CSI();_outByteStr(x);_out('D')
-
-/*    ## Cursor Next Line */
-#define ansi_CNL(x)         ansi_CSI();_outByteStr(x);_out('E')
-
-/*    ## Cursor Previous Line */
-#define ansi_CPL(x)         ansi_CSI();_outByteStr(x);_out('F')
-
-/*    ## Cursor Horizontal Absolute */
-#define ansi_CHA(x)         ansi_CSI();_outByteStr(x);_out('G')
-
-/*    ## Cursor Position {1}row, {2}column */
-#define ansi_CUP(y,x)       ansi_CSI();_outByteStr(y);_out(';');_outByteStr(x);_out('H')
-
-/*   ## Erase Display
-     ## 0 : from cursor up to end of screen
-     ## 1 : from cursor up to begin of screen
-     ## 2 : clear all screen : keep back buffer
-     ## 3 : clear all screen , erase back buffer */
-#define ansi_ED(x)          ansi_CSI();_outByteStr(x);_out('J')
-
-/*   ## Erase in Line, to cursor position change
-     ## 0 : clear from cursor to end of line
-     ## 1 : clear from cursor to begin of line
-     ## 2 : clear all line */
-#define ansi_EL(x)          ansi_CSI();_outByteStr(x);_out('K')
-
-/*   ##  Scroll Up */
-#define ansi_SU(x)          ansi_CSI();_outByteStr(x);_out('S')
-
-/*   ## Scroll Down */
-#define ansi_SD(x)          ansi_CSI();_outByteStr(x);_out('T')
-
-/*   ## same as ansi_CUP : Cursor Position {1} row {2} column */
-#define ansi_HVP(y,x)       ansi_CSI();_outByteStr(y);_out(';');_outByteStr(x);_out('f')
-
-/*   ## Select Graphic Endition {1} */
-#define ansi_SGR(x)         ansi_CSI();_outByteStr(x);_out('m')
-
-/*   ## Select Graphic Rendition with 2 parameters {1}n, {2}p1, {3}p2 */
-#define ansi_SGR3(n,p1,p2)  ansi_CSI();_outByteStr(n);_out(';');_outByteStr(p1);_out(';');_outByteStr(p2);_out('m')
-
-/*    ## Select Graphic Rendition with 4 parameters  */
-/*        {1} n, {2}p1, {3}p2, {4}p3, {5},p4 */
-#define ansi_SGR5(n,p1,p2,p3,p4) ansi_CSI();_outByteStr(n);_out(';');_outByteStr(p1);_out(';');_outByteStr(p2);_out(';');_outByteStr(p3);_out(';');_outByteStr(p4);_out('m')
-
-/*    ## AUX Port On */
-#define ansi_AUXportOn()      ansi_CSI()_out('5');_out('i')
-
-/*    ## AUX Port Off */
-#define ansi_AUXportOff()     ansi_CSI();_out('4');_out('i')
-
-/*    ## Device Status Report */
-#define ansi_DSR()            ansi_CSI();_out('6');_out('n')
-
-/*    ## Save Cursor Position */
-#define ansi_SCP()            ansi_CSI();_out('s')
-    
-/*    ## Restore Cursor Position */
-#define ansi_RCP()            ansi_CSI();_out('u')
-
-/*    ## show cursor */
-#define ansi_SCU()            ansi_CSI();_outStr("?25h")
-
-/*    ## hide cursor */
-#define ansi_HCU()            ansi_CSI();_outStr("?25l")
-
-/*    ## enable alternate screen buffer */
-#define ansi_EASB()           ansi_CSI();_outStr("?1049h")
-
-/*    ## disable alternate screen buffer */
-#define ansi_DASB()           ansi_CSI();_outStr("?1049l")
-
-/*   ## Turn on bracketed paste mode  */
-#define ansi_BPMon()          ansi_CSI();_outStr("?2004h")
-
-/*    ## Turn off bracketed paste mode  */
-#define ansi_BPMoff()         ansi_CSI();_outStr("?2004l")
-
-/*#####################################
-  # ANSI SGR (Select Graphic Rendition)
-  ##################################### */
-
-/*    ## Reset / Normal */
-#define ansi_SGR_reset()     ansi_SGR(0)
-
-/*    ## Bold or increased intensity */
-#define ansi_SGR_bold()      ansi_SGR(1)
-
-/*    ## Faint (decreased intensity) */
-#define ansi_SGR_faint()     ansi_SGR(2)
-
-/*    ## Italic */
-#define ansi_SGR_italic()    ansi_SGR(3)
-
-/*    ## Underline */
-#define ansi_SGR_underline() ansi_SGR(4)
-
-/*    ## Slow Blink */
-#define ansi_SGR_sblink()    ansi_SGR(5)
-    
-/*    ## Rapid Blink */
-#define ansi_SGR_rblink()    ansi_SGR(6)    
-
-/*    ## Reverse Video */
-#define ansi_SGR_reverse()   ansi_SGR(7)
-
-/*    ## Conceal */
-#define ansi_SGR_conceal()   ansi_SGR(8)    
-
-/*    ## Crossed-out */
-#define ansi_SGR_crossout()  ansi_SGR(9)    
-
-/*    ## primary font */
-#define ansi_SGR_defaultfont ansi_SGR(10)
-
-/*    ## alternate font (1 to 9) , 0 same as primary */
-#define ansi_SGR_font(x)     ansi_SGR((x+10))
-
-/*    ## Fraktur */
-#define ansi_SGR_fraktur()   ansi_SGR(20)
-
-/*    ## Bold off or Double Underline */
-#define ansi_SGR_doubleunderline()  ansi_SGR(21)
-
-/*    ## Normal color or intensity (neither bold nor faint) */
-#define ansi_SGR_normalcolorintensity() ansi_SGR(22)
-
-/*    ## Not italic nor fraktur */
-#define ansi_SGR_italicfrakturoff()  ansi_SGR(23)
-
-/*    ## Underline off */
-#define ansi_SGR_underlineoff()      ansi_SGR(24)
-
-/*    ## blink off */
-#define ansi_SGR_blinkoff()          ansi_SGR(25)
-
-/*    ## Inverse off */
-#define ansi_SGR_inverseoff()        ansi_SGR(27)
-
-/*    ## Reveal / conceal off */
-#define ansi_SGR_concealoff()        ansi_SGR(28)
-
-/*    ## Not cross-out */
-#define ansi_SGR_crossoutoff()       ansi_SGR(29)
-
-/*    ## Set foreground color 0 to 7  n {1} */
-#define ansi_SGR_fgcolor(x)          ansi_SGR((x+30))
-
-/*    ## set foreground color , palette on 256 colors n {1} */
-#define ansi_SGR_fg256(x)            ansi_SGR3(38,5,x)
-
-/*    ## set foreground color, RGB 24 bits (3* 256 colors, RGB) */
-/*        r {1}, g {2}, b {3} */
-#define ansi_SGR_fgRGB(r,g,b)        ansi_SGR5(38,2,r,g,b)    
-
-/*    ## set default foreground color */
-#define ansi_SGR_fgdefault()         ansi_SGR(39)
-
-/*    ## Set background color 0 to 7 n{1} */
-#define ansi_SGR_bgcolor(x)          ansi_SGR((x+40))
-
-/*    ## set background color , palette on 256 colors n{1} */
-#define ansi_SGR_bg256(x)            ansi_SGR3(48,5,x)
-
-/*    ## set background color, RGB 24 bits (3* 256 colors, RGB)
-        r{1}, g{2}, b{3} */
-#define ansi_SGR_bgRGB(r,g,b)        ansi_SGR5(48,2,r,g,b)    
-
-/*    ## set default background color */
-#define ansi_SGR_bgdefault()         ansi_SGR(49)
-
-/*    ## Framed */
-#define ansi_SGR_framed()            ansi_SGR(51)    
-
-/*    ## Encircled   */
-#define ansi_SGR_encircled()         ansi_SGR(52)
-
-/*    ## Overlined */
-#define ansi_SGR_overlined()         ansi_SGR(53)
-
-/*    ## Not framed or encirlced */
-#define ansi_SGR_framedoff()         ansi_SGR(54)
-
-#define ansi_SGR_encircledoff()      ansi_SGR(54)
-
-/*    ## Not overlined */
-#define ansi_SGR_overlinedoff()      ansi_SGR(55)
-
-/*    ## Foreground Black */
-#define ansi_SGR_fg_black()          ansi_SGR_fgcolor(0)
-
-/*    ## Foreground Red */
-#define ansi_SGR_fg_red()            ansi_SGR_fgcolor(1)
-
-/*   ## Foreground Green */
-#define ansi_SGR_fg_green()          ansi_SGR_fgcolor(2)
-
-/*    ## Foreground Yellow */
-#define ansi_SGR_fg_yellow()         ansi_SGR_fgcolor(3)
-
-/*   ## Foreground Blue */
-#define ansi_SGR_fg_blue()           ansi_SGR_fgcolor(4)
-
-/*   ## Foreground Magenta */
-#define ansi_SGR_fg_magenta()        ansi_SGR_fgcolor(5)
-
-/*    ## Foreground Cyan */
-#define ansi_SGR_fg_cyan             ansi_SGR_fgcolor(6)
-
-/*    ## Foreground White */
-#define ansi_SGR_fg_white()          ansi_SGR_fgcolor(7)
-    
-/*    ## Background Black */
-#define ansi_SGR_bg_black()          ansi_SGR_bgcolor(0)
-
-/*    ## Background Red */
-#define ansi_SGR_bg_red()            ansi_SGR_bgcolor(1)
-
-/*    ## Background Green */
-#define ansi_SGR_bg_green()          ansi_SGR_bgcolor(2)
-
-/*    ## Background Yellow */
-#define ansi_SGR_bg_yellow()         ansi_SGR_bgcolor(3)
-
-/*    ## Background Blue */
-#define ansi_SGR_bg_blue()           ansi_SGR_bgcolor(4)
-
-/*    ## Background Magenta */
-#define ansi_SGR_bg_magenta()        ansi_SGR_bgcolor(5)
-
-/*    ## Background Cyan */          
-#define ansi_SGR_bg_cyan()           ansi_SGR_bgcolor(6)
-
-/*   ## Background White */
-#define ansi_SGR_bg_white()          ansi_SGR_bgcolor(7)
 
 
 BYTE dev_bs3gfx_readByte(WORD address)
@@ -466,7 +178,6 @@ void dev_bs3gfx_writeByte(WORD address, BYTE data)
         }
     }
     pthread_mutex_lock(&lockGfx);
-
 }
 
 WORD dev_bs3gfx_readWord(WORD address)
@@ -506,17 +217,9 @@ void dev_bs3gfx_writeWord(WORD address, WORD data)
 }
 
 /* Utils functions for BS3 GFX command execution */
-void _bs3_gfx_clearscreen()
-{
-    _outFlush();
-    _outStr(".......");
-    ansi_ED(2);
-    ansi_ED(3);
-    ansi_SGR_reset();
-    ansi_SCU();
-    ansi_CUP(1,1);
-    _outFlush();
-}
+
+/* Utils BS3 GFX functions for ANSI screen */
+#include "ansi_esc.h"
 
 void _bs3_gfx_invalidateshadow()
 {
@@ -544,25 +247,9 @@ void _bs3_gfx_invalidateshadow()
     }
 }
 
-/* BS3 GFX command function implementation */
-void bs3_gfx_command_reset()
+void _bs3_gfx_setpalette()
 {
-    /* clear video ram surfaces */
-    int i,j;
-    for (i = 0 ; i < 2 ; i++)
-        for (j = 0; j < 65536; j++)
-            reg_bs3gfx.videoram[i][j]=0;
-    /* default view port */
-    reg_bs3gfx.viewport_location = 0x0000; /*( y= 0 , x = 0)  */
-    reg_bs3gfx.viewport_size = 100 * 256 + 160; /* Height = 100, Width = 160 */
-    reg_bs3gfx.viewport_surface = 0; /* first video ram */
-    /* reset byte registers */
-    for (i = 0 ; i < 8 ; i++)
-    {
-        reg_bs3gfx.pb[i]=0;
-        reg_bs3gfx.pw[i]=0;
-    }
-    /* set color palette */
+    int i;
     for (i = 0 ; i < 256; i++)
         reg_bs3gfx.colorPalette[i] = (BYTE)i;
     /* IBM VGA 16 color palette
@@ -600,28 +287,35 @@ void bs3_gfx_command_reset()
     reg_bs3gfx.colorPalette[0x0D] = 213;
     reg_bs3gfx.colorPalette[0x0E] = 228;
     reg_bs3gfx.colorPalette[0x0F] = 231;
-    /* reset status */
-    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
-    reg_bs3gfx.ENABLE = 1;
-    reg_bs3gfx.WAITFORDATA = 0;
-    /* reset screen + shadow */
+
+}
+
+void _bs3_gfx_clearscreen()
+{
+    _outFlush();
+    _outStr(".......");
+    ansi_ED(2);
+    ansi_ED(3);
+    ansi_SGR_reset();
+    ansi_CUP(1,1);
+    _outFlush();
+}
+
+void _bs3_gfx_clearscreen_enter()
+{
     _bs3_gfx_clearscreen();
     ansi_HCU();
     _bs3_gfx_invalidateshadow();
-    reg_bs3gfx.pb1 = 0;
-    bs3_gfx_command_viewport_clear();
-    bs3_gfx_command_refresh();
 }
 
-void bs3_gfx_command_end()
+void _bs3_gfx_clearscreen_leave()
 {
     _bs3_gfx_clearscreen();
-    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
-    reg_bs3gfx.ENABLE = 0;
-    reg_bs3gfx.WAITFORDATA = 0;
+    ansi_SCU();
 }
 
-void bs3_gfx_command_refresh()
+
+void _bs3_gfx_screenrender()
 {
     int y,x;
     int w,h;
@@ -709,6 +403,51 @@ void bs3_gfx_command_refresh()
         addrShadow += w;
     } /* for each double pixel row */
     _outFlush();
+}
+
+
+/* BS3 GFX command function implementation */
+void bs3_gfx_command_reset()
+{
+    /* clear video ram surfaces */
+    int i,j;
+    for (i = 0 ; i < 2 ; i++)
+        for (j = 0; j < 65536; j++)
+            reg_bs3gfx.videoram[i][j]=0;
+    /* default view port */
+    reg_bs3gfx.viewport_location = 0x0000; /*( y= 0 , x = 0)  */
+    reg_bs3gfx.viewport_size = 100 * 256 + 160; /* Height = 100, Width = 160 */
+    reg_bs3gfx.viewport_surface = 0; /* first video ram */
+    /* reset byte registers */
+    for (i = 0 ; i < 8 ; i++)
+    {
+        reg_bs3gfx.pb[i]=0;
+        reg_bs3gfx.pw[i]=0;
+    }
+    /* set color palette */
+    _bs3_gfx_setpalette();
+    /* reset status */
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+    reg_bs3gfx.ENABLE = 1;
+    reg_bs3gfx.WAITFORDATA = 0;
+    /* reset screen */
+    _bs3_gfx_clearscreen_enter();
+    reg_bs3gfx.pb1 = 0;
+    bs3_gfx_command_viewport_clear();
+    bs3_gfx_command_refresh();
+}
+
+void bs3_gfx_command_end()
+{
+    _bs3_gfx_clearscreen_leave();
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+    reg_bs3gfx.ENABLE = 0;
+    reg_bs3gfx.WAITFORDATA = 0;
+}
+
+void bs3_gfx_command_refresh()
+{
+    _bs3_gfx_screenrender();
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
@@ -734,11 +473,10 @@ void bs3_gfx_command_viewport_config()
     if (reg_bs3gfx.viewport_size != reg_bs3gfx.pw3)
     {
         reg_bs3gfx.viewport_size = reg_bs3gfx.pw3;
-        _bs3_gfx_clearscreen();
-        ansi_HCU();
-        _bs3_gfx_invalidateshadow();
+        _bs3_gfx_clearscreen_enter();
         bs3_gfx_command_refresh();
     }
+    if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
@@ -749,6 +487,7 @@ void bs3_gfx_command_viewport_clear()
     BYTE surface;
     WORD addrSurface;
     BYTE value;
+
     value = reg_bs3gfx.pb1;
     addrSurface = reg_bs3gfx.viewport_location;
     surface     = reg_bs3gfx.viewport_surface;
@@ -764,14 +503,17 @@ void bs3_gfx_command_viewport_clear()
         addrSurface += 256;
         addrSurface = addrSurface & 0x0FFFF; /* stay in surface */
     }
+    if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK; 
 }
 
 void bs3_gfx_command_surface_getpixel()
 {
     BYTE surface;
+    WORD addrSurface;
+
+    addrSurface = reg_bs3gfx.pw2;
     surface = reg_bs3gfx.pb1;
-    WORD addrSurface = reg_bs3gfx.pw2;
     if (surface & 0xFE) 
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
@@ -784,8 +526,10 @@ void bs3_gfx_command_surface_getpixel()
 void bs3_gfx_command_surface_setpixel()
 {
     BYTE surface;
+    WORD addrSurface;
+
+    addrSurface = reg_bs3gfx.pw2;
     surface = reg_bs3gfx.pb1;
-    WORD addrSurface = reg_bs3gfx.pw2;
     if (surface & 0xFE) 
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
@@ -799,10 +543,11 @@ void bs3_gfx_command_surface_setpixel()
 void bs3_gfx_command_surface_draw_hline()
 {
     BYTE surface;
-    surface = reg_bs3gfx.pb1;
     WORD addrSurface = reg_bs3gfx.pw2;
     BYTE i;
     BYTE value;
+
+    surface = reg_bs3gfx.pb1;
     value = reg_bs3gfx.pb3;
     i = reg_bs3gfx.pb4;
     if (surface & 0xFE) 
@@ -823,10 +568,11 @@ void bs3_gfx_command_surface_draw_hline()
 void bs3_gfx_command_surface_draw_vline()
 {
     BYTE surface;
-    surface = reg_bs3gfx.pb1;
     WORD addrSurface = reg_bs3gfx.pw2;
     BYTE i;
     BYTE value;
+
+    surface = reg_bs3gfx.pb1;
     value = reg_bs3gfx.pb3;
     i = reg_bs3gfx.pb4;
     if (surface & 0xFE) 
@@ -847,11 +593,12 @@ void bs3_gfx_command_surface_draw_vline()
 void bs3_gfx_command_surface_draw_box()
 {
     BYTE surface;
-    surface = reg_bs3gfx.pb1;
     WORD addrSurface;
     BYTE i;
     BYTE value;
     WORD offset;
+
+    surface = reg_bs3gfx.pb1;
     value = reg_bs3gfx.pb3;
     if (surface & 0xFE) 
     {
@@ -882,18 +629,18 @@ void bs3_gfx_command_surface_draw_box()
     } while (i);
     if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
-
 }
 
 void bs3_gfx_command_surface_draw_boxfull()
 {
     BYTE surface;
-    surface = reg_bs3gfx.pb1;
     WORD addrSurface;
     WORD offset;
     BYTE i;
     WORD j;
     BYTE value;
+
+    surface = reg_bs3gfx.pb1;
     value = reg_bs3gfx.pb3;
     if (surface & 0xFE) 
     {
@@ -1050,7 +797,7 @@ void bs3_gfx_command_surface_blit_transfer()
         return;
     }
     reg_bs3gfx.WAITFORDATA = 1;
-    reg_bs3gfx.pw6 = reg_bs3gfx.pw2;
+    reg_bs3gfx.pw6 = reg_bs3gfx.pw2; /* current surface coordinate */
     reg_bs3gfx.pw5 = 0; /* current progress X */
     reg_bs3gfx.pw1 = 0; /* current progress Y */
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
@@ -1059,7 +806,6 @@ void bs3_gfx_command_surface_blit_transfer()
 void bs3_gfx_command_surface_blit_transfer_data()
 {
     BYTE targetSurface;
-    WORD startAddr;
     WORD currAddr;
     BYTE value;
     WORD size;
@@ -1069,14 +815,13 @@ void bs3_gfx_command_surface_blit_transfer_data()
     WORD offset;
 
     targetSurface   = reg_bs3gfx.pb1;
-    startAddr       = reg_bs3gfx.pw2;
     size            = reg_bs3gfx.pw4;
     currAddr        = reg_bs3gfx.pw6;
     value           = reg_bs3gfx.pb3;
     currX           = reg_bs3gfx.pw5;
     currY           = reg_bs3gfx.pw1;
     w               =  size & 0x00FF;
-    h               = (size & 0x00FF) >> 8;
+    h               = (size & 0xFF00) >> 8;
     w               = w?w:0x0100;
     h               = h?h:0x0100;
     offset          = 0x0100 - w;
@@ -1100,7 +845,6 @@ void bs3_gfx_command_surface_blit_transfer_data()
     reg_bs3gfx.pw5 = currX;
     reg_bs3gfx.pw1 = currY;
     reg_bs3gfx.pw6 = currAddr;
-
 
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
@@ -1191,7 +935,13 @@ static void * dev_bs3gfx_run(void * bs3_device_bus)
 int dev_bs3gfx_stop()
 {
     int resultGfx ;
-    if (created_thread_bs3gfx)   resultGfx = pthread_kill(thread_bs3gfx, 0);
+    if (created_thread_bs3gfx)
+        resultGfx = pthread_kill(thread_bs3gfx, 0);
+    else
+    {
+        endGfx = 1;
+        return 1;
+    }            
 
     if (resultGfx == 0 && created_thread_bs3gfx) 
     {
@@ -1200,7 +950,8 @@ int dev_bs3gfx_stop()
         pthread_join(thread_bs3gfx, NULL);
     }
     created_thread_bs3gfx = 0;
-    return resultGfx;}
+    return resultGfx;
+}
 
 int dev_bs3gfx_start()
 {

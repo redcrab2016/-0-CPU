@@ -36,6 +36,47 @@ ebs3_timer_high16       equ     $010A
 ebs3_timer_mode         equ     $010C
 ebs3_timer_mode_time    equ     $00
 ebs3_timer_mode_tick    equ     $01
+ebs3_irq_queue          equ     $010E
+ebs3_gfx_cmd            equ     $0120
+ebs3_gfx_cmd_reset      equ     $00
+ebs3_gfx_cmd_end        equ     $FF
+ebs3_gfx_cmd_refresh    equ     $01
+ebs3_gfx_cmd_vpconfig   equ     $02
+ebs3_gfx_cmd_vpclear    equ     $03
+ebs3_gfx_cmd_getpixel   equ     $04
+ebs3_gfx_cmd_setpixel   equ     $05
+ebs3_gfx_cmd_hline      equ     $06
+ebs3_gfx_cmd_vline      equ     $07
+ebs3_gfx_cmd_box        equ     $08
+ebs3_gfx_cmd_boxfull    equ     $09
+ebs3_gfx_cmd_blitope    equ     $0A
+ebs3_gfx_cmd_blitkcolor equ     $0B
+ebs3_gfx_cmd_blitrans   equ     $0C
+ebs3_gfx_status         equ     $0120
+ebs3_gfx_status_busy    equ     $80
+ebs3_gfx_status_waitdata equ    $40
+ebs3_gfx_status_enable  equ     $20
+ebs3_gfx_status_code    equ     $1F
+ebs3_gfx_code_ok        equ     $00
+ebs3_gfx_code_disabled  equ     $01
+ebs3_gfx_code_badsize   equ     $02
+ebs3_gfx_code_badsurface equ    $03
+ebs3_gfx_code_badope    equ     $04
+ebs3_gfx_blit_ope_copy  equ     $00
+ebs3_gfx_blit_ope_or    equ     $01
+ebs3_gfx_blit_ope_eor   equ     $02
+ebs3_gfx_blit_ope_and   equ     $03
+ebs3_gfx_blit_ope_add   equ     $04
+ebs3_gfx_blit_ope_sub   equ     $05
+ebs3_gfx_blit_ope_mul   equ     $06
+
+ebs3_gfx_reg1           equ     $0121
+ebs3_gfx_reg2           equ     $0122
+ebs3_gfx_reg3           equ     $0123
+ebs3_gfx_reg4           equ     $0124
+ebs3_gfx_reg5           equ     $0125
+ebs3_gfx_reg6           equ     $0126
+ebs3_gfx_reg7           equ     $0127
 
 ; == BS3 common addresses
 ;   interruption handler addresses
@@ -83,6 +124,20 @@ lbs3_output_aux_status  org     ebs3_output_aux_status
 lbs3_timer_low16        org     ebs3_timer_low16
 lbs3_timer_high16       org     ebs3_timer_high16
 lbs3_timer_mode         org     ebs3_timer_mode
+lbs3_irq_queue          org     ebs3_irq_queue
+
+;  GFX I/O
+lbs3_gfx_cmd            org     ebs3_gfx_cmd
+lbs3_gfx_status
+lbs3_gfx_reg1           org     ebs3_gfx_reg1
+lbs3_gfx_reg2           org     ebs3_gfx_reg2
+lbs3_gfx_reg3           org     ebs3_gfx_reg3
+lbs3_gfx_reg4           org     ebs3_gfx_reg4
+lbs3_gfx_reg5           org     ebs3_gfx_reg5
+lbs3_gfx_reg6           org     ebs3_gfx_reg6
+lbs3_gfx_reg7           org     ebs3_gfx_reg7
+lbs3_gfx_autorefresh
+
 
 ;   Misc
 lbs3_default_stack      org     ebs3_default_stack
@@ -398,4 +453,241 @@ mbs3_printlnstr macro
  mbs3_printstr {1}
                 mbs3_putc   10
                 endm
-                        
+
+;   wait for gfx is ready to accept 
+;    B0 is modified
+mbs3_gfx_busywait_ macro
+.retry          ld      b0, [lbs3_gfx_status]
+                tst     b0, ebs3_gfx_status_busy
+                jnz     .retry
+                  endm
+
+;   wait for gfx is ready to accept 
+;   no register modified, except flag registers
+mbs3_gfx_busywait macro
+                push    b0
+                mbs3_gfx_busywait_
+                pop     b0
+                  endm
+
+;  execute a BS3 GFX command
+;  after execution register B0 contains the status code of the command
+;   expect 1 parameter : an immediate with the value of the command
+;   possible command values are known under the equ names ebs3_gfx_cmd_*
+mbs3_gfx_command        macro
+                mbs3_gfx_busywait_
+                mov     b0, {1}
+                sr      b0, [lbs3_gfx_cmd]
+                mbs3_gfx_busywait_
+                ld      b0, [lbs3_gfx_status]
+                and     b0, ebs3_gfx_status_code
+                endm
+
+;  set BS3 GFX Byte register
+;  expect 2 parameters
+;     1) an immdiate or label to registry addr
+;     2) immediate byte or register Bx
+mbs3_gfx_setreg8 macro
+                push    b0
+                mov     b0, {2}
+                sr      b0, [{1}] 
+                pop     b0
+                endm
+
+; set BS3 GFX PB1 register
+;  expect 1 parameter : immediate byte or register Bx
+mbs3_gfx_setPB1 macro
+                mbs3_gfx_setreg8 lbs3_gfx_reg1, {1}
+                endm
+
+; set BS3 GFX PB2 register
+;  expect 1 parameter : immediate byte or register Bx
+mbs3_gfx_setPB2 macro
+                mbs3_gfx_setreg8 lbs3_gfx_reg2, {1}
+                endm
+
+; set BS3 GFX PB3 register
+;  expect 1 parameter : immediate byte or register Bx
+mbs3_gfx_setPB3 macro
+                mbs3_gfx_setreg8 lbs3_gfx_reg3, {1}
+                endm
+
+; set BS3 GFX PB4 register
+;  expect 1 parameter : immediate byte or register Bx
+mbs3_gfx_setPB4 macro
+                mbs3_gfx_setreg8 lbs3_gfx_reg4, {1}
+                endm
+
+; set BS3 GFX PB5 register
+;  expect 1 parameter : immediate byte or register Bx
+mbs3_gfx_setPB5 macro
+                mbs3_gfx_setreg8 lbs3_gfx_reg5, {1}
+                endm
+
+; set BS3 GFX PB6 register
+;  expect 1 parameter : immediate byte or register Bx
+mbs3_gfx_setPB6 macro
+                mbs3_gfx_setreg8 lbs3_gfx_reg6, {1}
+                endm
+
+; set BS3 GFX PB7 register
+;  expect 1 parameter : immediate byte or register Bx
+mbs3_gfx_setPB7 macro
+                mbs3_gfx_setreg8 lbs3_gfx_reg7, {1}
+                endm
+
+
+;  set BS3 GFX Word register
+;  expect 2 parameters
+;     1) an immdiate or label to registry addr
+;     2) immediate byte or register Wx
+mbs3_gfx_setreg16 macro
+                push    w0
+                mov     w0, {2}
+                sr      w0, [{1}] 
+                pop     w0
+                endm
+
+; set BS3 GFX PW1 register
+;  expect 1 parameter : immediate word or register Wx
+mbs3_gfx_setPW1 macro
+                mbs3_gfx_setreg16 lbs3_gfx_reg1, {1}
+                endm
+
+; set BS3 GFX PW2 register
+;  expect 1 parameter : immediate word or register Wx
+mbs3_gfx_setPW2 macro
+                mbs3_gfx_setreg16 lbs3_gfx_reg2, {1}
+                endm
+
+; set BS3 GFX PW3 register
+;  expect 1 parameter : immediate word or register Wx
+mbs3_gfx_setPW3 macro
+                mbs3_gfx_setreg16 lbs3_gfx_reg3, {1}
+                endm
+
+; set BS3 GFX PW4 register
+;  expect 1 parameter : immediate word or register Wx
+mbs3_gfx_setPW4 macro
+                mbs3_gfx_setreg16 lbs3_gfx_reg4, {1}
+                endm
+
+; set BS3 GFX PW5 register
+;  expect 1 parameter : immediate word or register Wx
+mbs3_gfx_setPW5 macro
+                mbs3_gfx_setreg16 lbs3_gfx_reg5, {1}
+                endm
+
+; set BS3 GFX PW6 register
+;  expect 1 parameter : immediate word or register Wx
+mbs3_gfx_setPW6 macro
+                mbs3_gfx_setreg16 lbs3_gfx_reg6, {1}
+                endm
+
+; set BS3 GFX PW7 register
+;  expect 1 parameter : immediate word or register Wx
+mbs3_gfx_setPW7 macro
+                mbs3_gfx_setreg16 lbs3_gfx_reg7, {1}
+                endm
+
+
+;  reset BS3 GFX device
+;  at return B0 has the status code
+mbs3_gfx_reset  macro
+                mbs3_gfx_command  ebs3_gfx_cmd_reset      
+                endm
+
+;  end BS3 GFX device
+;  at return B0 has the status code
+mbs3_gfx_end    macro
+                mbs3_gfx_command  ebs3_gfx_cmd_end      
+                endm
+
+; Refresh BS3 GFX Viewport
+; at return B0 has the status code
+mbs3_gfx_refresh macro
+                mbs3_gfx_command  ebs3_gfx_cmd_refresh
+                endm
+
+; Clear BS3 GFX Viewport
+; at return B0 has the status code
+mbs3_gfx_vpclear macro
+                mbs3_gfx_command  ebs3_gfx_cmd_vpclear
+                endm
+
+; Config BS3 GFX Viewport
+; at return B0 has the status code
+mbs3_gfx_vpclear macro
+                mbs3_gfx_command  ebs3_gfx_cmd_vpconfig
+                endm
+
+; Get pixel on BS3 GFX Surface
+; at return B0 has the status code
+mbs3_gfx_getpixel macro
+                mbs3_gfx_command  ebs3_gfx_cmd_getpixel
+                endm
+
+; Set pixel on BS3 GFX Surface
+; at return B0 has the status code
+mbs3_gfx_setpixel macro
+                mbs3_gfx_command  ebs3_gfx_cmd_setpixel
+                endm
+
+; Horizontal line on BS3 GFX Surface
+; at return B0 has the status code
+mbs3_gfx_hline macro
+                mbs3_gfx_command  ebs3_gfx_cmd_hline
+                endm
+
+; Vertical line on BS3 GFX Surface
+; at return B0 has the status code
+mbs3_gfx_vline macro
+                mbs3_gfx_command  ebs3_gfx_cmd_vline
+                endm
+
+; Box on BS3 GFX Surface
+; at return B0 has the status code
+mbs3_gfx_box macro
+                mbs3_gfx_command  ebs3_gfx_cmd_box
+                endm
+
+; Full box on BS3 GFX Surface
+; at return B0 has the status code
+mbs3_gfx_boxfull macro
+                mbs3_gfx_command  ebs3_gfx_cmd_boxfull
+                endm
+
+; Blit with operator on BS3 GFX Surface
+; at return B0 has the status code
+mbs3_gfx_blitope macro
+                mbs3_gfx_command  ebs3_gfx_cmd_blitope
+                endm
+
+; Blit with key color on BS3 GFX Surface
+; at return B0 has the status code
+mbs3_gfx_blitkcolor macro
+                mbs3_gfx_command  ebs3_gfx_cmd_blitkcolor
+                endm
+
+; Blit with key color on BS3 GFX Surface
+; at return B0 has the status code
+mbs3_gfx_blitrans macro
+                mbs3_gfx_command  ebs3_gfx_cmd_blitrans
+                endm
+
+; Enable auto refresh of the BS3 GFX device
+mbs3_gfx_autorefresh_on macro
+                push    b0
+                mbs3_gfx_busywait
+                mov     b0, 1
+                sr      b0, [lbs3_gfx_autorefresh]
+                pop     b0
+
+; Disable auto refresh of the BS3 GFX device
+mbs3_gfx_autorefresh_off macro
+                push    b0
+                mbs3_gfx_busywait
+                mov     b0, 0
+                sr      b0, [lbs3_gfx_autorefresh]
+                pop     b0
+                        endm                 

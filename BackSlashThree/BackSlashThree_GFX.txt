@@ -20,7 +20,7 @@ Color palette:
     Each color is represented by 1 byte (8 bits) with value from 0 to 255.
     Each color index is represented by an standard color
     The BS3 GFX device use two standards : IBM 16 colors and ANSI 256 colors (256 - 16 ANSI colors).
-    Color index from 0 to 15 are mapped to the IBM PC VGA default color palette
+    Color index from 0 to 15 are mapped to the IBM PC default color palette
         index   Name (IBM)      Red (0..5)	Green(0..5) Blue(0..5)  (equivalent to ANSI 256 colors Index)
         $00     Black	        0	        0           0           16
         $01     Blue	        0	        0           3           19
@@ -79,7 +79,7 @@ I/O : 0120 to 0127 (height registers 8/16 bits registers )
 
 If BUSY == 1 then device is busy, therefore the device can't accept any command (write on 0120) or write on PBx or PWx (x from 1 to 7)
 If BUSY == 0 and WAITFORDATA == 1 then device is waiting for data reading or data writing from the bus host (e.g CPU)
-if BUSY == 0 and WAITFORDATA == 1 then only RESET command can be accepted.
+if BUSY == 0 and WAITFORDATA == 1 then only RESET or END commands are accepted.
 If BUSY == 0 and WAITFORDATA == 0 then device is ready to receive new command , and COMMAND_STATUS_CODE is valid indicating the status of last command
 a COMMAND_STATUS_CODE equal to 0 means success, other value express an error on previous executed command
 a COMMAND_STATUS_CODE == 31 means that previous command execution failed because the command code is unknown.
@@ -153,8 +153,9 @@ Description:
     Configure the viewport surface number, top left corner coordinates and size (Height, width)
     Height is between 1 and 100
     Width is between 1 and 160
-    if Height and Width change from previous config, a screen reset and refresh is executed after successful settings
+    if Height and Width change from previous config, a screen clear and refresh is executed after successful settings
     if Height and Width does not change from current viewport configation , then a REFRESH command is needed to see the result on screen
+    if PB7 != 0 then the automatic REFRESH command is perfomed 
 Status
     COMMAND_STATUS_CODE
         0 : Viewport config success
@@ -172,6 +173,7 @@ Parameter :
 Description:
     Erase the surface and area defined by current viewport configuration with a chosen color
     Change is not reflected on screen : need a REFRESH command
+    if PB7 != 0 then the automatic REFRESH command is perfomed
 Status
     COMMAND_STATUS_CODE
         0 : viewport surface area cleared with chosen color 
@@ -205,6 +207,7 @@ Parameter:
 Description 
     Set pixel color on chosen surface and coordinates. Change is not seen on screen, a REFRESH command is needed to see the change
     the change is visible (after REFRESH) if the pixel is on the same surface and inside the area of the current view port configuration.
+    if PB7 != 0 then the automatic REFRESH command is perfomed
 Status  
     COMMAND_STATUS_CODE
         0 : pixel color set at chosen coordinatesand surface
@@ -223,6 +226,7 @@ Parameter
         N/A
 Description
     Draw a line from left to right, by providing first pixel coordinates, color and line length.
+    if PB7 != 0 then the automatic REFRESH command is perfomed
 Status
     COMMAND_STATUS_CODE
         0 : horizontal line drawn
@@ -241,6 +245,7 @@ Parameter
         N/A
 Description
     Draw a line from top to bottom, by providing first pixel coordinates, color and line length.
+    if PB7 != 0 then the automatic REFRESH command is perfomed
 Status
     COMMAND_STATUS_CODE
         0 : verticalline drawn
@@ -259,6 +264,7 @@ Parameter
         N/A 
 Description
     Draw a box with a given color, surface number, top left coordinate and a size (1 to 256) provide a 0 for a size of 256 (height or width)
+    if PB7 != 0 then the automatic REFRESH command is perfomed
 Status
     COMMAND_STATUS_CODE
         0 : box drawn
@@ -277,6 +283,7 @@ Parameter
         N/A 
 Description
     Draw a full box with a given color, surface number, top left coordinate and a size (1 to 256) provide a 0 for a size of 256 (height or width)
+    if PB7 != 0 then the automatic REFRESH command is perfomed
 Status
     COMMAND_STATUS_CODE
         0 : full box drawn
@@ -305,6 +312,7 @@ Description
         4 : target = target ADD source (no cap value , may overflow)
         5 : target = target SUB source (no cap value, may underflow )
         6 : target = target MUL source (no cap value , may overflow  )
+    if PB7 != 0 then the automatic REFRESH command is perfomed        
 Status
     COMMAND_STATUS_CODE
         0 : Blit completed
@@ -328,6 +336,8 @@ Description
     Blit the bitmap rectangle defined by source surface, source top left corner coordinate and rectangle size,
     to the target surface at target coordinate by respecting the key color as follow:
       if source pixel to blit == key color , then pixel is not blit (key color = transparency color)
+    if PB7 != 0 then the automatic REFRESH command is perfomed
+
 Status
     COMMAND_STATUS_CODE
         0 : Blit completed
@@ -353,12 +363,13 @@ Description
     write a byte color index on PB3 X times (X = PW4:HH * PW4:WW (if HH = 0 then HH = 256, if WW = 0 the WW == 256 ))
     Any write to PW3 will interrupt the data transfer
     Before to write to PB3 register, be sure that BUSY == 0, otherwise the write is ignored.
-    the pixel stored on the surface is at progressive coordinate starting from PW2 coordinate, then progress from left to right and top to bottom
-    ( respecting the size defined by PW4, current next coordinate in PW6 )
+    the pixel stored on the surface is at progressive coordinates starting at PW2 coordinates, then progress from left to right and top to bottom
+    ( respecting the size defined by PW4, current next coordinate on surface in PW6 )
     when all pixels are received, the end of transfer is indicated by WAITFORDATA == 0 and BUSY == 0
     During pixel transfer process (WAITFORDATA == 1), no new command is accepted (write COMMAND is ignored except for RESET or END) and
     write to register is forbidden except for PB3 and PW3.
         you may break the transfert by writing anything on PW3 (word write instead of byte write on PB3) or by executing a RESET or END command
+    if PB7 != 0 then the automatic REFRESH command is perfomed when transfer is complete (not when trasnfer is broken)
     NB : during the transfer process BS3 GFX device modify information registers (PW6, PW5, PW1)
 Status 
     BUSY == 0 and WAITFORDATA == 1 when the device is ready to receive the data
