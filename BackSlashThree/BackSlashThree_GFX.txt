@@ -326,8 +326,8 @@ Parameter
         N/A 
 Description 
     Blit the bitmap rectangle defined by source surface, source top left corner coordinate and rectangle size,
-    to the target surface at target coordinate with a chosen by respecting the key color as follow:
-    if source pixel to blit == keycolor , then pixel is not blit (key color = transparency color)
+    to the target surface at target coordinate by respecting the key color as follow:
+      if source pixel to blit == key color , then pixel is not blit (key color = transparency color)
 Status
     COMMAND_STATUS_CODE
         0 : Blit completed
@@ -343,17 +343,23 @@ Parameter
         PW2 : surface top left corner coordinates  ($YYXX : MSB Y coordinate, LSB X coordinate)
         PW4 : rectangle size ($HHWW : MSB HH height (if 0 then 256) , LSB WW Width (if 0 then 256))
     Output
-        N/A
+        At any moment during the trasnfer the following registers provide current progress of bit transfer
+        PW1 : current progress Y (from 0 to HH -1 ) (next write PB3 relative rectangle coordinate )
+        PW5 : current progress X (from 0 to XX -1 ) (next write PB3 relative rectangle coordinate )
+        PW6 : current address on selected surface   (next write PB3 surface address (coordinates))
 Description
     transfer a rectangle(top left corner coordinates and size) of pixels from CPU/host to device chosen surface.
     after Command write the status BUSY bit should be 0 and WAITFORDATA must be 1
     write a byte color index on PB3 X times (X = PW4:HH * PW4:WW (if HH = 0 then HH = 256, if WW = 0 the WW == 256 ))
     Any write to PW3 will interrupt the data transfer
     Before to write to PB3 register, be sure that BUSY == 0, otherwise the write is ignored.
-    the pixel stored on the surface is at progrssive coordinate starting from PW2 coordinate, then progress from left to right and top to bottom
+    the pixel stored on the surface is at progressive coordinate starting from PW2 coordinate, then progress from left to right and top to bottom
+    ( respecting the size defined by PW4, current next coordinate in PW6 )
     when all pixels are received, the end of transfer is indicated by WAITFORDATA == 0 and BUSY == 0
-    During pixel transfer process, no new command is accepted (write COMMAND is ignored except for RESET).
-        you may break the transfert by writing anything on PW3 (word write instead of byte write on PB3) or by executing a RESET command
+    During pixel transfer process (WAITFORDATA == 1), no new command is accepted (write COMMAND is ignored except for RESET or END) and
+    write to register is forbidden except for PB3 and PW3.
+        you may break the transfert by writing anything on PW3 (word write instead of byte write on PB3) or by executing a RESET or END command
+    NB : during the transfer process BS3 GFX device modify information registers (PW6, PW5, PW1)
 Status 
     BUSY == 0 and WAITFORDATA == 1 when the device is ready to receive the data
     COMMAND_STATUS_CODE when BUSY == 0 and WAITFORDATA == 0

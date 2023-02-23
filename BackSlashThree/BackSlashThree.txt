@@ -1,6 +1,6 @@
 CISC 16 bits address, 8/16 bits data   0x5C33 "\\3"
 16 bits data/address bus
-little-endian data access and immediate encoding
+little-endian data access and immediate data parameter encoding
 Event/Interruption enabled
 Hypervisor controlled
 No stack/code/data protection

@@ -75,7 +75,13 @@ struct dev_bs3gfx
 #define BS3_GFX_COMMAND_SURFACE_BLIT_KEYCOLOR   0x0B
 #define BS3_GFX_COMMAND_SURFACE_BLIT_TRANSFER   0x0C
 
-
+#define BS3_GFX_COMMAND_BLIT_OPERATOR_COPY      0x00
+#define BS3_GFX_COMMAND_BLIT_OPERATOR_OR        0x01
+#define BS3_GFX_COMMAND_BLIT_OPERATOR_EOR       0x02
+#define BS3_GFX_COMMAND_BLIT_OPERATOR_AND       0x03
+#define BS3_GFX_COMMAND_BLIT_OPERATOR_ADD       0x04
+#define BS3_GFX_COMMAND_BLIT_OPERATOR_SUB       0x05
+#define BS3_GFX_COMMAND_BLIT_OPERATOR_MUL       0x06
 
 #define BS3_GFX_REGISTER_COMMAND    0x00
 #define BS3_GFX_REGISTER_PB1        0x01
@@ -128,7 +134,7 @@ struct dev_bs3gfx reg_bs3gfx;
 static pthread_cond_t condWakeUp = PTHREAD_COND_INITIALIZER; 
 pthread_mutex_t lockGfx = PTHREAD_MUTEX_INITIALIZER; 
 
-/* ANSI commands */
+/* terminal ANSI macro commands */
 #define _out(c) putc((int)c,stdout)
 #define _outStr(str) fprintf(stdout,str)
 #define _outFlush() fflush(stdout)
@@ -434,7 +440,9 @@ void dev_bs3gfx_writeByte(WORD address, BYTE data)
     pthread_mutex_lock(&lockGfx);
     if (addr == BS3_GFX_REGISTER_COMMAND) /* write command case */
     {
-        if (!reg_bs3gfx.WAITFORDATA || (reg_bs3gfx.WAITFORDATA && data == BS3_GFX_COMMAND_RESET))
+        if (!reg_bs3gfx.WAITFORDATA                                    ||
+            (reg_bs3gfx.WAITFORDATA && data == BS3_GFX_COMMAND_RESET)  ||
+            (reg_bs3gfx.WAITFORDATA && data == BS3_GFX_COMMAND_END))
         {
             reg_bs3gfx.cmd = data;
             reg_bs3gfx.BUSY = 1;
@@ -554,7 +562,7 @@ void bs3_gfx_command_reset()
         reg_bs3gfx.pb[i]=0;
         reg_bs3gfx.pw[i]=0;
     }
-    /* reset color palette */
+    /* set color palette */
     for (i = 0 ; i < 256; i++)
         reg_bs3gfx.colorPalette[i] = (BYTE)i;
     /* IBM VGA 16 color palette
@@ -784,6 +792,7 @@ void bs3_gfx_command_surface_setpixel()
         return;
     }
     reg_bs3gfx.videoram[surface][addrSurface] = reg_bs3gfx.pb3 ;
+    if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
@@ -807,6 +816,7 @@ void bs3_gfx_command_surface_draw_hline()
         addrSurface++;
         i--;
     } while (i);
+    if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
@@ -830,6 +840,7 @@ void bs3_gfx_command_surface_draw_vline()
         addrSurface+=256;
         i--;
     } while (i);
+    if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
@@ -869,7 +880,7 @@ void bs3_gfx_command_surface_draw_box()
         addrSurface += 256;
         i--;
     } while (i);
-
+    if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 
 }
@@ -905,30 +916,192 @@ void bs3_gfx_command_surface_draw_boxfull()
         offset += 0x0100;
         j      -= 0x0100;
     } while (j);
+    if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
 void bs3_gfx_command_surface_blit_operator()
 {
-    /* TODO */
+    BYTE sourceSurface;
+    BYTE targetSurface;
+    WORD sourceAddr;
+    WORD targetAddr;
+    WORD size;
+    BYTE operator;
+    WORD offset;
+    int x,y;
+    int h,w;
+    
+    sourceSurface   = reg_bs3gfx.pb1;
+    targetSurface   = reg_bs3gfx.pb5;
+    sourceAddr      = reg_bs3gfx.pw2;
+    targetAddr      = reg_bs3gfx.pw6;
+    size            = reg_bs3gfx.pw4;
+    operator        = reg_bs3gfx.pb3;
+
+    h               = (int)((size & 0xFF00) >> 8);
+    w               = (int)( size & 0x00FF);
+    h               = h?h:256;
+    w               = w?w:256;
+    offset          = 256 - w;
+    if ((sourceSurface & 0xFE) || (targetSurface & 0xFE)) 
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
+        return;
+    }
+
+    if (operator > 6 )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADOPERATOR;
+        return;        
+    }
+
+    for (y = 0; y < h ; y++)
+    {
+        for (x = 0; x < w ; x++)
+        {
+            switch (operator)
+            {
+                case BS3_GFX_COMMAND_BLIT_OPERATOR_COPY:
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] =  reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    break;
+                case BS3_GFX_COMMAND_BLIT_OPERATOR_OR:
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] |= reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    break;
+                case BS3_GFX_COMMAND_BLIT_OPERATOR_EOR:
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] ^= reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    break;
+                case BS3_GFX_COMMAND_BLIT_OPERATOR_AND:
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] &= reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    break;
+                case BS3_GFX_COMMAND_BLIT_OPERATOR_ADD:
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] += reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    break;
+                case BS3_GFX_COMMAND_BLIT_OPERATOR_SUB:
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] -= reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    break;
+                case BS3_GFX_COMMAND_BLIT_OPERATOR_MUL:
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] *= reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    break;
+            }
+            targetAddr++;
+            sourceAddr++;
+        }
+        targetAddr += offset;
+        sourceAddr += offset;
+    }
+    if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
 void bs3_gfx_command_surface_blit_keycolor()
 {
-    /* TODO */
+    BYTE sourceSurface;
+    BYTE targetSurface;
+    WORD sourceAddr;
+    WORD targetAddr;
+    WORD size;
+    BYTE keycolor;
+    BYTE value;
+    WORD offset;
+    int x,y;
+    int h,w;
+    
+    sourceSurface   = reg_bs3gfx.pb1;
+    targetSurface   = reg_bs3gfx.pb5;
+    sourceAddr      = reg_bs3gfx.pw2;
+    targetAddr      = reg_bs3gfx.pw6;
+    size            = reg_bs3gfx.pw4;
+    keycolor        = reg_bs3gfx.pb3;
+
+    h               = (int)((size & 0xFF00) >> 8);
+    w               = (int)( size & 0x00FF);
+    h               = h?h:256;
+    w               = w?w:256;
+    offset          = 256 - w;
+    if ((sourceSurface & 0xFE) || (targetSurface & 0xFE)) 
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
+        return;
+    }
+
+    for (y = 0; y < h ; y++)
+    {
+        for (x = 0; x < w ; x++)
+        {
+            value = reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+            if (value != keycolor)
+                reg_bs3gfx.videoram[targetSurface][targetAddr] = value;
+            targetAddr++;
+            sourceAddr++;
+        }
+        targetAddr += offset;
+        sourceAddr += offset;
+    }
+    if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
 void bs3_gfx_command_surface_blit_transfer()
 {
-    /* TODO */
+    if (reg_bs3gfx.pb1 & 0xFE)
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
+        return;
+    }
+    reg_bs3gfx.WAITFORDATA = 1;
+    reg_bs3gfx.pw6 = reg_bs3gfx.pw2;
+    reg_bs3gfx.pw5 = 0; /* current progress X */
+    reg_bs3gfx.pw1 = 0; /* current progress Y */
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
 void bs3_gfx_command_surface_blit_transfer_data()
 {
-    /* TODO */
+    BYTE targetSurface;
+    WORD startAddr;
+    WORD currAddr;
+    BYTE value;
+    WORD size;
+    WORD currX;
+    WORD currY;
+    WORD w,h;
+    WORD offset;
+
+    targetSurface   = reg_bs3gfx.pb1;
+    startAddr       = reg_bs3gfx.pw2;
+    size            = reg_bs3gfx.pw4;
+    currAddr        = reg_bs3gfx.pw6;
+    value           = reg_bs3gfx.pb3;
+    currX           = reg_bs3gfx.pw5;
+    currY           = reg_bs3gfx.pw1;
+    w               =  size & 0x00FF;
+    h               = (size & 0x00FF) >> 8;
+    w               = w?w:0x0100;
+    h               = h?h:0x0100;
+    offset          = 0x0100 - w;
+
+    reg_bs3gfx.videoram[targetSurface][currAddr] = value;
+    currX++;
+    currAddr++;
+    if (currX >= w)
+    {
+        currAddr += offset;
+        currX = 0;
+        currY++;
+        if (currY >= h)
+        {
+            reg_bs3gfx.WAITFORDATA = 0;
+            if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
+            reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+            return;
+        }
+    }
+    reg_bs3gfx.pw5 = currX;
+    reg_bs3gfx.pw1 = currY;
+    reg_bs3gfx.pw6 = currAddr;
+
+
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
@@ -941,7 +1114,7 @@ static void * dev_bs3gfx_run(void * bs3_device_bus)
     {
         reg_bs3gfx.BUSY = 0;
         pthread_cond_wait(&condWakeUp,&lockGfx);
-        if (reg_bs3gfx.WAITFORDATA && reg_bs3gfx.cmd != BS3_GFX_COMMAND_RESET) /* data transfer */
+        if (reg_bs3gfx.WAITFORDATA && reg_bs3gfx.cmd != BS3_GFX_COMMAND_RESET && reg_bs3gfx.cmd != BS3_GFX_COMMAND_END) /* data transfer */
         {
             switch (reg_bs3gfx.cmd)
             {
@@ -1044,7 +1217,7 @@ struct bs3_device dev_bs3gfx =
 {
     .name="BS3-GFX",
     .address=0x0120,
-    .mask=0xFFF8, /* 8 BS3 GFX I/O registers */
+    .mask=0xFFF8, /* 8 BS3 GFX I/O registers 8/16 bits */
     .startdevice = &dev_bs3gfx_start,
     .stopdevice = &dev_bs3gfx_stop,
     .readByte = &dev_bs3gfx_readByte,
