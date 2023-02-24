@@ -8,6 +8,8 @@ int main(int argc, char *argv[])
 {
   int i, err;
   struct bs3_asm_code_map codemap;
+  codemap.dynamic =0;
+  codemap.next = NULL;
   bs3_asm_code_map_reset(&codemap);
   for (i = 0 ; i < argc; i++)
   {
@@ -375,6 +377,7 @@ int main(int argc, char *argv[])
 
   struct bs3_asm_code_map codemap;
   codemap.dynamic =0;
+  codemap.next = NULL;
   if (toCompile)
   {
     bs3_asm_includepaths = &inc; /* provides the include paths */

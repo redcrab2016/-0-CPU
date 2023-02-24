@@ -14,7 +14,7 @@
  */
 #ifndef _ANSI_ESC_H
 #define _ANSI_ESC_H         1
-#define _out(c)             putchar((int)(c))
+#define _out(c)             fputc((int)(c), stdout)
 #define _outStr(str)        fprintf(stdout,(str))
 #define _outFlush()         fflush(stdout)
 #define _outByteStr(x)      fprintf(stdout,"%d",(int)(x))

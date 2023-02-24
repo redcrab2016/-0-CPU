@@ -15,7 +15,17 @@
         {
             "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
             "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
+            "binaryArgs": ["-D","dist/examples/rtc/hellortc.asm"]
+        },
+        {
+            "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
+            "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
             "binaryArgs": ["-D","dist/examples/ansigfx/helloansigfx.asm"]
+        },
+        {
+            "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
+            "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
+            "binaryArgs": ["-D","dist/examples/gfx/hellogfx.asm"]
         }
     ],
     "C_Cpp.dimInactiveRegions": false,

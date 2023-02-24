@@ -85,6 +85,7 @@ struct dev_bs3gfx
 #define BS3_GFX_COMMAND_BLIT_OPERATOR_MUL       0x06
 
 #define BS3_GFX_REGISTER_COMMAND                0x00
+#define BS3_GFX_REGISTER_STATUS                 0x00
 #define BS3_GFX_REGISTER_PB1                    0x01
 #define BS3_GFX_REGISTER_PB2                    0x02
 #define BS3_GFX_REGISTER_PB3                    0x03
@@ -140,7 +141,7 @@ BYTE dev_bs3gfx_readByte(WORD address)
 {
     WORD addr;
     addr = address & 0x0007;
-    if (addr == 0) return reg_bs3gfx.status;
+    if (addr == BS3_GFX_REGISTER_STATUS) return reg_bs3gfx.status;
     return reg_bs3gfx.pb[addr];
 }
 
@@ -177,7 +178,7 @@ void dev_bs3gfx_writeByte(WORD address, BYTE data)
             } /* else ignore write to register */
         }
     }
-    pthread_mutex_lock(&lockGfx);
+    pthread_mutex_unlock(&lockGfx);
 }
 
 WORD dev_bs3gfx_readWord(WORD address)
@@ -209,7 +210,7 @@ void dev_bs3gfx_writeWord(WORD address, WORD data)
         {   
             if (!reg_bs3gfx.WAITFORDATA)
             {
-                reg_bs3gfx.pb[addr] = data;
+                reg_bs3gfx.pw[addr] = data;
             } /* else ignore write */
         }
     }
@@ -294,9 +295,9 @@ void _bs3_gfx_clearscreen()
 {
     _outFlush();
     _outStr(".......");
+    ansi_SGR_reset();
     ansi_ED(2);
     ansi_ED(3);
-    ansi_SGR_reset();
     ansi_CUP(1,1);
     _outFlush();
 }
@@ -344,7 +345,7 @@ void _bs3_gfx_screenrender()
     lastRow = 255;
     lastForeColor = -1;
     lastBackColor = -1;
-    for (y = 1; y <= h; y++) ; /* browse view port on screen */
+    for (y = 1; y <= h; y++)  /* browse view port on screen */
     {
         for (x = 1; x <= w ; x++)
         {
@@ -360,21 +361,22 @@ void _bs3_gfx_screenrender()
                 if (lastColumn != x && lastRow != y)
                 {
                     ansi_CUP(y,x);
-                    lastColumn = x;
-                    lastRow = y;
+                    lastColumn = (BYTE)x;
+                    lastRow = (BYTE)y;
                 } 
                 else
                 {
                     if (lastColumn != x)
                     {
                         ansi_CHA(x);
-                        lastColumn = x;
+                        lastColumn = (BYTE)x;
                     }
                     else
                     {
                         if (lastRow != y)
                         {
                            ansi_CUD((y-lastRow));
+                           lastRow = (BYTE)y;
                         }
                     }
                 }
@@ -543,10 +545,10 @@ void bs3_gfx_command_surface_setpixel()
 void bs3_gfx_command_surface_draw_hline()
 {
     BYTE surface;
-    WORD addrSurface = reg_bs3gfx.pw2;
+    WORD addrSurface;
     BYTE i;
     BYTE value;
-
+    addrSurface = reg_bs3gfx.pw2;
     surface = reg_bs3gfx.pb1;
     value = reg_bs3gfx.pb3;
     i = reg_bs3gfx.pb4;
@@ -568,10 +570,11 @@ void bs3_gfx_command_surface_draw_hline()
 void bs3_gfx_command_surface_draw_vline()
 {
     BYTE surface;
-    WORD addrSurface = reg_bs3gfx.pw2;
+    WORD addrSurface;
     BYTE i;
     BYTE value;
 
+    addrSurface = reg_bs3gfx.pw2;
     surface = reg_bs3gfx.pb1;
     value = reg_bs3gfx.pb3;
     i = reg_bs3gfx.pb4;
@@ -618,7 +621,7 @@ void bs3_gfx_command_surface_draw_box()
     } while (i);
     /* left and right vertical lines */
     addrSurface = reg_bs3gfx.pw2;
-    i = (BYTE)((reg_bs3gfx.pw4 & 0xFF) >> 8);
+    i = (BYTE)((reg_bs3gfx.pw4 & 0xFF00) >> 8);
     offset = (reg_bs3gfx.pw4 & 0x00FF) - 1;
     do
     {
@@ -872,7 +875,7 @@ static void * dev_bs3gfx_run(void * bs3_device_bus)
         }
         else /* normal command excution */
         {
-            if (reg_bs3gfx.ENABLE) /* id BS3 GFX device is enable */
+            if (reg_bs3gfx.ENABLE || (!reg_bs3gfx.ENABLE && reg_bs3gfx.cmd == BS3_GFX_COMMAND_RESET)) /* id BS3 GFX device is enable */
             {
                 switch (reg_bs3gfx.cmd)
                 {
@@ -946,7 +949,7 @@ int dev_bs3gfx_stop()
     if (resultGfx == 0 && created_thread_bs3gfx) 
     {
         endGfx = 1;
-        
+        pthread_cond_signal(&condWakeUp);
         pthread_join(thread_bs3gfx, NULL);
     }
     created_thread_bs3gfx = 0;
