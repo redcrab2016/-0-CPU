@@ -163,8 +163,29 @@ Status
         2 : incorrect size (width == 0 or > 160, height == 0 or > 100) (viewport configuration unchanged)
         3 : incorrect surface number (not 0 nor 1 )
 
->>> VIEWPORT_CLEAR
+>>> VIEWPORT_GETCONFIG
 Command $03
+Parameter :
+    Input
+        N/A
+    Output  
+        PB1 : surface number (0: 1)
+        PW2 : top left corner Coordinates $YYXX  MSB YY: vertical coordinate, LSB XX: horizontal coordinate
+                coordinate from 0 to 255
+        PW3 : view port size $HHWW : MSB HH : height (even size from 2 to 100), LSB WW : width (even size 2 to 160)
+              if the size is odd then below even size is taken
+Description:
+    Get the viewport surface number, top left corner coordinates and size (Height, width)
+    Height is between 1 and 100
+    Width is between 1 and 160
+
+Status
+    COMMAND_STATUS_CODE
+        0 : Viewport get config success
+        1 : Device not initialized (device was not reset)
+
+>>> VIEWPORT_CLEAR
+Command $04
 Parameter :
     Input
         PB1 : clear color (0 to 255)
@@ -180,7 +201,7 @@ Status
         1 : Device not initialized (device was not reset)
 
 >>> SURFACE_GETPIXEL
-Command $04
+Command $05
 parameter:
     Input
         PB1 : surface number (O or 1)
@@ -196,7 +217,7 @@ Status
         3 : Incorrect surface number (not 0 nor 1)
 
 >>> SURFACE_SETPIXEL
-Command $05
+Command $06
 Parameter:
     Input
         PB1 : Surface number (0 or 1)
@@ -215,7 +236,7 @@ Status
         3 : Incorrect surface number (not 0 nor 1)
 
 >>> SURFACE_DRAW_HLINE
-Command $06
+Command $07
 Parameter
     Input
         PB1 : Surface number (0 or 1)
@@ -234,7 +255,7 @@ Status
         3 : Incorrect surface number (not 0 nor 1)
 
 >>> SURFACE_DRAW_VLINE
-Command $07
+Command $08
 Parameter
     Input
         PB1 : Surface number (0 or 1)
@@ -253,7 +274,7 @@ Status
         3 : Incorrect surface number (not 0 nor 1)
 
 >>> SURFACE_DRAW_BOX
-Command $08
+Command $09
 Parameter
     input
         PB1 : Surface number (0 or 1)
@@ -272,7 +293,7 @@ Status
         3 : Incorrect surface number (not 0 nor 1)        
 
 >>> SURFACE_DRAW_BOXFULL
-Command $09
+Command $0A
 Parameter
     input
         PB1 : Surface number (0 or 1)
@@ -291,7 +312,7 @@ Status
         3 : Incorrect surface number (not 0 nor 1)        
 
 >>> SURFACE_BLIT_OPERATOR
-Command $0A
+Command $0B
 Parameter
     Input
         PB1 : Source Surface number (0 or 1)
@@ -321,7 +342,7 @@ Status
         4 : Incorrect operator (unknown operator > 6 )
         
 >>> SURFACE_BLIT_KEYCOLOR
-Command $0B
+Command $0C
 Parameter
     Input
         PB1 : Source Surface number (0 or 1)
@@ -346,7 +367,7 @@ Status
         
 
 >>> SURFACE_BLIT_TRANSFER
-Command $0C
+Command $0D
 Parameter
     Input 
         PB1 : surface number (0 or 1)

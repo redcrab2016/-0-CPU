@@ -44,16 +44,17 @@ ebs3_gfx_cmd_reset      equ     $00
 ebs3_gfx_cmd_end        equ     $FF
 ebs3_gfx_cmd_refresh    equ     $01
 ebs3_gfx_cmd_vpconfig   equ     $02
-ebs3_gfx_cmd_vpclear    equ     $03
-ebs3_gfx_cmd_getpixel   equ     $04
-ebs3_gfx_cmd_setpixel   equ     $05
-ebs3_gfx_cmd_hline      equ     $06
-ebs3_gfx_cmd_vline      equ     $07
-ebs3_gfx_cmd_box        equ     $08
-ebs3_gfx_cmd_boxfull    equ     $09
-ebs3_gfx_cmd_blitope    equ     $0A
-ebs3_gfx_cmd_blitkcolor equ     $0B
-ebs3_gfx_cmd_blitrans   equ     $0C
+ebs3_gfx_cmd_vpgetconf  equ     $03
+ebs3_gfx_cmd_vpclear    equ     $04
+ebs3_gfx_cmd_getpixel   equ     $05
+ebs3_gfx_cmd_setpixel   equ     $06
+ebs3_gfx_cmd_hline      equ     $07
+ebs3_gfx_cmd_vline      equ     $08
+ebs3_gfx_cmd_box        equ     $09
+ebs3_gfx_cmd_boxfull    equ     $0A
+ebs3_gfx_cmd_blitope    equ     $0B
+ebs3_gfx_cmd_blitkcolor equ     $0C
+ebs3_gfx_cmd_blitrans   equ     $0D
 ebs3_gfx_status         equ     $0120
 ebs3_gfx_status_busy    equ     $80
 ebs3_gfx_status_waitdata equ    $40
@@ -457,4 +458,13 @@ mbs3_printlnstr macro
  mbs3_printstr {1}
                 mbs3_putc   10
                 endm
+
+mbs3_wait_input macro
+                push    b0
+.waitinput      in      b0
+                jz      .waitinput
+                pop     b0
+                endm
+
+
 

@@ -156,6 +156,12 @@ mbs3_gfx_vpconfig macro
                 mbs3_gfx_command  ebs3_gfx_cmd_vpconfig
                 endm
 
+; Get config BS3 GFX Viewport
+; at return B0 has the status code
+mbs3_gfx_vpgetconf macro
+                mbs3_gfx_command  ebs3_gfx_cmd_vpgetconf
+                endm
+
 ; Get pixel on BS3 GFX Surface
 ; at return B0 has the status code
 mbs3_gfx_getpixel macro

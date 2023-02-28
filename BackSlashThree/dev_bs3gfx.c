@@ -65,16 +65,17 @@ struct dev_bs3gfx
 #define BS3_GFX_COMMAND_END                     0xFF
 #define BS3_GFX_COMMAND_REFRESH                 0x01
 #define BS3_GFX_COMMAND_VIEWPORT_CONFIG         0x02
-#define BS3_GFX_COMMAND_VIEWPORT_CLEAR          0x03
-#define BS3_GFX_COMMAND_SURFACE_GETPIXEL        0x04
-#define BS3_GFX_COMMAND_SURFACE_SETPIXEL        0x05
-#define BS3_GFX_COMMAND_SURFACE_DRAW_HLINE      0x06
-#define BS3_GFX_COMMAND_SURFACE_DRAW_VLINE      0x07
-#define BS3_GFX_COMMAND_SURFACE_DRAW_BOX        0x08
-#define BS3_GFX_COMMAND_SURFACE_DRAW_BOXFULL    0x09
-#define BS3_GFX_COMMAND_SURFACE_BLIT_OPERATOR   0x0A
-#define BS3_GFX_COMMAND_SURFACE_BLIT_KEYCOLOR   0x0B
-#define BS3_GFX_COMMAND_SURFACE_BLIT_TRANSFER   0x0C
+#define BS3_GFX_COMMAND_VIEWPORT_GETCONFIG      0x03
+#define BS3_GFX_COMMAND_VIEWPORT_CLEAR          0x04
+#define BS3_GFX_COMMAND_SURFACE_GETPIXEL        0x05
+#define BS3_GFX_COMMAND_SURFACE_SETPIXEL        0x06
+#define BS3_GFX_COMMAND_SURFACE_DRAW_HLINE      0x07
+#define BS3_GFX_COMMAND_SURFACE_DRAW_VLINE      0x08
+#define BS3_GFX_COMMAND_SURFACE_DRAW_BOX        0x09
+#define BS3_GFX_COMMAND_SURFACE_DRAW_BOXFULL    0x0A
+#define BS3_GFX_COMMAND_SURFACE_BLIT_OPERATOR   0x0B
+#define BS3_GFX_COMMAND_SURFACE_BLIT_KEYCOLOR   0x0C
+#define BS3_GFX_COMMAND_SURFACE_BLIT_TRANSFER   0x0D
 
 #define BS3_GFX_COMMAND_BLIT_OPERATOR_COPY      0x00
 #define BS3_GFX_COMMAND_BLIT_OPERATOR_OR        0x01
@@ -479,6 +480,15 @@ void bs3_gfx_command_viewport_config()
         bs3_gfx_command_refresh();
     }
     if (reg_bs3gfx.pb7) bs3_gfx_command_refresh();
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+}
+
+void bs3_gfx_command_viewport_getconfig()
+{
+    /* get config apply change */
+    reg_bs3gfx.pb1 = reg_bs3gfx.viewport_surface;
+    reg_bs3gfx.pw2 = reg_bs3gfx.viewport_location;
+    reg_bs3gfx.pw3 = reg_bs3gfx.viewport_size;
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
@@ -891,6 +901,9 @@ static void * dev_bs3gfx_run(void * bs3_device_bus)
                         break;
                     case BS3_GFX_COMMAND_VIEWPORT_CONFIG:
                         bs3_gfx_command_viewport_config();
+                        break;
+                    case BS3_GFX_COMMAND_VIEWPORT_GETCONFIG:
+                        bs3_gfx_command_viewport_getconfig();
                         break;
                     case BS3_GFX_COMMAND_VIEWPORT_CLEAR:
                         bs3_gfx_command_viewport_clear();

@@ -14,7 +14,7 @@ extern struct bs3_device dev_bs3_rambankselect;
 
 BYTE rambank[BANK_SIZE][BANK_WIDTH];
 
-BYTE banknumber;
+static BYTE banknumber;
 
 BYTE dev_bs3_rambank_readByte(WORD address)
 {
