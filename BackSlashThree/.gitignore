@@ -6,4 +6,9 @@ test.*
 !*.asm
 !*.inc
 dist/*
+examples/sk/DATA
+examples/sk/*.s
+examples/sk/*.bs3
+examples/sk/*.rpt
+examples/sk/sk
 !dist/readme.txt

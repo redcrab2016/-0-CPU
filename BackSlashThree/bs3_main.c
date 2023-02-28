@@ -401,8 +401,11 @@ int main(int argc, char *argv[])
           sourceFile = fopen(outputBS3,"rb");
           if (sourceFile)
           {
-            i = fread(buffer, 1, BS3_BUFFER_SIZE, sourceFile);
-            fwrite(buffer, 1, i, targetELF);
+            while (!feof(sourceFile))
+            {
+              i = fread(buffer, 1, BS3_BUFFER_SIZE, sourceFile);
+              fwrite(buffer, 1, i, targetELF);
+            }
             fclose (sourceFile);
             i = 1;
           } else i = 0;

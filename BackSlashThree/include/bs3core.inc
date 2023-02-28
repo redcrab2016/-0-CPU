@@ -31,6 +31,8 @@ ebs3_output_status_wait  equ    $01
 ebs3_output_status_none  equ    $FF
 ebs3_output_aux         equ     $0104
 ebs3_output_aux_status  equ     $0105
+ebs3_bank_rom           equ     $0106
+ebs3_bank_ram           equ     $0107
 ebs3_timer_low16        equ     $0108
 ebs3_timer_high16       equ     $010A
 ebs3_timer_mode         equ     $010C
@@ -121,6 +123,8 @@ lbs3_output             org     ebs3_output
 lbs3_output_status      org     ebs3_output_status
 lbs3_output_aux         org     ebs3_output_aux
 lbs3_output_aux_status  org     ebs3_output_aux_status
+lbs3_bank_rom           org     ebs3_bank_rom
+lbs3_bank_ram           org     ebs3_bank_ram
 lbs3_timer_low16        org     ebs3_timer_low16
 lbs3_timer_high16       org     ebs3_timer_high16
 lbs3_timer_mode         org     ebs3_timer_mode

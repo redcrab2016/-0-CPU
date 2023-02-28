@@ -861,6 +861,7 @@ static void * dev_bs3gfx_run(void * bs3_device_bus)
     {
         reg_bs3gfx.BUSY = 0;
         pthread_cond_wait(&condWakeUp,&lockGfx);
+        if (endGfx) break;
         if (reg_bs3gfx.WAITFORDATA && reg_bs3gfx.cmd != BS3_GFX_COMMAND_RESET && reg_bs3gfx.cmd != BS3_GFX_COMMAND_END) /* data transfer */
         {
             switch (reg_bs3gfx.cmd)
