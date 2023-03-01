@@ -36,8 +36,8 @@ int endTimer;
 int timerChanged;
 pthread_t thread_bs3timer; 
 int created_thread_bs3timer = 0;
-pthread_cond_t condWakeUp = PTHREAD_COND_INITIALIZER; 
-pthread_mutex_t lockTimer = PTHREAD_MUTEX_INITIALIZER; 
+static pthread_cond_t condWakeUp = PTHREAD_COND_INITIALIZER; 
+static pthread_mutex_t lockTimer = PTHREAD_MUTEX_INITIALIZER; 
 extern struct bs3_device dev_bs3timer;
 
 BYTE dev_bs3timer_read(WORD address)

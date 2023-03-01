@@ -10,10 +10,10 @@
 struct bs3_device * bs3_devices[256];
 int nb_bs3_device = 0;
 struct bs3_device * bs3_bus_addresses[65536];
-pthread_mutex_t lockbus = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t lockirq = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t lockbus = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t lockirq = PTHREAD_MUTEX_INITIALIZER;
 pthread_t thread_busClock;
-pthread_mutex_t lockBusClock =  PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t lockBusClock =  PTHREAD_MUTEX_INITIALIZER;
 int created_thread_busClock = 0;
 int endClock = 0;
 unsigned long bs3_clock = 0;

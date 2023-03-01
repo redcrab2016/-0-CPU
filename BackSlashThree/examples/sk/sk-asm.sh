@@ -76,6 +76,7 @@ function extract_sprite_or_data
   bb=0
   sprcnt=0;
   limit=96
+  nbdata=0
   if [ "$3" == "mask" ]; then
     cutselect="-c3-4,7-8,11-12,15-16,19-20"
   else
@@ -110,7 +111,12 @@ function extract_sprite_or_data
           fi
       done
       if [ "$takeaway" == "$sotr" ]; then
-        echo " $transformed_line" |  sed -e 's/,$//g' >> "${targetPath}/$2"
+        nbdata=$((nbdata+1))
+        if [ "$nbdata" == "9" ]; then
+          nbdata=0
+        else
+          echo " $transformed_line" |  cut -c1-20 >> "${targetPath}/$2"
+        fi
       fi
       
       k=$((k+1))

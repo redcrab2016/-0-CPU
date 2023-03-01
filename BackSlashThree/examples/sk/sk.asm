@@ -80,28 +80,42 @@ rom_sk_fonts        equ     26
             mbs3_bootat start
 start:
             mbs3_gfx_reset
+            ; load tiles and sprite into gfx device
+            call            transromTileSpriteToGFX
             mov             b0, rom_sk_scr_hv
-            c               showromscreenshot
+            call            showromscreenshot
+            mbs3_gfx_refresh
             mbs3_wait_input
             mov             b0, rom_sk_scr_logo
-            c               showromscreenshot
+            call            showromscreenshot
+            mbs3_gfx_refresh
             mbs3_wait_input
             mov             b0, rom_sk_scr_menu
-            c               showromscreenshot
+            call            showromscreenshot
+            mbs3_gfx_refresh
             mbs3_wait_input
             mov             b0, rom_sk_scr_intro1
-            c               showromscreenshot
+            call            showromscreenshot
+            mbs3_gfx_refresh
             mbs3_wait_input
             mov             b0, rom_sk_scr_intro2
-            c               showromscreenshot
+            call            showromscreenshot
+            mbs3_gfx_refresh
             mbs3_wait_input
-            
+            ; clear viewport
+            mbs3_gfx_setPB1     16
+            mbs3_gfx_vpclear
+            mov             b0,        0 ; map 0
+            call            sk_map_blit
+            mbs3_gfx_refresh
+            mbs3_wait_input
             mbs3_gfx_end
             hlt
 
 ; show ROM screen shot in current view port
 ; use B0 as ROM bank number that
 ; contains the screen shot to show
+; after calling this routine, a GFX refresh is needed
 showromscreenshot:
             ; save env
             pusha
@@ -118,7 +132,6 @@ showromscreenshot:
             mov     w3, rom_scr_addr
             ; start pixel transfer
             C       sk_scrblitrans
-            mbs3_gfx_refresh
             ; restore env
             ld      b1, [.oldrom]
             sr      b1, [lbs3_bank_rom]
@@ -150,4 +163,212 @@ sk_scrblitrans
 .endblitrans
                 ret
 
+; draw a sk map
+; parameter
+;    b0 : map number
+sk_map_blit
+                ; save env
+                pusha
+                ld                  b1, [lbs3_bank_rom]
+                sr                  b1, [.oldrom]
+                ; select rom map
+                add                 b0, rom_sk_map0
+                sr                  b0, [lbs3_bank_rom]
+                ; select gfx image bank
+                mov                 b1, 0 ; tile gfx bank
+                ; first tile index address
+                mov                 w2, rom_map_layer0_addr
+                ; first gfx coordinate
+                mov                 w1, $0000
+                ; get tile index
+                ld                  b0, [w2]
+                ; blit tile b0 at w1 coordinate on surface 0
+.blit           c                   blit8x8frombank ; blt tile b0 @ w1
+                inc                 w2 ; next tile address
+                add                 b2, 8
+                cmp                 b2, 160
+                jnz                 .blit
+                eor                 b2, b2
+                add                 b3, 8
+                cmp                 b3, 96
+                jnz                 .blit
+                ; restore env
+                ld                  b1, [.oldrom]
+                sr                  b1, [lbs3_bank_rom]
+                popa
+                ret
+.oldrom
+
+; blit a 8x8 gfx image bank
+; parameters (registers)
+;   b0 : gfx image index
+;   b1 : gfx image bank
+;   w1 : target coordinates on surface 0
+blit8x8frombank
+                pusha
+                ; compute surface 1 coordinates (source)
+                ;   compute image bank address
+                eor         w2, w2
+                mov         b5, b1
+                shl         b5
+                shl         b5
+                shl         b5  ; w2 = image row in bank
+                ;   compute imnage address in bank
+                eor         w3, w3
+                mov         b6, b0
+                and         b6, $1E
+                shl         b6
+                shl         b6
+                shl         b6
+                mov         b7, b0
+                and         b7, $E0
+                shr         b7
+                shr         b7 ; w3 = offset addr in img bank
+                ; w2 = address in surface (bank addr + offs img addr)
+                add         w2, w3
+
+                mbs3_gfx_setPB1     0       ; target surface
+                mbs3_gfx_setPW2     w1      ; target coordinates
+                mbs3_gfx_setPB3     232     ; key color (black)
+                mbs3_gfx_setPW4     $0808   ; 8x8 image size
+                mbs3_gfx_setPB5     1       ; source surface
+                mbs3_gfx_setPW6     w2      ; source coordinates
+                mbs3_gfx_blitkcolor
+
+                popa
+                ret
+
+
+; transfer rom sk tiles to gfx surface
+transromTileSpriteToGFX
+                ; transfer tiles
+                mov                 b0, rom_sk_tile_data
+                mov                 b1, rom_sk_tile_mask
+                mov                 b4, 0 ; tile gfx image bank
+                mov                 b2, 0 ; rom img idx 
+                mov                 b3, 0 ; gfx img idx 
+.transOneTile   c                   trans8x8toGFX
+                add                 w1, $0101
+                cmp                 b2, 42
+                jnz                 .transOneTile
+                ; transfer sprite
+                mov                 b0, rom_sk_spr_data
+                mov                 b1, rom_sk_spr_mask
+                mov                 b4, 1 ; tile gfx image bank
+                mov                 b2, 0 ; rom img idx 
+                mov                 b3, 0 ; gfx img idx 
+.transOneSpr    c                   trans8x8toGFX
+                add                 w1, $0101
+                cmp                 b2, 96
+                jnz                 .transOneSpr
+                ret
+
+
+; transfer  to GFX surface number 1
+; one 8x8 image with "mask to key color" transform
+; to GFX surface number 1
+; parameters
+;      b0 : rom bank number for data
+;      b1 : rom bank number for mask
+;      b2 : rom 8x8 image index (0 to 255)
+;      b3 : GFX 8x8 image index in image bank
+;      b4 : GFX 8x8 image bank number (0: tile, 1: sprite, ... 4)
+trans8x8toGFX
+                ; save env
+                pusha
+                ld                  b5, [lbs3_bank_rom]
+                sr                  b5, [.oldrom]
+                ; set variable
+                sr                  b0, [.romdata]
+                sr                  b1, [.rommask]
+                sr                  b2, [.romimgidx]
+                sr                  b3, [.gfximgidx]
+                sr                  b4, [.gfximgbank]
+                ; prepare computed parameters
+                ;   compute rom bank address
+                eor                 w0, w0
+                ld                  b0, [.romimgidx]
+                shl                 w0
+                shl                 w0
+                shl                 w0
+                shl                 w0
+                shl                 w0
+                add                 w0, rom_scr_addr
+                sr                  w0, [.romimgaddr] ; rom addr
+                ;   compute surface coordinates
+                eor                 w0, w0
+                ld                  b1, [.gfximgbank]
+                shl                 b1
+                shl                 b1
+                shl                 b1
+                eor                 w1, w1
+                ld                  b2, [.gfximgidx]
+                mov                 b3, b2
+                and                 b2, $1F ; 0 to 31 Horiz image
+                shl                 b2
+                shl                 b2
+                shl                 b2
+                and                 b3, $E0 ; 0 to 3 Veti image
+                shr                 b3
+                shr                 b3
+                add                 w0, w1
+                sr                  w0, [.surfcoords] ; surface coords
+                ;   prepare the mbs3_gfx_blitrans
+                mbs3_gfx_setPB1     1
+                mbs3_gfx_setPW2     w0
+                mbs3_gfx_setPW4     $0808 ; 8x8 image
+                mbs3_gfx_blitrans
+                cmp                 b0, ebs3_gfx_code_ok ; is it ok ?
+                jnz                 .endtrans ; not ok then quit
+                ld                  w3, [.romimgaddr]
+.transferloop 
+                ld                  b0, [lbs3_gfx_status]
+                tst                 b0, ebs3_gfx_status_waitdata
+                jz                  .endtrans ; end of transfer
+                ; get data and mask data from rom
+                ld                  b0, [.romdata]
+                sr                  b0, [lbs3_bank_rom]
+                ld                  b2, [w3]
+                ld                  b0, [.rommask]
+                sr                  b0, [lbs3_bank_rom]
+                ld                  b3, [w3]
+                ; b2 = data, b3 = mask for 2 pixels 
+                ; (1 byte = 2 pixels. MSq:first, LSq: second)
+                ;  b4 = 1st pixel
+                mov                 b4, b2
+                shr                 b4
+                shr                 b4
+                shr                 b4
+                shr                 b4
+                ; first pixel : b5 4bits mask, b4 4bits data
+                tst                 b5, $F0 ; 1st pixel mask
+                jz                  .plot1st
+                mov                 b4, 232 ; black key color
+                ; transfer first pixel
+.plot1st        mbs3_gfx_setPB3     b4
+                call                lbs3_gfx_busywait
+                ; b2 = 2nd pixel
+                and                 b2, $0F
+                tst                 b5, $0F ; 2nd pixel mask
+                jz                  .plot2nd
+                mov                 b2, 232 ; black key color
+                ; transfer second pixel
+.plot2nd        mbs3_gfx_setPB3     b2
+                call                lbs3_gfx_busywait                
+                inc                 w3
+                j                   .transferloop
+                ; restore env
+.endtrans       ld                  b5, [.oldrom]
+                sr                  b5, [lbs3_bank_rom]
+                popa
+                ret
+.romdata        db                  0
+.rommask        db                  0
+.romimgidx      db                  0
+.gfximgidx      db                  0
+.gfximgbank     db                  0                
+.oldrom         db                  0
+                align               2
+.surfcoords     dw                  0 
+.romimgaddr     dw                  0              
 ; end of sk.asm                
