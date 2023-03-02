@@ -111,32 +111,19 @@ start:
             mbs3_wait_input
             jump    .byebye     
 .sequel
+            mov             b1, 0
+.cont            
             ; clear viewport
             mbs3_gfx_setPB1     16
             mbs3_gfx_vpclear
-            ; show map 0
-            mov             b0,        0 ; map 0
+            ; show map "b1"
+            mov             b0,        b1 ; map "b1"
             call            sk_map_blit
             mbs3_gfx_refresh
             mbs3_wait_input
-
-            ; clear viewport
-            mbs3_gfx_setPB1     16
-            mbs3_gfx_vpclear
-            ; show map 1
-            mov             b0,        1 ; map 0
-            call            sk_map_blit
-            mbs3_gfx_refresh
-            mbs3_wait_input
-
-            ; clear viewport
-            mbs3_gfx_setPB1     16
-            mbs3_gfx_vpclear
-            ; show map 2
-            mov             b0,        2 ; map 2
-            call            sk_map_blit
-            mbs3_gfx_refresh
-            mbs3_wait_input
+            inc             b1
+            cmp             b1, 15
+            jnz             .cont
 
 .byebye            
             mbs3_gfx_end
