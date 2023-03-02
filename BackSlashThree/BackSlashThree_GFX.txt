@@ -22,23 +22,22 @@ Color palette:
     The BS3 GFX device use two standards : IBM 16 colors and ANSI 256 colors (256 - 16 ANSI colors).
     Color index from 0 to 15 are mapped to the IBM PC default color palette
         index   Name (IBM)      Red (0..5)	Green(0..5) Blue(0..5)  (equivalent to ANSI 256 colors Index)
-        $00     Black	        0	        0           0           16
-        $01     Blue	        0	        0           3           19
-        $02     Green	        0	        3           0           34
-        $03     Cyan	        0	        3           3           37
-        $04     Red             3	        0           0           124
-        $05     Magenta	        3	        0           3           127
-        $06     Brown* 	        3	        2           0           136
-        $07     White	        3	        3           3           145
-        $08     Gray	        2	        2           2           102
-        $09     Light Blue      2	        2           5           105
-        $0A     Light Green     2	        5           2           120
-        $0B     Light Cyan      2	        5           5           123
-        $0C     Light Red       5	        2           2           210
-        $0D     Light Magenta	5	        2           5           213
-        $0E     Yellow	        5	        5           2           228
-        $0F     Bright White	5	        5           5           231
-
+        $00     Black           0           0           0           16
+        $01     Blue            0           0           2           18
+        $02     Green           0           2           0           28
+        $03     Cyan            0           2           2           30
+        $04     Red             2           0           0           88
+        $05     Magenta         2           0           2           90
+        $06     Brown           2           1           0           94
+        $07     White           2           2           2           247 instead of 102
+        $08     Gray            1           1           1           240 instead of 59
+        $09     Light Blue      1           1           5           63
+        $0A     Light Green     1           5           1           83
+        $0B     Light Cyan      1           5           5           87
+        $0C     Light Red       5           1           1           203
+        $0D     Light Magenta   5           1           5           207
+        $0E     Yellow          5           5           1           227
+        $0F     Bright White    5           5           5           231
     Color index from 16 to 255 are mapped to ANSI terminal 256 colors palette.
     ANSI 256 colors palette integrate 216 RGB colors
       6 values of Red Green Blue (from 0 to 5)

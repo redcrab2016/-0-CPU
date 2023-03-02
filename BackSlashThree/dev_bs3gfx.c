@@ -256,38 +256,41 @@ void _bs3_gfx_setpalette()
         reg_bs3gfx.colorPalette[i] = (BYTE)i;
     /* IBM VGA 16 color palette
         index   Name (IBM)      Red (0..5)  Green(0..5) Blue(0..5)  (equivalent to ANSI 256 colors Index)
-        $00     Black	        0	        0           0           16
-        $01     Blue	        0	        0           3           19
-        $02     Green	        0	        3           0           34
-        $03     Cyan	        0	        3           3           37
-        $04     Red             3	        0           0           124
-        $05     Magenta	        3	        0           3           127
-        $06     Brown* 	        3	        2           0           136
-        $07     White	        3	        3           3           145
-        $08     Gray	        2	        2           2           102
-        $09     Light Blue      2	        2           5           105
-        $0A     Light Green     2	        5           2           120
-        $0B     Light Cyan      2	        5           5           123
-        $0C     Light Red       5	        2           2           210
-        $0D     Light Magenta	5	        2           5           213
-        $0E     Yellow	        5	        5           2           228
-        $0F     Bright White	5	        5           5           231
+        $00     Black           0           0           0           16
+        $01     Blue            0           0           2           18
+        $02     Green           0           2           0           28
+        $03     Cyan            0           2           2           30
+        $04     Red             2           0           0           88
+        $05     Magenta         2           0           2           90
+        $06     Brown           2           1           0           94
+        $07     White           2           2           2           247 instead of 102
+        $08     Gray            1           1           1           240 instead of 59
+        $09     Light Blue      1           1           5           63
+        $0A     Light Green     1           5           1           83
+        $0B     Light Cyan      1           5           5           87
+        $0C     Light Red       5           1           1           203
+        $0D     Light Magenta   5           1           5           207
+        $0E     Yellow          5           5           1           227
+        $0F     Bright White    5           5           5           231
+
+
     */
+
     reg_bs3gfx.colorPalette[0x00] = 16;
-    reg_bs3gfx.colorPalette[0x01] = 19;
-    reg_bs3gfx.colorPalette[0x02] = 34;
-    reg_bs3gfx.colorPalette[0x03] = 37;
-    reg_bs3gfx.colorPalette[0x04] = 124;
-    reg_bs3gfx.colorPalette[0x05] = 127;
-    reg_bs3gfx.colorPalette[0x06] = 136;
-    reg_bs3gfx.colorPalette[0x07] = 145;
-    reg_bs3gfx.colorPalette[0x08] = 102;
-    reg_bs3gfx.colorPalette[0x09] = 105;
-    reg_bs3gfx.colorPalette[0x0A] = 120;
-    reg_bs3gfx.colorPalette[0x0B] = 123;
-    reg_bs3gfx.colorPalette[0x0C] = 210;
-    reg_bs3gfx.colorPalette[0x0D] = 213;
-    reg_bs3gfx.colorPalette[0x0E] = 228;
+    reg_bs3gfx.colorPalette[0x01] = 18;
+    reg_bs3gfx.colorPalette[0x02] = 28;
+    reg_bs3gfx.colorPalette[0x03] = 30;
+    reg_bs3gfx.colorPalette[0x04] = 88;
+    reg_bs3gfx.colorPalette[0x05] = 90;
+    reg_bs3gfx.colorPalette[0x06] = 94;
+    reg_bs3gfx.colorPalette[0x07] = 247; /* instead of 102 */
+    reg_bs3gfx.colorPalette[0x08] = 240; /* instead of 59  */
+    reg_bs3gfx.colorPalette[0x09] = 63;
+    reg_bs3gfx.colorPalette[0x0A] = 83;
+    reg_bs3gfx.colorPalette[0x0B] = 87;
+    reg_bs3gfx.colorPalette[0x0C] = 203;
+    reg_bs3gfx.colorPalette[0x0D] = 207;
+    reg_bs3gfx.colorPalette[0x0E] = 227;
     reg_bs3gfx.colorPalette[0x0F] = 231;
 
 }

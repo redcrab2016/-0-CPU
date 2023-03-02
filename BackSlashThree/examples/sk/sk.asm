@@ -102,13 +102,43 @@ start:
             call            showromscreenshot
             mbs3_gfx_refresh
             mbs3_wait_input
+            j               .sequel ; ignore show surface 1
+            ; below is code to show the surface 1 (tile and spr banks)
+            mbs3_gfx_vpgetconf
+            mbs3_gfx_setPB1 1
+            mbs3_gfx_vpconfig
+            mbs3_gfx_refresh
+            mbs3_wait_input
+            jump    .byebye     
+.sequel
             ; clear viewport
             mbs3_gfx_setPB1     16
             mbs3_gfx_vpclear
+            ; show map 0
             mov             b0,        0 ; map 0
             call            sk_map_blit
             mbs3_gfx_refresh
             mbs3_wait_input
+
+            ; clear viewport
+            mbs3_gfx_setPB1     16
+            mbs3_gfx_vpclear
+            ; show map 1
+            mov             b0,        1 ; map 0
+            call            sk_map_blit
+            mbs3_gfx_refresh
+            mbs3_wait_input
+
+            ; clear viewport
+            mbs3_gfx_setPB1     16
+            mbs3_gfx_vpclear
+            ; show map 2
+            mov             b0,        2 ; map 2
+            call            sk_map_blit
+            mbs3_gfx_refresh
+            mbs3_wait_input
+
+.byebye            
             mbs3_gfx_end
             hlt
 
@@ -181,9 +211,9 @@ sk_map_blit
                 ; first gfx coordinate
                 mov                 w1, $0000
                 ; get tile index
-                ld                  b0, [w2]
-                ; blit tile b0 at w1 coordinate on surface 0
-.blit           c                   blit8x8frombank ; blt tile b0 @ w1
+.blit           ld                  b0, [w2] ; get image index
+                ; blit tile b0 at w1(b3b2) coordinate on surface 0
+                c                   blit8x8frombank ; blt tile b0 @ w1
                 inc                 w2 ; next tile address
                 add                 b2, 8
                 cmp                 b2, 160
@@ -197,7 +227,7 @@ sk_map_blit
                 sr                  b1, [lbs3_bank_rom]
                 popa
                 ret
-.oldrom
+.oldrom         db                  0
 
 ; blit a 8x8 gfx image bank
 ; parameters (registers)
@@ -212,11 +242,14 @@ blit8x8frombank
                 mov         b5, b1
                 shl         b5
                 shl         b5
+                shl         b5
+                shl         b5
+                shl         b5
                 shl         b5  ; w2 = image row in bank
                 ;   compute imnage address in bank
                 eor         w3, w3
                 mov         b6, b0
-                and         b6, $1E
+                and         b6, $1F
                 shl         b6
                 shl         b6
                 shl         b6
@@ -227,12 +260,12 @@ blit8x8frombank
                 ; w2 = address in surface (bank addr + offs img addr)
                 add         w2, w3
 
-                mbs3_gfx_setPB1     0       ; target surface
-                mbs3_gfx_setPW2     w1      ; target coordinates
+                mbs3_gfx_setPB1     1       ; source surface
+                mbs3_gfx_setPW2     w2      ; source coordinates
                 mbs3_gfx_setPB3     232     ; key color (black)
                 mbs3_gfx_setPW4     $0808   ; 8x8 image size
-                mbs3_gfx_setPB5     1       ; source surface
-                mbs3_gfx_setPW6     w2      ; source coordinates
+                mbs3_gfx_setPB5     0       ; target surface
+                mbs3_gfx_setPW6     w1      ; target coordinates
                 mbs3_gfx_blitkcolor
 
                 popa
@@ -259,7 +292,7 @@ transromTileSpriteToGFX
                 mov                 b3, 0 ; gfx img idx 
 .transOneSpr    c                   trans8x8toGFX
                 add                 w1, $0101
-                cmp                 b2, 96
+                cmp                 b2, 48
                 jnz                 .transOneSpr
                 ret
 
@@ -295,12 +328,16 @@ trans8x8toGFX
                 shl                 w0
                 add                 w0, rom_scr_addr
                 sr                  w0, [.romimgaddr] ; rom addr
-                ;   compute surface coordinates
+                ;   compute GFX surface coordinates
                 eor                 w0, w0
                 ld                  b1, [.gfximgbank]
                 shl                 b1
                 shl                 b1
                 shl                 b1
+                shl                 b1
+                shl                 b1
+                shl                 b1
+                
                 eor                 w1, w1
                 ld                  b2, [.gfximgidx]
                 mov                 b3, b2

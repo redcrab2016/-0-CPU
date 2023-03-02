@@ -82,17 +82,18 @@ function extract_sprite_or_data
   else
     cutselect="-c1-2,5-6,9-10,13-14,17-18"
   fi
+  if [ "$4" == "Tile" ]; then
+    sot=2
+    sotr=1
+    limit=84
+  else
+    sot=2
+    sotr=1
+    limit=96
+  fi
   hexdump -v -e '10/1 "%02X"' -e '"\n"' "${sourcePath}/$1" | cut $cutselect | while read line; do
     if [ $spr -lt $limit ]; then
-      if [ "$4" == "Tile" ]; then
-        sot=2
-        sotr=1
-        limit=84
-      else
-        sot=2
-        sotr=1
-        limit=96
-      fi
+
       takeaway=$((spr%sot))
       length=${#line}
       if [ "$bb" == "0" ]; then
