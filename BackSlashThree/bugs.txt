@@ -1,4 +1,4 @@
 #1 : no assembling error when having duplicate local label
 #2 : 'u' command on unexpected address after debugger come in 'stopped' state 
-#3 : strange hang (race condition on multi thread lock ?)
+#3 : FIXED : strange hang (race condition on multi thread lock ?)
 

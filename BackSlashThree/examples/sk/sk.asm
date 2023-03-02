@@ -76,6 +76,59 @@ rom_sk_fonts        equ     26
     embed   "sk_tile_mask.bs3",     rom_sk_tile_mask,   0
     embed   "sk_fonts.bs3",         rom_sk_fonts,       0
 
+sk_spr_sword            equ     0   ; Sword
+sk_spr_heart_red        equ     1   ; red heart
+sk_spr_heart_empty      equ     2   ; empty heart
+sk_spr_key_gray         equ     3   ; gray key
+sk_spr_key_green        equ     4   ; green key
+sk_spr_key_red          equ     5   ; red key
+sk_spr_key_blue         equ     6   ; blue key
+sk_spr_key_purple       equ     7   ; purple key
+sk_spr_key_yellow       equ     8   ; yellow key
+sk_spr_hero_right1      equ     9   ; hero face to right open legs
+sk_spr_hero_right2      equ     10  ; hero face to right close legs
+sk_spr_hero_left1       equ     11  ; hero face to left open legs
+sk_spr_hero_left2       equ     12  ; hero face to left close legs
+sk_spr_heart_yellow     equ     13  ; yellow heart
+sk_spr_bottle_gray      equ     14  ; gray bottle
+sk_spr_horse_right1     equ     15  ; horse face to right close legs
+sk_spr_horse_right2     equ     16  ; horse face to right open legs
+sk_spr_hero_right_ride  equ     17  ; hero face to right riding 
+sk_spr_bat_sleep        equ     18  ; bat sleep
+sk_spr_bat_fly1         equ     19  ; bat fly wings up
+sk_spr_bat_fly2         equ     20  ; bat fly wings down
+;21: sword skeleton face to right open legs
+;22: sword skeleton face to right close legs
+;23: sword skeleton face to left open legs
+;24: sword skeleton face to left close legs
+;25: sword guard face to right open legs
+;26: sword guard face to right close legs
+;27: sword guard face to left open legs
+;28: sword guard face to left close legs
+;29: surface small picks
+;30: Skeleton face to right open legs
+;31: Skeleton face to left close legs
+;32: Skeleton face to left open legs
+;33: Skeleton face to left close legs
+;34: fire skull face to right
+;35: fire skull face to left
+;36: Hero sword attack to right
+;37: Hero sword attack to left
+;38: fireball to right
+;39: fireball to left
+;40: white ball
+;41: small gray circle
+;42: medium gray circle
+;43: large gray circle
+;44: furnace fire danse left
+;45: furnace fire danse right
+;46: boots
+;47: spell book
+
+
+
+
+
 ; Entry point
             mbs3_bootat start
 start:
@@ -102,15 +155,8 @@ start:
             call            showromscreenshot
             mbs3_gfx_refresh
             mbs3_wait_input
-            j               .sequel ; ignore show surface 1
-            ; below is code to show the surface 1 (tile and spr banks)
-            mbs3_gfx_vpgetconf
-            mbs3_gfx_setPB1 1
-            mbs3_gfx_vpconfig
-            mbs3_gfx_refresh
-            mbs3_wait_input
-            jump    .byebye     
-.sequel
+   
+            ; shows all maps
             mov             b1, 0
 .cont            
             ; clear viewport
@@ -124,6 +170,21 @@ start:
             inc             b1
             cmp             b1, 15
             jnz             .cont
+
+            ; below is code to show the surface 1 (tile and spr banks)
+            mbs3_gfx_vpgetconf
+            mbs3_gfx_setPB1 1
+            mbs3_gfx_vpconfig
+            mbs3_gfx_refresh
+            mbs3_wait_input
+
+            mbs3_gfx_vpgetconf
+            mbs3_gfx_setPB1 1
+            mbs3_gfx_setPW2 $0060
+            mbs3_gfx_vpconfig
+            mbs3_gfx_refresh
+            mbs3_wait_input
+
 
 .byebye            
             mbs3_gfx_end
