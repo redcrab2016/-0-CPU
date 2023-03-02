@@ -114,9 +114,11 @@ BYTE dev_bs3inout_read(WORD address)
             pthread_mutex_lock(&lockINSTATUS);
             if (reg_bs3inout.INSTATUS == 0x00) /* waiting for consumption*/
             {
+                pthread_mutex_lock(&lockIN);
                 value = reg_bs3inout.reg[addr];
                 reg_bs3inout.INSTATUS = 0x01; /* input consummed */
                 pthread_cond_signal(&condIN); /* signal input consumption */
+                pthread_mutex_unlock(&lockIN);
             } 
             else value = reg_bs3inout.reg[addr];
             pthread_mutex_unlock(&lockINSTATUS);
@@ -205,6 +207,7 @@ static void * dev_bs3in_run(void * bs3_device_bus) /* thread dedicated function 
     ssize_t status;
     
     endIN = 0;
+    pthread_mutex_lock(&lockIN);
     while (!endIN)
     {
         switch( reg_bs3inout.INSTATUS )
@@ -237,9 +240,9 @@ static void * dev_bs3in_run(void * bs3_device_bus) /* thread dedicated function 
                 }
                 break;
             case 0x00:
-                pthread_mutex_lock(&lockIN);
+                
                 pthread_cond_wait(&condIN, &lockIN); /* wait for input */
-                pthread_mutex_unlock(&lockIN);
+                
                 break;
             case 0xFF:
                 /* nothing to do when "No input data available "*/
@@ -248,6 +251,7 @@ static void * dev_bs3in_run(void * bs3_device_bus) /* thread dedicated function 
                 break;
         }
     } /* end of while forever */
+    pthread_mutex_unlock(&lockIN);
     return NULL;
 }
 
