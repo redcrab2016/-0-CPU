@@ -1,6 +1,7 @@
 BS3 Graphic device
 Maximum 160x100 8bits (1 byte color index from 0 to 255) per pixel view port (view port is what is seen on screen after REFRESH command)
 Videoram : 2 x 64KiB : 2 x (256 width x 256 Height pixels)
+Tile, Tile Map, Sprites (with collision pixel perfect) features available
 
 Internally there are 2 surfaces of 256x256 pixels (2 x 64 KiB video ram)
 Surface coordinates are expressed by a word (16 bits) : MSB Y coordinate (0 to 255) LSB X coordinate (0 to 255)
@@ -131,10 +132,10 @@ When bank tile size is 16x16 then a bank can have 16x4 = 64 tiles referenced fro
 When bank tile size is 32x32 then a bank can have 8x2 = 16 tiles referenced from 0 to 15
 When bank tile size is 64x64 then a bank can have 4x1 = 4 tiles referenced from 0 to 3
 
-At reset time all banks on all surface are configured with 8x8 size
+At reset time all banks on all surfaces are configured with 8x8 size
 
 When blitting a tile on to a target surface you may use free coordinates or tile mode coordinates
-In tile mode blit target coordinates, there is a grid placement of 8x8 :
+In tile mode blit target coordinates, there is a grid with a step of 8x8 pixels :
     example:
         if coordinates is $0A03
             absolute it does represent Y=$0A = 10, x=$03 = 3
@@ -142,8 +143,8 @@ In tile mode blit target coordinates, there is a grid placement of 8x8 :
 
 In all commands of the GFX device, when designating a surface with its bit 7=1 then it will use tile mode
     example:
-        if surface is 0 the in tile mode its designation is $80 (do set surface number to $80 instead of 0)
-        if surface is 1 the in tile mode its designation is $81 (do set surface number to $81 instead of 1)
+        if surface is 0, in tile mode its designation is $80 (do set surface number to $80 instead of 0)
+        if surface is 1, in tile mode its designation is $81 (do set surface number to $81 instead of 1)
 
 TILE MAP 
     A tile map is a grid of tiles
@@ -188,12 +189,12 @@ LAYERS
  /    Surface          /
 /                     /
 ----------------------
-Sprite with Z=3 is not rendered but exist as it is rendered.
+Sprite with Z=3 is not rendered but exist as if it is rendered.
 
 
 SPRITES
     Sprites are individual picture rendered on surface but is not in its memory
-    a sprites is confgured with a set of properties
+    a sprites is configured with a set of properties
         image: (keycolor or OR/AND mask or copy ()) do reference to tile
                 in key color rendering
                     : surface number 
@@ -535,6 +536,8 @@ Status
         1 : Device not initialiazed (device was not reset)
         3 : incorrect surface number (not 0 nor 1)
         5 : broken data transfer (by host word write to PW3)
+
+====== BELOW, the commands are TILE, TILEMAP ans SPRITE dedicated
 
 >>> TILE_BANK_CONFIG
 Command $0E
