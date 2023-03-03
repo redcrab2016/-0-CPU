@@ -97,35 +97,33 @@ sk_spr_hero_right_ride  equ     17  ; hero face to right riding
 sk_spr_bat_sleep        equ     18  ; bat sleep
 sk_spr_bat_fly1         equ     19  ; bat fly wings up
 sk_spr_bat_fly2         equ     20  ; bat fly wings down
-;21: sword skeleton face to right open legs
-;22: sword skeleton face to right close legs
-;23: sword skeleton face to left open legs
-;24: sword skeleton face to left close legs
-;25: sword guard face to right open legs
-;26: sword guard face to right close legs
-;27: sword guard face to left open legs
-;28: sword guard face to left close legs
-;29: surface small picks
-;30: Skeleton face to right open legs
-;31: Skeleton face to left close legs
-;32: Skeleton face to left open legs
-;33: Skeleton face to left close legs
-;34: fire skull face to right
-;35: fire skull face to left
-;36: Hero sword attack to right
-;37: Hero sword attack to left
-;38: fireball to right
-;39: fireball to left
-;40: white ball
-;41: small gray circle
-;42: medium gray circle
-;43: large gray circle
-;44: furnace fire danse left
-;45: furnace fire danse right
-;46: boots
-;47: spell book
-
-
+sk_spr_skelguard_right1 equ     21  ; sword skeleton right open legs
+sk_spr_skelguard_right2 equ     22  ; sword skeleton right close legs
+sk_spr_skelguard_left1  equ     23  ; sword skeleton left open legs
+sk_spr_skelguard_left2  equ     24  ; sword skeleton left close legs
+sk_spr_guard_right1     equ     25  ; sword guard right open legs
+sk_spr_guard_right2     equ     26  ; sword guard right close legs
+sk_spr_guard_left1      equ     27  ; sword guard left open legs
+sk_spr_guard_left2      equ     28  ; sword guard left close legs
+sk_spr_picks_ground     equ     29  ; surface small picks
+sk_spr_skeleton_right1  equ     30  ; Skeleton face to right open legs
+sk_spr_skeleton_right2  equ     31  ; Skeleton face to left close legs
+sk_spr_skeleton_left1   equ     32  ; Skeleton face to left open legs
+sk_spr_skeleton_left2   equ     33  ; Skeleton face to left close legs
+sk_spr_fireskull_right  equ     34  ; fire skull face to right
+sk_spr_fireskull_left   equ     35  ; fire skull face to left
+sk_spr_herosword_right  equ     36  ; Hero sword attack to right
+sk_spr_herosword_left   equ     37  ; Hero sword attack to left
+sk_spr_fireball_right   equ     38  ; fireball to right
+sk_spr_fireball_left    equ     39  ; fireball to left
+sk_spr_whiteball        equ     40  ; white ball
+sk_spr_circle_small     equ     41  ; small gray circle
+sk_spr_circle_medium    equ     42  ; medium gray circle
+sk_spr_circle_large     equ     43  ; large gray circle
+sk_spr_fire_left        equ     44  ; furnace fire danse left
+sk_spr_fire_right       equ     45  ; furnace fire danse right
+sk_spr_boots            equ     46  ; boots
+sk_spr_book             equ     47  ; spell book
 
 
 
