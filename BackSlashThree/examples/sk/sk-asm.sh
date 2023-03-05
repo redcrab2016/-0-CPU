@@ -62,7 +62,7 @@ function extract_screen
   echo ' include "bs3core.inc"' > "${targetPath}/$2"
   echo '; Begin of Silly Knight screen '$1 >> "${targetPath}/$2"
   echo ' org $E000' >> "${targetPath}/$2"
-  hexdump -v -e '" db "' -e '16/1 "%d,"' -e '"\n"' "${sourcePath}/$1" | sed -e 's/,$//g' >> "${targetPath}/$2"
+  hexdump -v -e '" db "' -e '16/1 "%u,"' -e '"\n"' "${sourcePath}/$1" | sed -e 's/,$//g' >> "${targetPath}/$2"
   bs3_compile "${targetPath}/$2"
 }
 

@@ -227,6 +227,9 @@ if sprite A Z value is higher than B Z value then A is rendered over B.
 ===================================
 BS3 Gfx commands
 
+====== GENERAL commands
+
+
 >>> RESET 
 Command $00
 Parameter : N/A 
@@ -310,6 +313,9 @@ Status
     COMMAND_STATUS_CODE
         0 : Viewport get config success
         1 : Device not initialized (device was not reset)
+
+
+====== BITMAP dedicated commands
 
 >>> VIEWPORT_CLEAR
 Command $04
@@ -537,7 +543,7 @@ Status
         3 : incorrect surface number (not 0 nor 1)
         5 : broken data transfer (by host word write to PW3)
 
-====== BELOW, the commands are TILE, TILEMAP ans SPRITE dedicated
+====== TILE, TILEMAP ans SPRITE dedicated commands
 
 >>> TILE_BANK_CONFIG
 Command $0E
