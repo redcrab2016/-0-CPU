@@ -175,6 +175,9 @@ TILE MAP
 LAYERS
 
    Tile map / surface / sprite layering
+View port rendering is the superposed result of the layers and sprites, 
+Therefore layer 2 cover layer 1 that cover layer 0
+
     ______________________
    /                     /  <- above layer 2 : sprites with Z = 2 
   /   Layer 2           /
@@ -186,10 +189,12 @@ LAYERS
 /                     /___
 ----------------------   /  <- between layer 0 & 1 : sprites with Z = 0
   /   Layer 0           /
- /    Surface          /
+ /    Surface          /  Surface is the one chosen by the view port configuration
 /                     /
 ----------------------
 Sprite with Z=3 is not rendered but exist as if it is rendered.
+All layers are the same size (256 x 256 pixels)
+The tile maps and the sprites rendering do not modify the underlying surface video ram (They are overlays)
 
 
 SPRITES
@@ -219,7 +224,7 @@ SPRITES
         metadata : 16 bits metadata
 
 GFX device may handle 128 sprites
-If sprite A & B overlapp, then if sprite index of A is < to sprite index B then B is rendered over A on the same Z 
+If sprite A & B overlapp and are on the same Z coordinate, then if sprite index of A is < to sprite index B then B is rendered over A 
 if sprite A Z value is higher than B Z value then A is rendered over B.
 
 
@@ -315,7 +320,7 @@ Status
         1 : Device not initialized (device was not reset)
 
 
-====== BITMAP dedicated commands
+====== BITMAP dedicated commands : commands that modify videoram content (layer #0)
 
 >>> VIEWPORT_CLEAR
 Command $04
@@ -551,7 +556,7 @@ Parameter
     Input
         PB1 : Surface number (0 or 1, or $80 or $81)
         PB2 : Bank number (0 ... 3) only bit 0 and 1 are interpreted, bit 2-7 are ignored
-        PB3 : Size (8, 16, 32, 64)
+        PB3 : Size (0:8x8, 1:16x16, 2:32x32, 3:64x64) : size = 2^(PB3+3)
     Output
         N/A
 Description
@@ -562,16 +567,16 @@ Status
         1 : Device not initialized (device was not reset)
         3 : Incorrect surface number (not 0 nor 1) in source and/or target    
         6 : Incorrect Bank number
-        7 : Incorrect Size
+        7 : Incorrect Bank Size
 
->>> GET TILE_BANK_CONFIG
+>>> TILE_BANK_GETCONFIG
 Command $0F
 Parameter
     Input
         PB1 : Surface number (0 or 1, or $80 or $81)
         PB2 : Bank number (0 ... 3) only bit 0 and 1 are interpreted, bit 2-7 are ignored
     Output
-        PB3 : Size (8, 16, 32, 64)
+        PB3 : Size (0:8x8, 1:16x16, 2:32x32, 3:64x64) : size = 2^(PB3+3)
 Description
     Get the tile size in a tile bank in a particular surface
 Status
@@ -593,6 +598,7 @@ Description
 Status
     COMMAND_STATUS_CODE
         0 : reset completed
+        8 : Incorrect tile map number        
         1 : Device not initialized (device was not reset)
 
 >>> TILE_MAP_CONFIG
@@ -604,7 +610,7 @@ Parameter
     Output
         N/a
 Description
-    Configure (visibility) of a tile map
+    Configure (visibility) of a tile map, at reset time, all tile map are not visible
 Status
     COMMAND_STATUS_CODE
         0 : config completed
@@ -624,7 +630,7 @@ Parameter
         PB5 : keyColor for tile with key color operation
         PB6 : tile type/configuration
                 7 6 5 4 3 2 1 0
-                | | | | | | | - 0: AND/OR operation (PB5 ignored), see bit 1 and 2 for configuration
+                | | | | | | | + 0: AND/OR operation (PB5 ignored), see bit 1 and 2 for configuration
                 | | | | | | |   1: keycolor operation (PW5 ignored), bit 1 and 2 ignored
                 | | | | | | |
                 | | | | | | +-- 0: if bit0==0 then use PW5 tile info for AND mask, else ignored
@@ -661,20 +667,20 @@ Status
         8 : Incorrect Tile map number
         10: incorrect cell coordinates
 
->>> GET TILE_MAP_CELL_CONFIG
+>>> TILE_MAP_CELL_GETCONFIG
 Command $13
 Parameter
     Input
-        PB1 : Tile map number (0 or 1)
+        PB1 : Tile map number (0 or 1 or $80 or $81)
         PW2 : Tile map cell reference coordinate $YYXX : YY MSB (0..31), XX LSB (0..31)
     Output
-        PB3 : tile image Surface number (0 or 1 or $80 or $81, (bit 7 is ignored))
+        PB3 : tile image Surface number (0 or 1)
         PW4 : (tile ref for Or or Keycolor operation) tile image bank number and index :  $BBII  : MSB BB is bank number, LSB II is index number
         PW5 : (AND tile operation) tile image bank number and index :  $BBII  : MSB BB is bank number, LSB II is index number 
         PB5 : keyColor for tile with key color operation
         PB6 : tile type/configuration
                 7 6 5 4 3 2 1 0
-                | | | | | | | - 0: AND/OR operation (PB5 ignored), see bit 1 and 2 for configuration
+                | | | | | | | + 0: AND/OR operation (PB5 ignored), see bit 1 and 2 for configuration
                 | | | | | | |   1: keycolor operation (PW5 ignored), bit 1 and 2 ignored
                 | | | | | | |
                 | | | | | | +-- 0: if bit0==0 then use PW5 tile info for AND mask, else ignored
@@ -735,7 +741,7 @@ Parameter
         PB5 : keyColor for tile with key color operation (see PB6 bit0)
         PB6 : sprite configuration
                 7 6 5 4 3 2 1 0
-                | | | | | | | - 0: AND/OR operation (PB5 ignored), see bit 1 and 2 for configuration
+                | | | | | | | + 0: AND/OR operation (PB5 ignored), see bit 1 and 2 for configuration
                 | | | | | | |   1: keycolor operation (PW5 ignored), bit 1 and 2 ignored
                 | | | | | | |
                 | | | | | | +-- 0: if bit0==0 then use PW5 tile info for AND mask, else ignored
@@ -755,8 +761,8 @@ Parameter
                 |               10 : Z = 2 sprite located above layer 2
                 |               11 : Z = 3, sprite exist but rendered
                 | 
-                +-------------- 0: invisible sprite (not rendered and ignored by the device)
-                                1: visible sprite
+                +-------------- 0: disable sprite (not rendered and ignored by the device)
+                                1: enable sprite
         PW6 : custom meta data                                
     Output 
         n/A
@@ -772,7 +778,7 @@ Status
         8 : Incorrect Tile map number
         11: incorrect sprite number
 
->>> GET SPRITE_CONFIG
+>>> SPRITE_GETCONFIG
 Command $16
 Parameter
     Input
@@ -785,7 +791,7 @@ Parameter
         PB5 : keyColor for tile with key color operation (see PB6 bit0)
         PB6 : sprite configuration
                 7 6 5 4 3 2 1 0
-                | | | | | | | - 0: AND/OR operation (PB5 ignored), see bit 1 and 2 for configuration
+                | | | | | | | + 0: AND/OR operation (PB5 ignored), see bit 1 and 2 for configuration
                 | | | | | | |   1: keycolor operation (PW5 ignored), bit 1 and 2 ignored
                 | | | | | | |
                 | | | | | | +-- 0: if bit0==0 then use PW5 tile info for AND mask, else ignored
@@ -836,18 +842,19 @@ Description
 Status
     COMMAND_STATUS_CODE
         0 : collision number retrieved
-
->>> GET SPRITE_COLLISION
+        1 : Device not initialized (device was not reset)
+        
+>>> SPRITE_GETCOLLISION
 Command $18
 Parameter
     Input
-        PB1 : Collision number
+        PB1 : Collision number (zero based : if SPRITE_COLLISION_COUNT == 3 , here PB1 is from 0 to 2)
     Output
-        PW2 : Collision from to : $TTFF  TT: MSB to sprite number, FF:LSB from sprite number
+        PW2 : Collision from/to : $TTFF  TT: MSB to sprite number, FF:LSB from sprite number
 Description
     Use SPRITE_COLLISION_COUNT before to use one or several time this GET SPRITE_COLLISION.
 Status            
         0 : Collision info retrieved
         1 : Device not initialized (device was not reset)
-        12: incorrect sprite collision number
+        13: incorrect sprite collision number
 

@@ -8,6 +8,60 @@
 
 #include "bs3_bus.h"
 
+struct dev_bs3gfx_tile
+{
+    WORD metadata;                          /* custom data usable by BS3 CPU program */
+    union 
+    {
+        WORD coordinates;                   /* tile coordinates(may be) for tile and sprite(if tileCoordinate == 1 ), or sprite absolute coordinates*/
+        struct 
+        {
+            BYTE x;                         /* from 0 to 31 if tile coordinate , from 0 to 255 if absolute coordinate */
+            BYTE y;                         /* from 0 to 31 if tile coordinate , from 0 to 255 if absolute coordinate */
+        };
+        
+    };
+    BYTE surface;                           /* Surface where the image tiles (including mask) is stored */
+    BYTE keyColor;                          /* Key color to use when useKeyColor == 1 */
+    BYTE mainTileIndex;                     /* Tile index for OR/XOR or keycolor */
+    BYTE mainTileBank;                      /* Tile bank of mainTileIndex */
+    BYTE auxTileIndex;                      /* Tile index for AND operation, ignored if useKeycolor == 1 or ( usekeycolor == 0 && useSpecialMask == 1 ) */
+    BYTE auxTileBank;                       /* Tile bank of auxTileBank */
+    union 
+    {
+        BYTE config;
+        struct 
+        {
+            BYTE useKeyColor:1;             /* 0: OR & AND mask, 1: Key color */
+            BYTE useSpecialMask:1;          /* valid if useKeycolor == 0, 0: use auxTile for AND mask , 1: use special mask useMaskFF */
+            BYTE useMaskFF:1;               /* valid = useKeyColor == 0 && useSPecialMask ==1, 0: mask is full 00, 1: mask is full $FF */
+            BYTE reserved1:5;
+        };
+        struct /* Dedicated for Tile map cell */
+        {
+            BYTE reserved2:3;
+            BYTE ORasXOR:1;                 /* valid if useKeyColor == 0 */
+            BYTE tileIsKeycolorFullbox:1;   /* valid if useKeyColor == 1 */
+            BYTE reserved3:2;
+            BYTE visible:1;                 /* 0: tile is not rendered, 1: tile is rendered */
+        };
+        struct /* Dedicated for Sprite */
+        {
+            BYTE reserved4:3;               
+            BYTE cancollide:1;              /* 0: no collision detection, 1: collision detection (between two sprites that have cancollide == 1 )*/
+            BYTE tileCoordinate:1;
+            BYTE z:2;                       /* 00: sprite between layer 0 and 1, 01, sprite between layer 1 and 2, 10, sprite above layer 2, 11 sprite not rendered*/
+            BYTE enabled:1;                 /* 0: disabled sprite (not rendered, no collision ... ), 1: enabled sprite*/
+        };
+    };
+};
+
+struct dev_bs3gfx_tilemap
+{
+    struct dev_bs3gfx_tile map[32][32]; /* map[Y][X] */
+    BYTE visible;                       /* 0: invisible , 1 visible */
+};
+
 
 struct dev_bs3gfx
 {
@@ -53,12 +107,15 @@ struct dev_bs3gfx
         };
         
     };
-    BYTE videoram [2][65536];       /* 2 surfaces of 64KiB (256 width x 256 height  x 8bpp) */
-    WORD viewport_location;         /* MSB Y location (0 to 255), LSB X location (0 to 255) */
-    WORD viewport_size;             /* MSB Height (1 to 100) LSB Width (1 to 160)           */
+    BYTE videoram [3][65536];               /* 2 surfaces of 64KiB (256 width x 256 height  x 8bpp) + 1 surface layers composition result  */
+    WORD viewport_location;                 /* MSB Y location (0 to 255), LSB X location (0 to 255) */
+    WORD viewport_size;                     /* MSB Height (1 to 100) LSB Width (1 to 160)           */
     BYTE viewport_surface;
-    BYTE viewport_shadow[16000];    /* shadow of what is on screen                          */
+    BYTE viewport_shadow[16000];            /* shadow of what is on screen                          */
     BYTE colorPalette[256];
+    BYTE tilebanksize[2][4];                /*[surface][banknumber] =  0: 8x8, 1: 16x16, 2: 32x32, 3: 64x64 */
+    struct dev_bs3gfx_tilemap tilemap[2];   /* 2 tile maps */
+    struct dev_bs3gfx_tile sprite[128];     /* 128 sprites */
 };
 
 #define BS3_GFX_COMMAND_RESET                   0x00
@@ -76,6 +133,17 @@ struct dev_bs3gfx
 #define BS3_GFX_COMMAND_SURFACE_BLIT_OPERATOR   0x0B
 #define BS3_GFX_COMMAND_SURFACE_BLIT_KEYCOLOR   0x0C
 #define BS3_GFX_COMMAND_SURFACE_BLIT_TRANSFER   0x0D
+#define BS3_GFX_COMMAND_TILE_BANK_CONFIG        0x0E
+#define BS3_GFX_COMMAND_TILE_BANK_GETCONFIG     0x0F
+#define BS3_GFX_COMMAND_TILE_MAP_RESET          0x10
+#define BS3_GFX_COMMAND_TILE_MAP_CONFIG         0x11
+#define BS3_GFX_COMMAND_TILE_MAP_CELL_CONFIG    0x12
+#define BS3_GFX_COMMAND_TILE_MAP_CELL_GETCONFIG 0x13
+#define BS3_GFX_COMMAND_SPRITE_RESET            0x14
+#define BS3_GFX_COMMAND_SPRITE_CONFIG           0x15
+#define BS3_GFX_COMMAND_SPRITE_GETCONFIG        0x16
+#define BS3_GFX_COMMAND_SPRITE_COLLISION_COUNT  0x17
+#define BS3_GFX_COMMAND_SPRITE_GETCOLLISION     0x18
 
 #define BS3_GFX_COMMAND_BLIT_OPERATOR_COPY      0x00
 #define BS3_GFX_COMMAND_BLIT_OPERATOR_OR        0x01
@@ -110,6 +178,14 @@ struct dev_bs3gfx
 #define BS3_GFX_STATUS_BADSURFACE               0x03
 #define BS3_GFX_STATUS_BADOPERATOR              0x04
 #define BS3_GFX_STATUS_BROKENTRANSFER           0x05
+#define BS3_GFX_STATUS_BADBANKID                0x06
+#define BS3_GFX_STATUS_BADBANKSIZE              0x07
+#define BS3_GFX_STATUS_BADTILEMAPID             0x08
+#define BS3_GFX_STATUS_BADVISIBILITY            0x09
+#define BS3_GFX_STATUS_BADCELLCOORDINATES       0x0A
+#define BS3_GFX_STATUS_BADSPRITEID              0x0B
+#define BS3_GFX_STATUS_BADTILEINDEX             0x0C
+#define BS3_GFX_STATUS_BADCOLLIDEID             0x0D
 
 /* set of BS3 GFX command function declaration*/
 void bs3_gfx_command_reset();
@@ -127,6 +203,18 @@ void bs3_gfx_command_surface_blit_operator();
 void bs3_gfx_command_surface_blit_keycolor();
 void bs3_gfx_command_surface_blit_transfer();
 void bs3_gfx_command_surface_blit_transfer_data();
+
+void bs3_gfx_command_tile_bank_config();
+void bs3_gfx_command_tile_bank_getconfig();
+void bs3_gfx_command_tile_map_reset();
+void bs3_gfx_command_tile_map_config();
+void bs3_gfx_command_tile_map_cell_config();
+void bs3_gfx_command_tile_map_cell_getconfig();
+void bs3_gfx_command_sprite_reset();
+void bs3_gfx_command_sprite_config();
+void bs3_gfx_command_sprite_getconfig();
+void bs3_gfx_command_sprite_collision_count();
+void bs3_gfx_command_sprite_getcollision();
 
 
 extern struct bs3_device dev_bs3gfx;
@@ -320,7 +408,7 @@ void _bs3_gfx_clearscreen_leave()
 }
 
 
-void _bs3_gfx_screenrender()
+void _bs3_gfx_screenrender(BYTE chosenSurface)
 {
     int y,x;
     int w,h;
@@ -343,6 +431,7 @@ void _bs3_gfx_screenrender()
     w = (int)(reg_bs3gfx.viewport_size & 0x00FE);
     h = (int)((reg_bs3gfx.viewport_size & 0xFE00) >> 8 ) / 2 ;
     surface = reg_bs3gfx.viewport_surface;
+    if (chosenSurface < 3) surface = chosenSurface;
     addrShadow = 0;
     addrVideo = reg_bs3gfx.viewport_location-1; /* minus because for(x...) start with 1 and not 0 */
     lastColumn = 255;
@@ -413,11 +502,13 @@ void _bs3_gfx_screenrender()
 
 
 /* BS3 GFX command function implementation */
+BYTE banknbtilespersize[]= {256 /* 8x8 */, 64 /* 16x16 */ , 16 /* 32x32*/ , 4 /* 64x64 */ };
+
 void bs3_gfx_command_reset()
 {
     /* clear video ram surfaces */
     int i,j;
-    for (i = 0 ; i < 2 ; i++)
+    for (i = 0 ; i < 3 ; i++)
         for (j = 0; j < 65536; j++)
             reg_bs3gfx.videoram[i][j]=0;
     /* default view port */
@@ -453,7 +544,9 @@ void bs3_gfx_command_end()
 
 void bs3_gfx_command_refresh()
 {
-    _bs3_gfx_screenrender();
+    /* TODO : compute compositing */
+    memcpy(&reg_bs3gfx.videoram[2][0], &reg_bs3gfx.videoram[reg_bs3gfx.viewport_surface][0], 65536);
+    _bs3_gfx_screenrender(255);
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
@@ -865,6 +958,388 @@ void bs3_gfx_command_surface_blit_transfer_data()
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
+void bs3_gfx_command_tile_bank_config()
+{
+    BYTE surface;
+    BYTE bank;
+    BYTE banksize;
+
+    surface     = reg_bs3gfx.pb1 & 0x7F;
+    bank        = reg_bs3gfx.pb2;
+    banksize    = reg_bs3gfx.pb3;
+
+    if (surface & 0xFE )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
+        return;
+    }
+    if (bank & 0xFC)
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKID;
+        return;
+    }
+    if (banksize > 3)
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKSIZE;
+        return;
+    }
+    reg_bs3gfx.tilebanksize[surface][bank] = banksize;
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+}
+
+void bs3_gfx_command_tile_bank_getconfig()
+{
+    BYTE surface;
+    BYTE bank;
+
+    surface     = reg_bs3gfx.pb1 & 0x7F; /* Ignore bit 7 : surface 1 == surface $81 , surface 0 == surface $80 */
+    bank        = reg_bs3gfx.pb2;
+
+    if (surface & 0xFE )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
+        return;
+    }
+    if (bank & 0xFC)
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKID;
+        return;
+    }
+    reg_bs3gfx.pb3 = reg_bs3gfx.tilebanksize[surface][bank];
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+
+}
+
+void bs3_gfx_command_tile_map_reset()
+{
+    BYTE tilemapid;
+    int x,y;
+    tilemapid = reg_bs3gfx.pb1;
+    if (tilemapid & 0xFE)
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEMAPID;
+        return;
+    }
+    reg_bs3gfx.tilemap[tilemapid].visible = 0; /* tile map invisible */
+    for ( y=0; y < 32 ; y++ )
+    {
+        for ( x = 0; x < 32 ; x++ )
+        {
+            reg_bs3gfx.tilemap[tilemapid].map[y][x].visible = 0; /* all tile map cell invisible */
+        }
+    }
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+}
+
+void bs3_gfx_command_tile_map_config()
+{
+    BYTE tilemapid;
+    BYTE visible;
+    int x,y;
+
+    tilemapid   = reg_bs3gfx.pb1;
+    visible     = reg_bs3gfx.pb2; 
+
+    if (tilemapid & 0xFE)
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEMAPID;
+        return;
+    }
+    if (visible & 0xFE)
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADVISIBILITY;
+        return;
+    }
+
+    reg_bs3gfx.tilemap[tilemapid].visible = visible; 
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+
+}
+
+void bs3_gfx_command_tile_map_cell_config()
+{
+    BYTE tilemapid;
+    WORD tilemapcellcoordinates;
+    BYTE tilemapcelly;
+    BYTE tilemapcellx;
+    BYTE tilesurface;
+    WORD tilebankindex;
+    BYTE tilebank;
+    BYTE tileindex;
+    WORD tileauxbankindex;
+    BYTE tileauxbank;
+    BYTE tileauxindex;
+    BYTE tilekeycolor;
+    BYTE cellconfig;
+    WORD cellmetadata;
+    struct dev_bs3gfx_tile cell;
+
+    /* get the information from the device registers */
+    tilemapid               = reg_bs3gfx.pb1;
+    tilemapcellcoordinates  = reg_bs3gfx.pw2;
+    tilemapcellx            = (BYTE)(tilemapcellcoordinates & 0x00FF);
+    tilemapcelly            = (BYTE)((tilemapcellcoordinates & 0xFF00) >> 8);
+    tilesurface             = reg_bs3gfx.pb3 & 0x7F;  /* Ignore bit 7 : surface 1 == surface $81 , surface 0 == surface $80 */
+    tilebankindex           = reg_bs3gfx.pw4;
+    tilebank                = (BYTE)((tilebankindex & 0xFF00) >> 8);
+    tileindex               = (BYTE)(tilebankindex & 0x00FF);
+    tileauxbankindex        = reg_bs3gfx.pw5;
+    tileauxbank             = (BYTE)((tileauxbankindex & 0xFF00) >> 8);
+    tileauxindex            = (BYTE)(tileauxbankindex & 0x00FF);
+    tilekeycolor            = reg_bs3gfx.pb5;
+    cellconfig              = reg_bs3gfx.pb6;
+    cellmetadata            = reg_bs3gfx.pw6;
+
+    /* check value validity */
+    if (tilemapid & 0xFE )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEMAPID;
+        return;
+    }
+    if (tilemapcellx > 31 || tilemapcelly > 31)
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADCELLCOORDINATES;
+        return;
+    }
+    if (tilesurface & 0xFE )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
+        return;
+    }
+    if (tilebank > 3 )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKID;
+        return;
+    }
+    if (tileindex >= banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tilebank]] )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEINDEX;
+        return;
+    }
+    cell.config = cellconfig;
+    if (cell.keyColor == 0 && cell.useSpecialMask == 0) /* we've to check the auxtile index and bank*/
+    {
+        if (tileauxbank > 3 )
+        {
+            reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKID;
+            return;
+        }
+        if (tileauxindex >= banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tileauxbank]] )
+        {
+            reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEINDEX;
+            return;
+        }
+    }
+    if (cell.keyColor == 1 || (cell.keyColor == 0 && cell.useSpecialMask == 1 )) /* if aux tile not used then set default valid values */
+    {
+        tileauxbank     = 0;
+        tileauxindex    = 0;
+    }
+
+    /* set the values in the tile map cell */
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].config            = cellconfig;
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].tileCoordinate    = tilemapcellcoordinates;
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].surface           = tilesurface;
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].mainTileBank      = tilebank;
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].mainTileIndex     = tileindex;
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].auxTileBank       = tileauxbank & 0x03;
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].auxTileBank       = tileauxindex;
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].keyColor          = tilekeycolor;
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].metadata          = cellmetadata;
+    
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+
+}
+
+void bs3_gfx_command_tile_map_cell_getconfig()
+{
+    BYTE tilemapid;
+    WORD tilemapcellcoordinates;
+    BYTE tilemapcelly;
+    BYTE tilemapcellx;
+   
+    /* get the information from the device registers */
+    tilemapid               = reg_bs3gfx.pb1;
+    tilemapcellcoordinates  = reg_bs3gfx.pw2;
+    tilemapcellx            = (BYTE)(tilemapcellcoordinates & 0x00FF);
+    tilemapcelly            = (BYTE)((tilemapcellcoordinates & 0xFF00) >> 8);
+
+    /* check value validity */
+    if (tilemapid & 0xFE )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEMAPID;
+        return;
+    }
+    if (tilemapcellx > 31 || tilemapcelly > 31)
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADCELLCOORDINATES;
+        return;
+    }
+
+    /* get the values in the tile map cell to set into the respective register */
+    reg_bs3gfx.pb6 = reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].config;
+    reg_bs3gfx.pb3 = reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].surface & 0x01;
+    reg_bs3gfx.pw4 = (((WORD)reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].mainTileBank & 0x03) << 8) | (WORD)reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].mainTileIndex;
+    reg_bs3gfx.pw5 = (((WORD)reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].auxTileBank & 0x03) << 8) | (WORD)reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].auxTileBank;
+    reg_bs3gfx.pb5 = reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].keyColor;
+    reg_bs3gfx.pw6 = reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].metadata;
+    
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+
+}
+
+void bs3_gfx_command_sprite_reset()
+{
+    int i;
+    for (i = 0 ; i < 128 ; i++)
+    {
+        reg_bs3gfx.sprite[i].config         = 0;
+        reg_bs3gfx.sprite[i].coordinates    = 0;
+        reg_bs3gfx.sprite[i].keyColor       = 0;
+        reg_bs3gfx.sprite[i].mainTileBank   = 0;
+        reg_bs3gfx.sprite[i].mainTileIndex  = 0;
+        reg_bs3gfx.sprite[i].auxTileBank    = 0;
+        reg_bs3gfx.sprite[i].auxTileIndex   = 0;
+        reg_bs3gfx.sprite[i].metadata       = 0;
+    }
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+}
+
+void bs3_gfx_command_sprite_config()
+{
+    BYTE spriteid;
+    WORD spritecoordinates;
+    BYTE spritey;
+    BYTE spritex;
+    BYTE tilesurface;
+    WORD tilebankindex;
+    BYTE tilebank;
+    BYTE tileindex;
+    WORD tileauxbankindex;
+    BYTE tileauxbank;
+    BYTE tileauxindex;
+    BYTE tilekeycolor;
+    BYTE spriteconfig;
+    WORD spritemetadata;
+    struct dev_bs3gfx_tile sprite;
+
+    /* get the information from the device registers */
+    spriteid                = reg_bs3gfx.pb1;
+    spritecoordinates       = reg_bs3gfx.pw2;
+    spritex                 = (BYTE)(spritecoordinates & 0x00FF);
+    spritey                 = (BYTE)((spritecoordinates & 0xFF00) >> 8);
+    tilesurface             = reg_bs3gfx.pb3 & 0x7F;  /* Ignore bit 7 : surface 1 == surface $81 , surface 0 == surface $80 */
+    tilebankindex           = reg_bs3gfx.pw4;
+    tilebank                = (BYTE)((tilebankindex & 0xFF00) >> 8);
+    tileindex               = (BYTE)(tilebankindex & 0x00FF);
+    tileauxbankindex        = reg_bs3gfx.pw5;
+    tileauxbank             = (BYTE)((tileauxbankindex & 0xFF00) >> 8);
+    tileauxindex            = (BYTE)(tileauxbankindex & 0x00FF);
+    tilekeycolor            = reg_bs3gfx.pb5;
+    spriteconfig            = reg_bs3gfx.pb6;
+    spritemetadata          = reg_bs3gfx.pw6;
+    sprite.config           = spriteconfig;
+
+    /* check value validity */
+    if (spriteid & 0x80 )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSPRITEID;
+        return;
+    }
+    if ((spritex > 31 || spritey > 31) && sprite.tileCoordinate == 1)
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADCELLCOORDINATES;
+        return;
+    }
+    if (tilesurface & 0xFE )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
+        return;
+    }
+    if (tilebank > 3 )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKID;
+        return;
+    }
+    if (tileindex >= banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tilebank]] )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEINDEX;
+        return;
+    }
+    
+    if (sprite.keyColor == 0 && sprite.useSpecialMask == 0) /* we've to check the auxtile index and bank*/
+    {
+        if (tileauxbank > 3 )
+        {
+            reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKID;
+            return;
+        }
+        if (tileauxindex >= banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tileauxbank]] )
+        {
+            reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEINDEX;
+            return;
+        }
+    }
+    if (sprite.keyColor == 1 || (sprite.keyColor == 0 && sprite.useSpecialMask == 1 )) /* if aux tile not used then set default valid values */
+    {
+        tileauxbank     = 0;
+        tileauxindex    = 0;
+    }
+
+    /* set the values in the sprite */
+    reg_bs3gfx.sprite[spriteid].config          = spriteconfig;
+    reg_bs3gfx.sprite[spriteid].coordinates     = spritecoordinates;
+    reg_bs3gfx.sprite[spriteid].surface         = tilesurface;
+    reg_bs3gfx.sprite[spriteid].mainTileBank    = tilebank;
+    reg_bs3gfx.sprite[spriteid].mainTileIndex   = tileindex;
+    reg_bs3gfx.sprite[spriteid].auxTileBank     = tileauxbank & 0x03;
+    reg_bs3gfx.sprite[spriteid].auxTileBank     = tileauxindex;
+    reg_bs3gfx.sprite[spriteid].keyColor        = tilekeycolor;
+    reg_bs3gfx.sprite[spriteid].metadata        = spritemetadata;
+    
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+
+}
+
+void bs3_gfx_command_sprite_getconfig()
+{
+    BYTE spriteid;
+
+    /* get the information from the device registers */
+    spriteid = reg_bs3gfx.pb1;
+
+    /* check value validity */
+    if (spriteid & 0x80 )
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSPRITEID;
+        return;
+    }
+   
+    /* set the values in the sprite */
+    reg_bs3gfx.pb6 = reg_bs3gfx.sprite[spriteid].config;
+    reg_bs3gfx.pw2 = reg_bs3gfx.sprite[spriteid].coordinates;
+    reg_bs3gfx.pb3 = reg_bs3gfx.sprite[spriteid].surface & 0x01;
+    reg_bs3gfx.pw4 = (((WORD)reg_bs3gfx.sprite[spriteid].mainTileBank) << 8) | (WORD)reg_bs3gfx.sprite[spriteid].mainTileIndex;
+    reg_bs3gfx.pw5 = (((WORD)reg_bs3gfx.sprite[spriteid].auxTileBank)  << 8) | (WORD)reg_bs3gfx.sprite[spriteid].auxTileBank;
+    reg_bs3gfx.pb5 = reg_bs3gfx.sprite[spriteid].keyColor;
+    reg_bs3gfx.pw6 = reg_bs3gfx.sprite[spriteid].metadata;
+    
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+}
+
+void bs3_gfx_command_sprite_collision_count()
+{
+    /* TODO */
+    reg_bs3gfx.pb1 = 0;
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+}
+
+void bs3_gfx_command_sprite_getcollision()
+{
+    /* TODO */
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADCOLLIDEID;
+}
+
 /* function executed by a dedicated thread to perform the device activities */
 static void * dev_bs3gfx_run(void * bs3_device_bus)
 {
@@ -937,6 +1412,39 @@ static void * dev_bs3gfx_run(void * bs3_device_bus)
                         break;
                     case BS3_GFX_COMMAND_SURFACE_BLIT_TRANSFER:
                         bs3_gfx_command_surface_blit_transfer();
+                        break;
+                    case BS3_GFX_COMMAND_TILE_BANK_CONFIG:
+                        bs3_gfx_command_tile_bank_config();
+                        break;
+                    case BS3_GFX_COMMAND_TILE_BANK_GETCONFIG:
+                        bs3_gfx_command_tile_bank_getconfig();
+                        break;
+                    case  BS3_GFX_COMMAND_TILE_MAP_RESET:
+                        bs3_gfx_command_tile_map_reset();
+                        break;
+                    case BS3_GFX_COMMAND_TILE_MAP_CONFIG:
+                        bs3_gfx_command_tile_map_config();
+                        break;
+                    case BS3_GFX_COMMAND_TILE_MAP_CELL_CONFIG:
+                        bs3_gfx_command_tile_map_cell_config();
+                        break;
+                    case BS3_GFX_COMMAND_TILE_MAP_CELL_GETCONFIG:
+                        bs3_gfx_command_tile_map_cell_getconfig();
+                        break;
+                    case BS3_GFX_COMMAND_SPRITE_RESET:
+                        bs3_gfx_command_sprite_reset();
+                        break;
+                    case BS3_GFX_COMMAND_SPRITE_CONFIG:
+                        bs3_gfx_command_sprite_config();
+                        break;
+                    case BS3_GFX_COMMAND_SPRITE_GETCONFIG:
+                        bs3_gfx_command_sprite_getconfig();
+                        break;
+                    case BS3_GFX_COMMAND_SPRITE_COLLISION_COUNT:
+                        bs3_gfx_command_sprite_collision_count();
+                        break;
+                    case BS3_GFX_COMMAND_SPRITE_GETCOLLISION:                        
+                        bs3_gfx_command_sprite_getcollision();
                         break;
                     default:
                         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_UNKNOWN_CMD;
