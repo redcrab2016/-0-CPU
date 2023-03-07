@@ -277,9 +277,10 @@ Status
 Command $02
 Parameter :
     Input
-        PB1 : surface number (0: 1)
+        PB1 : surface number (0/ 1 or $80 $81)
         PW2 : top left corner Coordinates $YYXX  MSB YY: vertical coordinate, LSB XX: horizontal coordinate
                 coordinate from 0 to 255
+              tile coordinate if PB1 == $80 or $81  , $YYBB , MSB YY : (0..31), LSB XX (0..31)
         PW3 : view port size $HHWW : MSB HH : height (even size from 2 to 100), LSB WW : width (even size 2 to 160)
               if the size is odd then below even size is taken
     Output  
@@ -297,6 +298,7 @@ Status
         1 : Device not initialized (device was not reset)
         2 : incorrect size (width == 0 or > 160, height == 0 or > 100) (viewport configuration unchanged)
         3 : incorrect surface number (not 0 nor 1 )
+        10: incorrect tile coordinates (hapened when surface is $80 or 81 and PW2 coordinates is out of scale)
 
 >>> VIEWPORT_GETCONFIG
 Command $03
@@ -748,7 +750,7 @@ Parameter
                 | | | | | |     1: if bit0==0 then special AND mask (see bit 2), else ignored
                 | | | | | |
                 | | | | | +---- 0: if bit0==0 and bit1==1 then all tile mask bytes are as $00(copy tile), else ignored
-                | | | | |       1: if bit0==0 and bit1==1 then all tile mask bytes are as $FF(ORed tile), else ignored
+                | | | | |       1: if bit0==0 and bit1==1 then all tile mask bytes are as $FF(XORed tile), else ignored
                 | | | | |
                 | | | | +------ 0: No collision detection
                 | | | |         1: Collision detect

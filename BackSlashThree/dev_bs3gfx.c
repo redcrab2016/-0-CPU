@@ -116,6 +116,8 @@ struct dev_bs3gfx
     BYTE tilebanksize[2][4];                /*[surface][banknumber] =  0: 8x8, 1: 16x16, 2: 32x32, 3: 64x64 */
     struct dev_bs3gfx_tilemap tilemap[2];   /* 2 tile maps */
     struct dev_bs3gfx_tile sprite[128];     /* 128 sprites */
+    WORD spritecollision[256];
+    BYTE spritecollisioncount;
 };
 
 #define BS3_GFX_COMMAND_RESET                   0x00
@@ -186,6 +188,16 @@ struct dev_bs3gfx
 #define BS3_GFX_STATUS_BADSPRITEID              0x0B
 #define BS3_GFX_STATUS_BADTILEINDEX             0x0C
 #define BS3_GFX_STATUS_BADCOLLIDEID             0x0D
+
+#define BS3_TILE_BLIT_TILEMAP                   0
+#define BS3_TILE_BLIT_SPRITE                    1
+#define BS3_TILE_BLIT_KEYCOLOR                  0
+#define BS3_TILE_BLIT_KEYCOLORTILE              1
+#define BS3_TILE_BLIT_ANDOR                     2
+#define BS3_TILE_BLIT_COPY                      3
+#define BS3_TILE_BLIT_OR                        4
+#define BS3_TILE_BLIT_XOR                       5
+
 
 /* set of BS3 GFX command function declaration*/
 void bs3_gfx_command_reset();
@@ -502,10 +514,11 @@ void _bs3_gfx_screenrender(BYTE chosenSurface)
 
 
 /* BS3 GFX command function implementation */
-BYTE banknbtilespersize[]= {256 /* 8x8 */, 64 /* 16x16 */ , 16 /* 32x32*/ , 4 /* 64x64 */ };
+WORD banknbtilespersize[]= {255 /* 8x8 */, 63 /* 16x16 */ , 15 /* 32x32*/ , 3 /* 64x64 */ };
 
 void bs3_gfx_command_reset()
 {
+    memset(&reg_bs3gfx,0,sizeof(struct dev_bs3gfx));
     /* clear video ram surfaces */
     int i,j;
     for (i = 0 ; i < 3 ; i++)
@@ -542,11 +555,304 @@ void bs3_gfx_command_end()
     reg_bs3gfx.WAITFORDATA = 0;
 }
 
+/* compute tile coordinates by its index in a bank of a surface */
+/* return 0xFFFF is index is invalid */
+WORD bs3_gfx_bank_tile_coordinates(BYTE surface, BYTE bank, BYTE tileindex)
+{
+    WORD tileoffset;
+    BYTE tileSize;
+    WORD tileCoordinates;
+
+    tileSize = reg_bs3gfx.tilebanksize[surface & 0x01][bank & 0x03] & 0x03; /* 0:8x8 or 1:16x16 or 2:32x32 or 3:64x64 */
+
+    switch (tileSize) /* compute index bank offset on surface */
+    {
+        case 0: /* 8x8   : 32 x 8 tiles : tile index from 0 to 255 */ 
+            tileoffset = (((WORD)tileindex & 0x1F) << 3) + (((WORD)tileindex & 0xE0) << 6);
+            break;
+        case 1: /* 16x16 : 16 x 4 tiles : tile index from 0 to 63 */
+            if (tileindex > 63 ) return 0xFFFF;
+            tileoffset = (((WORD)tileindex & 0x0F) << 4) + (((WORD)tileindex & 0x30) << 8);
+            break;
+        case 2: /* 32x32 : 8 x 2 tiles : tile index from 0 to 15 */
+            if (tileindex > 15) return 0xFFFF;
+            tileoffset = (((WORD)tileindex & 0x07) << 5) + (((WORD)tileindex & 0x08) << 10);
+            break;
+        case 3: /* 64x64 : 4 x 1 tiles : tile index from 0 to 3 */
+            if (tileindex > 3) return 0xFFFF;
+            tileoffset = (((WORD)tileindex & 0x03) << 6) ;
+            break;
+        default:
+            return 0xFFFF;
+    }
+    tileCoordinates  = (((WORD)(bank & 0x03)) << 14) + tileoffset;
+    return tileCoordinates;
+
+}
+
+void bs3_gfx_tile_blit(struct dev_bs3gfx_tile * ptile, BYTE * targetSurface, int isSprite /* 1 for sprite , 0 for tilemap */)
+{
+    WORD targetCoordinates;
+    BYTE tileSize;
+    BYTE * srcSurface;
+    BYTE * mainTileAddr;
+    BYTE * auxTileAddr;
+    BYTE * targetAddr;
+    BYTE * maxTargetAddr;
+    WORD maintileCoordinates;
+    WORD auxTileCoordinates;
+    BYTE blitMode;
+    BYTE keyColor;
+    WORD offset;
+    int x,y;
+    /* Determine tile blit mode */
+    if (isSprite)
+    {
+        if (ptile->useKeyColor) blitMode = BS3_TILE_BLIT_KEYCOLOR;
+        else /* AND Mask */
+        {
+            if (ptile->useSpecialMask)
+            {
+                if (ptile->useMaskFF)  blitMode = BS3_TILE_BLIT_XOR;
+                else blitMode = BS3_TILE_BLIT_COPY;
+            }
+            else blitMode = BS3_TILE_BLIT_ANDOR;
+        }
+    }
+    else /* tile map */
+    {
+        if (ptile->useKeyColor)
+        {
+            if (ptile->tileIsKeycolorFullbox)
+                blitMode = BS3_TILE_BLIT_KEYCOLORTILE;
+            else
+                blitMode = BS3_TILE_BLIT_KEYCOLOR;
+        }
+        else /* AND mask */
+        {
+            if (ptile->useSpecialMask)
+            {
+                if (ptile->useMaskFF)
+                {
+                    if (ptile->ORasXOR)
+                        blitMode = BS3_TILE_BLIT_XOR;
+                    else
+                        blitMode = BS3_TILE_BLIT_OR;
+                }
+                else blitMode = BS3_TILE_BLIT_COPY;
+            } 
+            else blitMode = BS3_TILE_BLIT_ANDOR;
+        }
+    }
+
+    keyColor      = ptile->keyColor;
+    targetCoordinates = (isSprite == 0 || (isSprite == 1 && ptile->tileCoordinate == 1))?((ptile->coordinates & 0x1F1F) << 3):ptile->coordinates;
+    tileSize = 1 << (3 + (reg_bs3gfx.tilebanksize[ptile->surface & 0x01][ptile->mainTileBank & 0x03] & 0x03) ); /* 8 or 16 or 32 or 64 */
+    offset = 256 - tileSize;
+    srcSurface = &reg_bs3gfx.videoram[ptile->surface & 0x01][0];
+    maintileCoordinates = bs3_gfx_bank_tile_coordinates(ptile->surface, ptile->mainTileBank, ptile->mainTileIndex);
+    auxTileCoordinates  = bs3_gfx_bank_tile_coordinates(ptile->surface, ptile->auxTileBank,  ptile->auxTileIndex);
+    if (maintileCoordinates == 0xFFFF || auxTileCoordinates == 0xFFFF) return; /* something wrong with the tiles index */
+    mainTileAddr = srcSurface    + maintileCoordinates;
+    auxTileAddr  = srcSurface    + auxTileCoordinates;
+    targetAddr   = targetSurface + targetCoordinates;
+    maxTargetAddr= targetSurface + 65536;
+    switch (blitMode)
+    {
+        case BS3_TILE_BLIT_KEYCOLOR:
+            for (y = 0 ; y < tileSize; y++)
+            {
+                if (targetAddr >= maxTargetAddr) break;
+                for (x = 0 ; x < tileSize; x++)
+                {
+                    if (targetAddr >= maxTargetAddr) break;
+                    if (*mainTileAddr != keyColor) *targetAddr = *mainTileAddr;
+                    mainTileAddr++;
+                    targetAddr++;
+                }
+                mainTileAddr += offset;
+                targetAddr   += offset;
+            }        
+            break;
+        case BS3_TILE_BLIT_KEYCOLORTILE:
+            for (y = 0 ; y < tileSize; y++)
+            {
+                if (targetAddr >= maxTargetAddr) break;
+                for (x = 0 ; x < tileSize; x++)
+                {
+                    if (targetAddr >= maxTargetAddr) break;
+                    *targetAddr = keyColor;
+                    targetAddr++;
+                }
+                targetAddr   += offset;
+            }        
+            break;
+        case BS3_TILE_BLIT_ANDOR:
+            for (y = 0 ; y < tileSize; y++)
+            {
+                if (targetAddr >= maxTargetAddr) break;
+                for (x = 0 ; x < tileSize; x++)
+                {
+                    if (targetAddr >= maxTargetAddr) break;
+                    *targetAddr = ((*targetAddr) & (*auxTileAddr)) | (*mainTileAddr);
+                    mainTileAddr++;
+                    auxTileAddr++;
+                    targetAddr++;
+                }
+                mainTileAddr += offset;
+                auxTileAddr  += offset;
+                targetAddr   += offset;
+            }        
+            break;
+        case BS3_TILE_BLIT_COPY:
+            for (y = 0 ; y < tileSize; y++)
+            {
+                if (targetAddr >= maxTargetAddr) break;
+                for (x = 0 ; x < tileSize; x++)
+                {
+                    if (targetAddr >= maxTargetAddr) break;
+                    *targetAddr = *mainTileAddr;
+                    mainTileAddr++;
+                    targetAddr++;
+                }
+                mainTileAddr += offset;
+                targetAddr   += offset;
+            }        
+            break;
+        case BS3_TILE_BLIT_OR:
+            for (y = 0 ; y < tileSize; y++)
+            {
+                if (targetAddr >= maxTargetAddr) break;
+                for (x = 0 ; x < tileSize; x++)
+                {
+                    if (targetAddr >= maxTargetAddr) break;
+                    *targetAddr |= *mainTileAddr;
+                    mainTileAddr++;
+                    targetAddr++;
+                }
+                mainTileAddr += offset;
+                targetAddr   += offset;
+            }        
+            break;
+        case BS3_TILE_BLIT_XOR:
+            for (y = 0 ; y < tileSize; y++)
+            {
+                if (targetAddr >= maxTargetAddr) break;
+                for (x = 0 ; x < tileSize; x++)
+                {
+                    if (targetAddr >= maxTargetAddr) break;
+                    *targetAddr ^= *mainTileAddr;
+                    mainTileAddr++;
+                    targetAddr++;
+                }
+                mainTileAddr += offset;
+                targetAddr   += offset;
+            }        
+            break;
+    }
+}
+
 void bs3_gfx_command_refresh()
 {
-    /* TODO : compute compositing */
+    /* compute layer compositing */
+    int spritecount;
+    int i;
+    int x,y;
+    WORD mintilex, mintiley, maxtilex, maxtiley;
+    spritecount = 0;
+    mintilex = (reg_bs3gfx.viewport_location & 0x00FF) >> 3;
+    mintiley = (((reg_bs3gfx.viewport_location >> 8) & 0x00FF)) >> 3;
+    maxtilex = (((reg_bs3gfx.viewport_location + reg_bs3gfx.viewport_size) & 0x00FF) - 1) >> 3;
+    maxtiley = (((reg_bs3gfx.viewport_location >> 8) & 0x00FF) - 1) >> 3;
+    mintilex = (mintilex<8)?0:mintilex;
+    mintiley = (mintilex<8)?0:mintilex;
+
+    for (i = 0 ; i < 128; i++)
+    {
+        if (reg_bs3gfx.sprite[i].enabled && 
+            reg_bs3gfx.sprite[i].z < 3  ) spritecount++;
+    }
+    /* if bitmap only mode then do not do any layer composition*/
+    if (reg_bs3gfx.tilemap[0].visible == 0 && reg_bs3gfx.tilemap[1].visible == 0 && spritecount == 0) 
+    {
+        _bs3_gfx_screenrender(255); /* 255 means render the surface referenced by the view port */
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
+        return;
+    }
+    /* we need to do layer composition */
+
+    /* layer 0 : get surface referenced by the view port */
     memcpy(&reg_bs3gfx.videoram[2][0], &reg_bs3gfx.videoram[reg_bs3gfx.viewport_surface][0], 65536);
-    _bs3_gfx_screenrender(255);
+    /* between layer 0 and 1 : sprites with Z == 0 */
+    for (i = 0; i < 128; i++)
+    {
+        if (reg_bs3gfx.sprite[i].enabled && reg_bs3gfx.sprite[i].z == 0 )
+        {
+            bs3_gfx_tile_blit(&reg_bs3gfx.sprite[i], &reg_bs3gfx.videoram[2][0],  BS3_TILE_BLIT_SPRITE);
+        }
+    }
+    /* layer 1 : tilemap 0 */
+    if (reg_bs3gfx.tilemap[0].visible)
+    {
+        for (y = 0; y < 32 ; y++)
+        {
+            if (y > maxtiley) break;
+            if (y >= mintiley )
+            {
+                for (x = 0 ; x < 32; x++)
+                {
+                    if (x > maxtilex) break;
+                    if (x >= mintilex)
+                    {
+                        if (reg_bs3gfx.tilemap[0].map[y][x].visible)
+                        {
+                            bs3_gfx_tile_blit(&reg_bs3gfx.tilemap[0].map[y][x], &reg_bs3gfx.videoram[2][0], BS3_TILE_BLIT_TILEMAP);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    /* between layer 1 and 2 : sprites with Z == 1 */
+    for (i = 0; i < 128; i++)
+    {
+        if (reg_bs3gfx.sprite[i].enabled && reg_bs3gfx.sprite[i].z == 1 )
+        {
+            bs3_gfx_tile_blit(&reg_bs3gfx.sprite[i], &reg_bs3gfx.videoram[2][0],  BS3_TILE_BLIT_SPRITE);
+        }
+    }
+    /* layer 2 : tilemap 1 */
+    if (reg_bs3gfx.tilemap[1].visible)
+    {
+        for (y = 0; y < 32 ; y++)
+        {
+            if (y > maxtiley) break;
+            if (y >= mintiley )
+            {
+                for (x = 0 ; x < 32; x++)
+                {
+                    if (x > maxtilex) break;
+                    if (x >= mintilex)
+                    {
+                        if (reg_bs3gfx.tilemap[1].map[y][x].visible)
+                        {
+                            bs3_gfx_tile_blit(&reg_bs3gfx.tilemap[1].map[y][x], &reg_bs3gfx.videoram[2][0], BS3_TILE_BLIT_TILEMAP);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    /* above layer 2 : sprite with Z == 2 */
+    for (i = 0; i < 128; i++)
+    {
+        if (reg_bs3gfx.sprite[i].enabled && reg_bs3gfx.sprite[i].z == 2 )
+        {
+            bs3_gfx_tile_blit(&reg_bs3gfx.sprite[i], &reg_bs3gfx.videoram[2][0], BS3_TILE_BLIT_SPRITE);
+        }
+    }
+
+    _bs3_gfx_screenrender(2); /* 2 means render the compositing result surface */
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
@@ -561,14 +867,19 @@ void bs3_gfx_command_viewport_config()
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADVPSIZE;
         return;
     }    
-    if (reg_bs3gfx.pb1 > 1) /* good new surface ? */
+    if ((reg_bs3gfx.pb1 & 0x7F) > 1) /* good new surface ? */
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
         return;
     }
+    if ((reg_bs3gfx.pb1 & 0x80) && (reg_bs3gfx.pw2 & 0xE0E0))
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADCELLCOORDINATES;
+        return;
+    }
     /* apply change */
-    reg_bs3gfx.viewport_surface  = reg_bs3gfx.pb1;
-    reg_bs3gfx.viewport_location = reg_bs3gfx.pw2;
+    reg_bs3gfx.viewport_surface  = reg_bs3gfx.pb1 & 0x01;
+    reg_bs3gfx.viewport_location = (reg_bs3gfx.pb1 & 0x80)?((reg_bs3gfx.pw2 & 0x1F1F) << 3): reg_bs3gfx.pw2;
     if (reg_bs3gfx.viewport_size != reg_bs3gfx.pw3)
     {
         reg_bs3gfx.viewport_size = reg_bs3gfx.pw3;
@@ -621,8 +932,8 @@ void bs3_gfx_command_surface_getpixel()
     WORD addrSurface;
 
     addrSurface = reg_bs3gfx.pw2;
-    surface = reg_bs3gfx.pb1;
-    if (surface & 0xFE) 
+    surface = reg_bs3gfx.pb1 & 0x7F;
+    if (surface & 0x7E) 
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
         return;
@@ -637,8 +948,8 @@ void bs3_gfx_command_surface_setpixel()
     WORD addrSurface;
 
     addrSurface = reg_bs3gfx.pw2;
-    surface = reg_bs3gfx.pb1;
-    if (surface & 0xFE) 
+    surface = reg_bs3gfx.pb1 & 0x7F;
+    if (surface & 0x7E) 
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
         return;
@@ -655,10 +966,10 @@ void bs3_gfx_command_surface_draw_hline()
     BYTE i;
     BYTE value;
     addrSurface = reg_bs3gfx.pw2;
-    surface = reg_bs3gfx.pb1;
+    surface = reg_bs3gfx.pb1 & 0x7F;
     value = reg_bs3gfx.pb3;
     i = reg_bs3gfx.pb4;
-    if (surface & 0xFE) 
+    if (surface & 0x7E) 
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
         return;
@@ -681,10 +992,10 @@ void bs3_gfx_command_surface_draw_vline()
     BYTE value;
 
     addrSurface = reg_bs3gfx.pw2;
-    surface = reg_bs3gfx.pb1;
+    surface = reg_bs3gfx.pb1 & 0x7F;
     value = reg_bs3gfx.pb3;
     i = reg_bs3gfx.pb4;
-    if (surface & 0xFE) 
+    if (surface & 0x7E) 
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
         return;
@@ -707,9 +1018,9 @@ void bs3_gfx_command_surface_draw_box()
     BYTE value;
     WORD offset;
 
-    surface = reg_bs3gfx.pb1;
+    surface = reg_bs3gfx.pb1 & 0x7F;
     value = reg_bs3gfx.pb3;
-    if (surface & 0xFE) 
+    if (surface & 0x7E) 
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
         return;
@@ -749,9 +1060,9 @@ void bs3_gfx_command_surface_draw_boxfull()
     WORD j;
     BYTE value;
 
-    surface = reg_bs3gfx.pb1;
+    surface = reg_bs3gfx.pb1 & 0x7F;
     value = reg_bs3gfx.pb3;
-    if (surface & 0xFE) 
+    if (surface & 0x7E) 
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
         return;
@@ -788,10 +1099,10 @@ void bs3_gfx_command_surface_blit_operator()
     int x,y;
     int h,w;
     
-    sourceSurface   = reg_bs3gfx.pb1;
-    targetSurface   = reg_bs3gfx.pb5;
-    sourceAddr      = reg_bs3gfx.pw2;
-    targetAddr      = reg_bs3gfx.pw6;
+    sourceSurface   = reg_bs3gfx.pb1 & 0x7F;
+    targetSurface   = reg_bs3gfx.pb5 & 0x7F;
+    sourceAddr      = (reg_bs3gfx.pb1 & 0x80)? bs3_gfx_bank_tile_coordinates(sourceSurface, (BYTE)((reg_bs3gfx.pw2 & 0xFF00)>>8), (BYTE)(reg_bs3gfx.pw2 & 0x00FF)):reg_bs3gfx.pw2;
+    targetAddr      = (reg_bs3gfx.pb5 & 0x80)?(reg_bs3gfx.pw6 & 0x1F1F) << 3:reg_bs3gfx.pw6;
     size            = reg_bs3gfx.pw4;
     operator        = reg_bs3gfx.pb3;
 
@@ -800,9 +1111,19 @@ void bs3_gfx_command_surface_blit_operator()
     h               = h?h:256;
     w               = w?w:256;
     offset          = 256 - w;
-    if ((sourceSurface & 0xFE) || (targetSurface & 0xFE)) 
+    if ((sourceSurface & 0x7E) || (targetSurface & 0x7E)) 
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
+        return;
+    }
+    if ((reg_bs3gfx.pb1 & 0x80) && ((sourceAddr == 0xFFFF)))
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEINDEX;
+        return;
+    }
+    if ((reg_bs3gfx.pb5 & 0x80) && (reg_bs3gfx.pw6 & 0xE0E0))
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADCELLCOORDINATES;
         return;
     }
 
@@ -863,10 +1184,10 @@ void bs3_gfx_command_surface_blit_keycolor()
     int x,y;
     int h,w;
     
-    sourceSurface   = reg_bs3gfx.pb1;
-    targetSurface   = reg_bs3gfx.pb5;
-    sourceAddr      = reg_bs3gfx.pw2;
-    targetAddr      = reg_bs3gfx.pw6;
+    sourceSurface   = reg_bs3gfx.pb1 & 0x7F;
+    targetSurface   = reg_bs3gfx.pb5 & 0x7F;
+    sourceAddr      = (reg_bs3gfx.pb1 & 0x80)? bs3_gfx_bank_tile_coordinates(sourceSurface, (BYTE)((reg_bs3gfx.pw2 & 0xFF00)>>8), (BYTE)(reg_bs3gfx.pw2 & 0x00FF)):reg_bs3gfx.pw2;
+    targetAddr      = (reg_bs3gfx.pb5 & 0x80)?(reg_bs3gfx.pw6 & 0x1F1F) << 3:reg_bs3gfx.pw6;
     size            = reg_bs3gfx.pw4;
     keycolor        = reg_bs3gfx.pb3;
 
@@ -875,9 +1196,19 @@ void bs3_gfx_command_surface_blit_keycolor()
     h               = h?h:256;
     w               = w?w:256;
     offset          = 256 - w;
-    if ((sourceSurface & 0xFE) || (targetSurface & 0xFE)) 
+    if ((sourceSurface & 0x7E) || (targetSurface & 0x7E)) 
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
+        return;
+    }
+    if ((reg_bs3gfx.pb1 & 0x80) && ((sourceAddr == 0xFFFF)))
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEINDEX;
+        return;
+    }
+    if ((reg_bs3gfx.pb5 & 0x80) && (reg_bs3gfx.pw6 & 0xE0E0))
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADCELLCOORDINATES;
         return;
     }
 
@@ -900,13 +1231,25 @@ void bs3_gfx_command_surface_blit_keycolor()
 
 void bs3_gfx_command_surface_blit_transfer()
 {
-    if (reg_bs3gfx.pb1 & 0xFE)
+    WORD coordinates;
+    if (reg_bs3gfx.pb1 & 0x7E)
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
         return;
     }
+    if ((reg_bs3gfx.pb1 & 0x80) && (reg_bs3gfx.pw2 & 0xFC00))
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKID;
+        return;
+    }
+    coordinates = (reg_bs3gfx.pb1 & 0x80)? bs3_gfx_bank_tile_coordinates(reg_bs3gfx.pb1, (BYTE)((reg_bs3gfx.pw2 & 0xFF00)>>8), (BYTE)(reg_bs3gfx.pw2 & 0x00FF)):reg_bs3gfx.pw2;
+    if (coordinates == 0xFFFF) 
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEINDEX;
+        return;
+    }
     reg_bs3gfx.WAITFORDATA = 1;
-    reg_bs3gfx.pw6 = reg_bs3gfx.pw2; /* current surface coordinate */
+    reg_bs3gfx.pw6 =  coordinates;
     reg_bs3gfx.pw5 = 0; /* current progress X */
     reg_bs3gfx.pw1 = 0; /* current progress Y */
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
@@ -923,7 +1266,7 @@ void bs3_gfx_command_surface_blit_transfer_data()
     WORD w,h;
     WORD offset;
 
-    targetSurface   = reg_bs3gfx.pb1;
+    targetSurface   = reg_bs3gfx.pb1 & 0x01;
     size            = reg_bs3gfx.pw4;
     currAddr        = reg_bs3gfx.pw6;
     value           = reg_bs3gfx.pb3;
@@ -1111,7 +1454,7 @@ void bs3_gfx_command_tile_map_cell_config()
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKID;
         return;
     }
-    if (tileindex >= banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tilebank]] )
+    if (tileindex > banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tilebank]] )
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEINDEX;
         return;
@@ -1124,7 +1467,7 @@ void bs3_gfx_command_tile_map_cell_config()
             reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKID;
             return;
         }
-        if (tileauxindex >= banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tileauxbank]] )
+        if (tileauxindex > banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tileauxbank]] )
         {
             reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEINDEX;
             return;
@@ -1261,7 +1604,7 @@ void bs3_gfx_command_sprite_config()
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKID;
         return;
     }
-    if (tileindex >= banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tilebank]] )
+    if (tileindex > banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tilebank]] )
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEINDEX;
         return;
@@ -1274,7 +1617,7 @@ void bs3_gfx_command_sprite_config()
             reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADBANKID;
             return;
         }
-        if (tileauxindex >= banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tileauxbank]] )
+        if (tileauxindex > banknbtilespersize[reg_bs3gfx.tilebanksize[tilesurface][tileauxbank]])
         {
             reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADTILEINDEX;
             return;
@@ -1327,17 +1670,179 @@ void bs3_gfx_command_sprite_getconfig()
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
+BYTE bs3_gfx_isspritepixelvisible(BYTE sprite, WORD inCoords) 
+{
+    BYTE value = 0;
+    WORD tileCoords;
+    BYTE * pSurface;
+    BYTE surface;
+    struct dev_bs3gfx_tile * pSprite;
+
+    surface = pSprite->surface & 0x01;
+    pSprite = &reg_bs3gfx.sprite[sprite];
+    pSurface = &reg_bs3gfx.videoram[surface][0];
+
+    if (pSprite->useKeyColor)
+    {
+        tileCoords = bs3_gfx_bank_tile_coordinates(surface, pSprite->mainTileBank, pSprite->mainTileIndex) + inCoords;
+        if (*(pSurface + tileCoords) != pSprite->keyColor ) return 1;
+        return 0;
+    }
+    else if (pSprite->useSpecialMask)
+    {
+        if (pSprite->useMaskFF) /* OR / XOR only : then test pixel in mainTile*/
+        {
+            tileCoords = bs3_gfx_bank_tile_coordinates(surface, pSprite->mainTileBank, pSprite->mainTileIndex) + inCoords;
+            if (*(pSurface + tileCoords)) return 1;
+            return 0;            
+        }
+        else  /* COPY : then any pixel is visible*/
+        {
+            return 1;
+        }
+    }
+    else /* AND+OR tile */
+    {
+        tileCoords = bs3_gfx_bank_tile_coordinates(surface, pSprite->auxTileBank, pSprite->auxTileIndex)   + inCoords;
+        if (*(pSurface + tileCoords)) return 0;
+        return 1;
+    }
+
+    return value; 
+}
+
+/* test if two sprites collide */
+/* return 0 for non collision */
+/* return 1 for collision */
+int bs3_gfx_sprite_collide(BYTE spriteFrom , BYTE spriteTo)
+{
+    WORD spriteFromCoordTopLeft;
+    WORD spriteToCoordTopLeft;
+    WORD spriteFromCoordBottomRight;
+    WORD spriteToCoordBottomRight;
+    BYTE spriteFromSize;
+    BYTE spriteToSize;
+    WORD xmin1,ymin1,xmax1,ymax1,xmin2,ymin2,xmax2,ymax2;
+    WORD x,y;
+    BYTE spriteSmall;
+    BYTE spriteBig;
+    BYTE spriteSmallSize;
+    BYTE spriteBigSize;
+    BYTE pixelSpriteSmall;
+    BYTE pixelSpriteBig;
+
+    spriteFromSize             = 1 << (3 + reg_bs3gfx.tilebanksize[reg_bs3gfx.sprite[spriteFrom].surface & 0x01][reg_bs3gfx.sprite[spriteFrom].mainTileBank & 0x03] & 0x03); 
+    spriteToSize               = 1 << (3 + reg_bs3gfx.tilebanksize[reg_bs3gfx.sprite[spriteTo  ].surface & 0x01][reg_bs3gfx.sprite[spriteTo  ].mainTileBank & 0x03] & 0x03); 
+    spriteFromCoordTopLeft     = reg_bs3gfx.sprite[spriteFrom].coordinates; 
+    spriteToCoordTopLeft       = reg_bs3gfx.sprite[spriteTo  ].coordinates; 
+    spriteFromCoordBottomRight = spriteFromCoordTopLeft + spriteFromSize  - 0x0101;
+    spriteToCoordBottomRight   = spriteToCoordTopLeft   + spriteToSize    - 0x0101;
+    /* if sprite wrap over horizontally or vertically then no collision (convention to avoid to handle torus) : sprite too to the righ or too to the bottom */
+    if ((spriteFromCoordBottomRight & 0xFF00) < (spriteFromCoordTopLeft & 0xFF00)) return 0;
+    if ((spriteFromCoordBottomRight & 0x00FF) < (spriteFromCoordTopLeft & 0x00FF)) return 0;
+    if ((spriteToCoordBottomRight & 0xFF00)   < (spriteToCoordTopLeft & 0xFF00))   return 0;
+    if ((spriteToCoordBottomRight & 0x00FF)   < (spriteToCoordTopLeft & 0x00FF))   return 0;
+    /* sprite box overlapped ? */
+    
+    if (spriteFromSize < spriteToSize)
+    {
+        spriteSmall     = spriteFrom;
+        spriteSmallSize = spriteFromSize;
+        spriteBig       = spriteTo;
+        spriteBigSize   = spriteToSize;
+        xmin1           = spriteFromCoordTopLeft     & 0x00FF;
+        ymin1           = spriteFromCoordTopLeft     & 0xFF00;
+        xmax1           = spriteFromCoordBottomRight & 0x00FF;
+        ymax1           = spriteFromCoordBottomRight & 0xFF00;
+        xmin2           = spriteToCoordTopLeft       & 0x00FF;
+        ymin2           = spriteToCoordTopLeft       & 0xFF00;
+        xmax2           = spriteToCoordBottomRight   & 0x00FF;
+        ymax2           = spriteToCoordBottomRight   & 0xFF00;
+    }
+    else
+    {
+        spriteSmall     = spriteTo;
+        spriteSmallSize = spriteToSize;
+        spriteBig       = spriteFrom;
+        spriteBigSize   = spriteFromSize;
+        xmin1           = spriteToCoordTopLeft       & 0x00FF;
+        ymin1           = spriteToCoordTopLeft       & 0xFF00;
+        xmax1           = spriteToCoordBottomRight   & 0x00FF;
+        ymax1           = spriteToCoordBottomRight   & 0xFF00;
+        xmin2           = spriteFromCoordTopLeft     & 0x00FF;
+        ymin2           = spriteFromCoordTopLeft     & 0xFF00;
+        xmax2           = spriteFromCoordBottomRight & 0x00FF;
+        ymax2           = spriteFromCoordBottomRight & 0xFF00;
+    }
+
+    if (ymax1 < ymin2 || ymax2 < ymin1 ) return 0; /* sprite boxes can't collide verticaly */
+    if (xmax1 < xmin2 || xmax2 < xmin1 ) return 0; /* sprite boxes can't collide horitonaly */
+
+    /* sprite box do overlap : collision possibility : do pixel perfect collision detection */
+    /* todo : optimize if collisiton from left/right top or bottom to optimize browsing of the small sprite*/
+    for (x = xmin1 ; x <= xmax1 ; x++) /* browse the small sprite horizontaly */
+    {
+        if (x > xmax2) break;
+        if (x >= xmin2)
+        {
+            for (y = ymin1 ; y <= ymax1 ; y+=0x0100 ) /* browse the small sprite verticaly*/
+            {
+                if (y > ymax2) break;
+                if (y >= ymin2)
+                {
+                    /* get pixel overlap mask value of spriteSmall*/
+                    pixelSpriteSmall = bs3_gfx_isspritepixelvisible(spriteSmall, (y-ymin1) | (x-xmin1)); 
+                    if (pixelSpriteSmall) /* small sprite pixel visible then check big sprite pixel visibility */
+                    {
+                    /* get pixel overlap mask value of spriteBig */
+                        pixelSpriteBig = bs3_gfx_isspritepixelvisible(spriteBig, (y-ymin2) | (x-xmin2));
+                        if (pixelSpriteBig) return 1; /* collision */
+                    }
+                }
+            }
+        }
+    }
+    return 0;    
+}
+
 void bs3_gfx_command_sprite_collision_count()
 {
-    /* TODO */
-    reg_bs3gfx.pb1 = 0;
+    int i,j;
+    reg_bs3gfx.spritecollisioncount = 0;
+    for (i = 128; i > 0; i--)
+    {
+        if (reg_bs3gfx.sprite[i].enabled && reg_bs3gfx.sprite[i].cancollide)
+        {
+            for (j = i-1; j > -1 ; j--)
+            {
+                if (reg_bs3gfx.sprite[j].enabled && reg_bs3gfx.sprite[j].cancollide)
+                {
+                    if (bs3_gfx_sprite_collide((BYTE)i,(BYTE)j))
+                    {
+                        reg_bs3gfx.spritecollision[reg_bs3gfx.spritecollisioncount++] = ((i & 0x00FF) << 8) | (j & 0x00FF);
+                        reg_bs3gfx.spritecollision[reg_bs3gfx.spritecollisioncount++] = ((j & 0x00FF) << 8) | (i & 0x00FF);
+                        if (reg_bs3gfx.spritecollisioncount >= 255) 
+                        {
+                            j = 128; i = 127; /* soft break; when collision buffer is full */
+                        }
+                    }
+                }
+            }
+        }
+    }
+    reg_bs3gfx.pb1 = reg_bs3gfx.spritecollisioncount;
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
 void bs3_gfx_command_sprite_getcollision()
 {
-    /* TODO */
-    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADCOLLIDEID;
+    if (reg_bs3gfx.pb1 >= reg_bs3gfx.spritecollisioncount)
+    {
+        reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADCOLLIDEID;
+        return;
+    }
+    reg_bs3gfx.pw2 = reg_bs3gfx.spritecollision[reg_bs3gfx.pb1];
+    reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
 /* function executed by a dedicated thread to perform the device activities */
