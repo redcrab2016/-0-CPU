@@ -161,14 +161,18 @@ start:
             mbs3_gfx_setPB1     16
             mbs3_gfx_vpclear
             ; show map "b1"
-            mov             b0,        b1 ; map "b1"
-            call            sk_map_blit
+.cont2      mov             b0,        b1 ; map "b1"
+            call            sk_tilemap ; sk_map_blit
             mbs3_gfx_refresh
             mbs3_wait_input
             inc             b1
             cmp             b1, 15
-            jnz             .cont
+            jnz             .cont2 ; .cont
 
+            ; hide tile map 0
+            mbs3_gfx_setPB1 0
+            mbs3_gfx_setPB2 0
+            mbs3_gfx_tmconfig
             ; below is code to show the surface 1 (tile and spr banks)
             mbs3_gfx_vpgetconf
             mbs3_gfx_setPB1 1
@@ -259,7 +263,7 @@ sk_map_blit
                 ; get tile index
 .blit           ld                  b0, [w2] ; get image index
                 ; blit tile b0 at w1(b3b2) coordinate on surface 0
-                c                   blit8x8frombank ; blt tile b0 @ w1
+                call                blit8x8frombank ; blt tile b0 @ w1
                 inc                 w2 ; next tile address
                 add                 b2, 8
                 cmp                 b2, 160
@@ -275,6 +279,56 @@ sk_map_blit
                 ret
 .oldrom         db                  0
 
+; tile map a sk map
+; parameter
+;    b0 : sk map number
+sk_tilemap
+                ; save env
+                pusha
+                ld                  b1, [lbs3_bank_rom]
+                sr                  b1, [.oldrom]
+                ; select rom map
+                add                 b0, rom_sk_map0
+                sr                  b0, [lbs3_bank_rom]
+                ; select gfx image bank
+                mov                 b1, 0 ; tile gfx bank
+                ; first tile index address in rom
+                mov                 w2, rom_map_layer0_addr
+                ; first tilemap coordinates
+                mov                 w1, $0000
+                ; reset tile maps
+                mbs3_gfx_setPB1     0 ; choose tilemap 0
+                mbs3_gfx_tmreset      ; reset chosen tilemap
+                ; make visible tile map 0
+                mbs3_gfx_setPB2     1 ; visible
+                mbs3_gfx_tmconfig     ; set chosen tilemap config
+                ; common register for all tiles in map
+                mbs3_gfx_setPB3     1   ; surface where are tiles
+                mbs3_gfx_setPB5     232 ; keycolor
+                mbs3_gfx_setPB6     $81 ; visible | use keycolor
+                ; get tile index
+.blit           ld                  b0, [w2] ; get image index
+                mov                 b1, 0    ; tile bank 0
+                mbs3_gfx_setPW4     w0       ; set tile bank and index
+                mbs3_gfx_setPW2     w1       ; tile map coordinates
+                mbs3_gfx_tmcellconf          ; set tile into tilemap
+                inc                 w2 ; next rom map tile address
+                ; next tilemap coordinates
+                inc                 b2
+                cmp                 b2, 20
+                jnz                 .blit
+                eor                 b2, b2
+                inc                 b3
+                cmp                 b3, 12
+                jnz                 .blit
+                ; restore env
+                ld                  b1, [.oldrom]
+                sr                  b1, [lbs3_bank_rom]
+                popa
+                ret
+.oldrom         db                  0
+
+
 ; blit a 8x8 gfx image bank
 ; parameters (registers)
 ;   b0 : gfx image index
@@ -282,38 +336,12 @@ sk_map_blit
 ;   w1 : target coordinates on surface 0
 blit8x8frombank
                 pusha
-                ; compute surface 1 coordinates (source)
-                ;   compute image bank address
-                eor         w2, w2
-                mov         b5, b1
-                shl         b5
-                shl         b5
-                shl         b5
-                shl         b5
-                shl         b5
-                shl         b5  ; w2 = image row in bank
-                ;   compute imnage address in bank
-                eor         w3, w3
-                mov         b6, b0
-                and         b6, $1F
-                shl         b6
-                shl         b6
-                shl         b6
-                mov         b7, b0
-                and         b7, $E0
-                shr         b7
-                shr         b7 ; w3 = offset addr in img bank
-                ; w2 = address in surface (bank addr + offs img addr)
-                add         w2, w3
-
-                mbs3_gfx_setPB1     1       ; source surface
-                mbs3_gfx_setPW2     w2      ; source coordinates
+                mbs3_gfx_setPB1     $81     ; source surface
+                mbs3_gfx_setPW2     w0      ; source coordinates
                 mbs3_gfx_setPB3     232     ; key color (black)
-                mbs3_gfx_setPW4     $0808   ; 8x8 image size
                 mbs3_gfx_setPB5     0       ; target surface
                 mbs3_gfx_setPW6     w1      ; target coordinates
                 mbs3_gfx_blitkcolor
-
                 popa
                 ret
 
@@ -351,7 +379,7 @@ transromTileSpriteToGFX
 ;      b1 : rom bank number for mask
 ;      b2 : rom 8x8 image index (0 to 255)
 ;      b3 : GFX 8x8 image index in image bank
-;      b4 : GFX 8x8 image bank number (0: tile, 1: sprite, ... 4)
+;      b4 : GFX 8x8 image bank number (0: tile, 1: sprite, ... 3)
 trans8x8toGFX
                 ; save env
                 pusha
@@ -375,31 +403,11 @@ trans8x8toGFX
                 add                 w0, rom_scr_addr
                 sr                  w0, [.romimgaddr] ; rom addr
                 ;   compute GFX surface coordinates
-                eor                 w0, w0
                 ld                  b1, [.gfximgbank]
-                shl                 b1
-                shl                 b1
-                shl                 b1
-                shl                 b1
-                shl                 b1
-                shl                 b1
-                
-                eor                 w1, w1
-                ld                  b2, [.gfximgidx]
-                mov                 b3, b2
-                and                 b2, $1F ; 0 to 31 Horiz image
-                shl                 b2
-                shl                 b2
-                shl                 b2
-                and                 b3, $E0 ; 0 to 3 Veti image
-                shr                 b3
-                shr                 b3
-                add                 w0, w1
-                sr                  w0, [.surfcoords] ; surface coords
+                ld                  b0, [.gfximgidx]
                 ;   prepare the mbs3_gfx_blitrans
-                mbs3_gfx_setPB1     1
+                mbs3_gfx_setPB1     $81
                 mbs3_gfx_setPW2     w0
-                mbs3_gfx_setPW4     $0808 ; 8x8 image
                 mbs3_gfx_blitrans
                 cmp                 b0, ebs3_gfx_code_ok ; is it ok ?
                 jnz                 .endtrans ; not ok then quit

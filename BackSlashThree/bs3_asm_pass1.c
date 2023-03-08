@@ -2254,9 +2254,17 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
                 break;
             case BS3_INSTR_ENDM:
                 /* end of macro recording mode */
-                isMacroRecording = 0;  
-                fclose(macroFile);  
-                macroFile = 0;        
+                if (isMacroRecording)
+                {
+                  isMacroRecording = 0;  
+                  fclose(macroFile);  
+                  macroFile = 0;
+                }
+                else
+                {
+                  err = BS3_ASM_PASS1_PARSE_ERR_ENDMBUTNOMACRO;
+                  bs3_asm_report(filename, linenum, pbs3_asm->column,err);
+                }
                 break;
             case BS3_INSTR_EMBED: /* EMBED "file", rom bank number, ram bank number */
                 err = bs3_asm_line_commit(pbs3_asm);

@@ -39,6 +39,7 @@ ebs3_timer_mode         equ     $010C
 ebs3_timer_mode_time    equ     $00
 ebs3_timer_mode_tick    equ     $01
 ebs3_irq_queue          equ     $010E
+
 ebs3_gfx_cmd            equ     $0120
 ebs3_gfx_cmd_reset      equ     $00
 ebs3_gfx_cmd_end        equ     $FF
@@ -55,6 +56,19 @@ ebs3_gfx_cmd_boxfull    equ     $0A
 ebs3_gfx_cmd_blitope    equ     $0B
 ebs3_gfx_cmd_blitkcolor equ     $0C
 ebs3_gfx_cmd_blitrans   equ     $0D
+ebs3_gfx_cmd_tbconfig   equ     $0E
+ebs3_gfx_cmd_tbgetconf  equ     $0F 
+ebs3_gfx_cmd_tmreset    equ     $10
+ebs3_gfx_cmd_tmconfig   equ     $11
+ebs3_gfx_cmd_tmcellconf equ     $12
+ebs3_gfx_cmd_tmcellgetconf equ  $13
+ebs3_gfx_cmd_sprreset   equ     $14
+ebs3_gfx_cmd_sprconfig  equ     $15
+ebs3_gfx_cmd_sprgetconf equ     $16
+ebs3_gfx_cmd_sprcollcnt equ     $17
+ebs3_gfx_cmd_sprgetcoll equ     $18
+
+
 ebs3_gfx_status         equ     $0120
 ebs3_gfx_status_busy    equ     $80
 ebs3_gfx_status_waitdata equ    $40

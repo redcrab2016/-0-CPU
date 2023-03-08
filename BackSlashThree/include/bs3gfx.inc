@@ -216,6 +216,73 @@ mbs3_gfx_blitrans macro
                 mbs3_gfx_command  ebs3_gfx_cmd_blitrans
                 endm
 
+; Configure a tile bank (set size)
+; at return B0 has the status code
+mbs3_gfx_tbconf macro
+                mbs3_gfx_command  ebs3_gfx_cmd_tbconfig
+                endm
+
+; Get configuration of a tile bank (get size)
+; at return B0 has the status code
+mbs3_gfx_tbgetconf macro
+                mbs3_gfx_command  ebs3_gfx_cmd_tbgetconf
+                endm
+
+; Tile Map reset (all cells and tile map iteself not visible)
+; at return B0 has the status code
+mbs3_gfx_tmreset  macro
+                mbs3_gfx_command  ebs3_gfx_cmd_tmreset
+                endm
+
+; Tile Map config (set visible/invisible the tile map)
+; at return B0 has the status code
+mbs3_gfx_tmconfig macro
+                mbs3_gfx_command  ebs3_gfx_cmd_tmconfig
+                endm
+
+; Tile Map cell config
+; at return B0 has the status code
+mbs3_gfx_tmcellconf macro
+                mbs3_gfx_command  ebs3_gfx_cmd_tmcellconf
+                endm
+
+; Tile Map cell get config
+; at return B0 has the status code
+mbs3_gfx_tmcellgetconf macro
+                mbs3_gfx_command  ebs3_gfx_cmd_tmcellgetconf
+                endm
+
+; Sprite reset (disable all sprites)
+; at return B0 has the status code
+mbs3_gfx_sprreset macro
+                mbs3_gfx_command  ebs3_gfx_cmd_sprreset
+                endm
+
+; Sprite config
+; at return B0 has the status code
+mbs3_gfx_sprconf macro
+                mbs3_gfx_command  ebs3_gfx_cmd_sprconfig
+                endm
+
+; Sprite get config
+; at return B0 has the status code
+mbs3_gfx_sprgetconf macro
+                mbs3_gfx_command  ebs3_gfx_cmd_sprgetconf
+                endm
+
+; Sprite get collision count 
+; at return B0 has the status code
+mbs3_gfx_sprcollcount  macro
+                mbs3_gfx_command  ebs3_gfx_cmd_sprcollcnt
+                endm
+
+; Sprite get collision
+; at return B0 has the status code
+mbs3_gfx_sprgetcoll macro
+                mbs3_gfx_command  ebs3_gfx_cmd_sprgetcoll
+                endm
+
+
 ; Enable auto refresh of the BS3 GFX device
 mbs3_gfx_autorefresh_on macro
                 push    b0

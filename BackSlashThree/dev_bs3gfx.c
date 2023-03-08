@@ -763,7 +763,7 @@ void bs3_gfx_command_refresh()
     mintilex = (reg_bs3gfx.viewport_location & 0x00FF) >> 3;
     mintiley = (((reg_bs3gfx.viewport_location >> 8) & 0x00FF)) >> 3;
     maxtilex = (((reg_bs3gfx.viewport_location + reg_bs3gfx.viewport_size) & 0x00FF) - 1) >> 3;
-    maxtiley = (((reg_bs3gfx.viewport_location >> 8) & 0x00FF) - 1) >> 3;
+    maxtiley = ((((reg_bs3gfx.viewport_location + reg_bs3gfx.viewport_size)>> 8) & 0x00FF) - 1) >> 3;
     mintilex = (mintilex<8)?0:mintilex;
     mintiley = (mintilex<8)?0:mintilex;
 
@@ -1103,7 +1103,15 @@ void bs3_gfx_command_surface_blit_operator()
     targetSurface   = reg_bs3gfx.pb5 & 0x7F;
     sourceAddr      = (reg_bs3gfx.pb1 & 0x80)? bs3_gfx_bank_tile_coordinates(sourceSurface, (BYTE)((reg_bs3gfx.pw2 & 0xFF00)>>8), (BYTE)(reg_bs3gfx.pw2 & 0x00FF)):reg_bs3gfx.pw2;
     targetAddr      = (reg_bs3gfx.pb5 & 0x80)?(reg_bs3gfx.pw6 & 0x1F1F) << 3:reg_bs3gfx.pw6;
-    size            = reg_bs3gfx.pw4;
+    if (reg_bs3gfx.pb1 & 0x80) /* if tile mode surface , then PW4 is ignored and PW2 express a bank (MSB) then it is use to determine the size */
+    {
+        size = reg_bs3gfx.tilebanksize[sourceSurface & 0x01][((reg_bs3gfx.pw2 & 0xFF00)>>8) & 0x03];
+        size = ((1 << (3+size)) << 8) | (1 << (3+size)) ; 
+    }
+    else 
+    {
+        size            = reg_bs3gfx.pw4;
+    }
     operator        = reg_bs3gfx.pb3;
 
     h               = (int)((size & 0xFF00) >> 8);
@@ -1188,7 +1196,15 @@ void bs3_gfx_command_surface_blit_keycolor()
     targetSurface   = reg_bs3gfx.pb5 & 0x7F;
     sourceAddr      = (reg_bs3gfx.pb1 & 0x80)? bs3_gfx_bank_tile_coordinates(sourceSurface, (BYTE)((reg_bs3gfx.pw2 & 0xFF00)>>8), (BYTE)(reg_bs3gfx.pw2 & 0x00FF)):reg_bs3gfx.pw2;
     targetAddr      = (reg_bs3gfx.pb5 & 0x80)?(reg_bs3gfx.pw6 & 0x1F1F) << 3:reg_bs3gfx.pw6;
-    size            = reg_bs3gfx.pw4;
+    if (reg_bs3gfx.pb1 & 0x80) /* if tile mode surface , then PW4 is ignored and PW2 express a bank (MSB) then it is use to determine the size */
+    {
+        size = reg_bs3gfx.tilebanksize[sourceSurface & 0x01][((reg_bs3gfx.pw2 & 0xFF00)>>8) & 0x03];
+        size = ((1 << (3+size)) << 8) | (1 << (3+size)) ; 
+    }
+    else 
+    {
+        size            = reg_bs3gfx.pw4;
+    }
     keycolor        = reg_bs3gfx.pb3;
 
     h               = (int)((size & 0xFF00) >> 8);
@@ -1267,7 +1283,15 @@ void bs3_gfx_command_surface_blit_transfer_data()
     WORD offset;
 
     targetSurface   = reg_bs3gfx.pb1 & 0x01;
-    size            = reg_bs3gfx.pw4;
+    if (reg_bs3gfx.pb1 & 0x80) /* if tile mode surface , then PW4 is ignored and PW2 express a bank (MSB) then it is use to determine the size */
+    {
+        size = reg_bs3gfx.tilebanksize[targetSurface & 0x01][((reg_bs3gfx.pw2 & 0xFF00)>>8) & 0x03];
+        size = ((1 << (3+size)) << 8) | (1 << (3+size)) ; 
+    }
+    else 
+    {
+        size            = reg_bs3gfx.pw4;
+    }
     currAddr        = reg_bs3gfx.pw6;
     value           = reg_bs3gfx.pb3;
     currX           = reg_bs3gfx.pw5;
@@ -1338,7 +1362,7 @@ void bs3_gfx_command_tile_bank_getconfig()
     surface     = reg_bs3gfx.pb1 & 0x7F; /* Ignore bit 7 : surface 1 == surface $81 , surface 0 == surface $80 */
     bank        = reg_bs3gfx.pb2;
 
-    if (surface & 0xFE )
+    if (surface & 0x7E )
     {
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_BADSURFACE;
         return;
@@ -1460,7 +1484,7 @@ void bs3_gfx_command_tile_map_cell_config()
         return;
     }
     cell.config = cellconfig;
-    if (cell.keyColor == 0 && cell.useSpecialMask == 0) /* we've to check the auxtile index and bank*/
+    if (cell.useKeyColor == 0 && cell.useSpecialMask == 0) /* we've to check the auxtile index and bank*/
     {
         if (tileauxbank > 3 )
         {
@@ -1473,7 +1497,7 @@ void bs3_gfx_command_tile_map_cell_config()
             return;
         }
     }
-    if (cell.keyColor == 1 || (cell.keyColor == 0 && cell.useSpecialMask == 1 )) /* if aux tile not used then set default valid values */
+    if (cell.useKeyColor == 1 || (cell.useKeyColor == 0 && cell.useSpecialMask == 1 )) /* if aux tile not used then set default valid values */
     {
         tileauxbank     = 0;
         tileauxindex    = 0;
@@ -1481,7 +1505,7 @@ void bs3_gfx_command_tile_map_cell_config()
 
     /* set the values in the tile map cell */
     reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].config            = cellconfig;
-    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].tileCoordinate    = tilemapcellcoordinates;
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].coordinates       = tilemapcellcoordinates;
     reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].surface           = tilesurface;
     reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].mainTileBank      = tilebank;
     reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].mainTileIndex     = tileindex;
@@ -1610,7 +1634,7 @@ void bs3_gfx_command_sprite_config()
         return;
     }
     
-    if (sprite.keyColor == 0 && sprite.useSpecialMask == 0) /* we've to check the auxtile index and bank*/
+    if (sprite.useKeyColor == 0 && sprite.useSpecialMask == 0) /* we've to check the auxtile index and bank*/
     {
         if (tileauxbank > 3 )
         {
@@ -1623,7 +1647,7 @@ void bs3_gfx_command_sprite_config()
             return;
         }
     }
-    if (sprite.keyColor == 1 || (sprite.keyColor == 0 && sprite.useSpecialMask == 1 )) /* if aux tile not used then set default valid values */
+    if (sprite.useKeyColor == 1 || (sprite.useKeyColor == 0 && sprite.useSpecialMask == 1 )) /* if aux tile not used then set default valid values */
     {
         tileauxbank     = 0;
         tileauxindex    = 0;
