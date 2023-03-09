@@ -153,7 +153,18 @@ start:
             call            showromscreenshot
             mbs3_gfx_refresh
             mbs3_wait_input
-   
+
+            ; show a sprite
+            mbs3_gfx_setPB1 0                       ; sprite 0
+            mov             b0, sk_spr_hero_left1   ; tile index
+            mov             b1, 1                   ; tile Bank
+            mbs3_gfx_setPW4 w0                      ; set index/bank
+            mbs3_gfx_setPB3 1                       ; tile surface
+            mbs3_gfx_setPW2 $3250                   ; coords x=80,y=50
+            mbs3_gfx_setPB5 232                     ; keycolor
+            mbs3_gfx_setPB6 $A1                     ; enabled|z=1|kc
+            mbs3_gfx_sprconf                        ; sprite config
+
             ; shows all maps
             mov             b1, 0
 .cont            
@@ -346,7 +357,7 @@ blit8x8frombank
                 ret
 
 
-; transfer rom sk tiles to gfx surface
+; transfer rom sk tiles and sprite to gfx surface
 transromTileSpriteToGFX
                 ; transfer tiles
                 mov                 b0, rom_sk_tile_data
@@ -431,8 +442,8 @@ trans8x8toGFX
                 shr                 b4
                 shr                 b4
                 shr                 b4
-                ; first pixel : b5 4bits mask, b4 4bits data
-                tst                 b5, $F0 ; 1st pixel mask
+                ; first pixel : b3 4bits mask, b4 4bits data
+                tst                 b3, $F0 ; 1st pixel mask
                 jz                  .plot1st
                 mov                 b4, 232 ; black key color
                 ; transfer first pixel
@@ -440,7 +451,7 @@ trans8x8toGFX
                 call                lbs3_gfx_busywait
                 ; b2 = 2nd pixel
                 and                 b2, $0F
-                tst                 b5, $0F ; 2nd pixel mask
+                tst                 b3, $0F ; 2nd pixel mask
                 jz                  .plot2nd
                 mov                 b2, 232 ; black key color
                 ; transfer second pixel
