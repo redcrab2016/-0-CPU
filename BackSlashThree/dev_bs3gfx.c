@@ -7,6 +7,7 @@
 #include <signal.h>
 
 #include "bs3_bus.h"
+#include "bs3gfxlogo.inc"
 
 struct dev_bs3gfx_tile
 {
@@ -236,7 +237,7 @@ int created_thread_bs3gfx = 0;
 struct dev_bs3gfx reg_bs3gfx;
 static pthread_cond_t condWakeUp = PTHREAD_COND_INITIALIZER; 
 pthread_mutex_t lockGfx = PTHREAD_MUTEX_INITIALIZER; 
-
+static int logoshowed;
 
 BYTE dev_bs3gfx_readByte(WORD address)
 {
@@ -520,7 +521,7 @@ void bs3_gfx_command_reset()
 {
     memset(&reg_bs3gfx,0,sizeof(struct dev_bs3gfx));
     /* clear video ram surfaces */
-    int i,j;
+    int i,j,k,v;
     for (i = 0 ; i < 3 ; i++)
         for (j = 0; j < 65536; j++)
             reg_bs3gfx.videoram[i][j]=0;
@@ -542,6 +543,24 @@ void bs3_gfx_command_reset()
     reg_bs3gfx.WAITFORDATA = 0;
     /* reset screen */
     _bs3_gfx_clearscreen_enter();
+    if (logoshowed == 0)
+    {
+        
+        logoshowed =1;
+        i=0;
+        j=0;
+        while (bs3gfxlogo[i])
+        {
+            for ( k = bs3gfxlogo[i++], v = bs3gfxlogo[i++] ; k ; k--)
+            {
+                reg_bs3gfx.videoram[0][j++] = v;
+                if ((j & 0x00FF) == 160) j= j + (256-160);
+                j= j & 0x0FFFF;
+            }
+        }
+         bs3_gfx_command_refresh();
+         sleep(3);
+    }
     reg_bs3gfx.pb1 = 0;
     bs3_gfx_command_viewport_clear();
     bs3_gfx_command_refresh();
@@ -2013,6 +2032,7 @@ int dev_bs3gfx_stop()
 int dev_bs3gfx_start()
 {
     int resultGFX;
+    logoshowed = 0;
     if (created_thread_bs3gfx) dev_bs3gfx_stop();
     memset(&reg_bs3gfx,0, sizeof(struct dev_bs3gfx)); /* set to 0 the registers */
     resultGFX = pthread_create(&thread_bs3gfx, NULL, &dev_bs3gfx_run, NULL); 

@@ -76,55 +76,57 @@ rom_sk_fonts        equ     26
     embed   "sk_tile_mask.bs3",     rom_sk_tile_mask,   0
     embed   "sk_fonts.bs3",         rom_sk_fonts,       0
 
-sk_spr_sword            equ     0   ; Sword
-sk_spr_heart_red        equ     1   ; red heart
-sk_spr_heart_empty      equ     2   ; empty heart
-sk_spr_key_gray         equ     3   ; gray key
-sk_spr_key_green        equ     4   ; green key
-sk_spr_key_red          equ     5   ; red key
-sk_spr_key_blue         equ     6   ; blue key
-sk_spr_key_purple       equ     7   ; purple key
-sk_spr_key_yellow       equ     8   ; yellow key
-sk_spr_hero_right1      equ     9   ; hero face to right open legs
-sk_spr_hero_right2      equ     10  ; hero face to right close legs
-sk_spr_hero_left1       equ     11  ; hero face to left open legs
-sk_spr_hero_left2       equ     12  ; hero face to left close legs
-sk_spr_heart_yellow     equ     13  ; yellow heart
-sk_spr_bottle_gray      equ     14  ; gray bottle
-sk_spr_horse_right1     equ     15  ; horse face to right close legs
-sk_spr_horse_right2     equ     16  ; horse face to right open legs
-sk_spr_hero_right_ride  equ     17  ; hero face to right riding 
-sk_spr_bat_sleep        equ     18  ; bat sleep
-sk_spr_bat_fly1         equ     19  ; bat fly wings up
-sk_spr_bat_fly2         equ     20  ; bat fly wings down
-sk_spr_skelguard_right1 equ     21  ; sword skeleton right open legs
-sk_spr_skelguard_right2 equ     22  ; sword skeleton right close legs
-sk_spr_skelguard_left1  equ     23  ; sword skeleton left open legs
-sk_spr_skelguard_left2  equ     24  ; sword skeleton left close legs
-sk_spr_guard_right1     equ     25  ; sword guard right open legs
-sk_spr_guard_right2     equ     26  ; sword guard right close legs
-sk_spr_guard_left1      equ     27  ; sword guard left open legs
-sk_spr_guard_left2      equ     28  ; sword guard left close legs
-sk_spr_picks_ground     equ     29  ; surface small picks
-sk_spr_skeleton_right1  equ     30  ; Skeleton face to right open legs
-sk_spr_skeleton_right2  equ     31  ; Skeleton face to left close legs
-sk_spr_skeleton_left1   equ     32  ; Skeleton face to left open legs
-sk_spr_skeleton_left2   equ     33  ; Skeleton face to left close legs
-sk_spr_fireskull_right  equ     34  ; fire skull face to right
-sk_spr_fireskull_left   equ     35  ; fire skull face to left
-sk_spr_herosword_right  equ     36  ; Hero sword attack to right
-sk_spr_herosword_left   equ     37  ; Hero sword attack to left
-sk_spr_fireball_right   equ     38  ; fireball to right
-sk_spr_fireball_left    equ     39  ; fireball to left
-sk_spr_whiteball        equ     40  ; white ball
-sk_spr_circle_small     equ     41  ; small gray circle
-sk_spr_circle_medium    equ     42  ; medium gray circle
-sk_spr_circle_large     equ     43  ; large gray circle
-sk_spr_fire_left        equ     44  ; furnace fire danse left
-sk_spr_fire_right       equ     45  ; furnace fire danse right
-sk_spr_boots            equ     46  ; boots
-sk_spr_book             equ     47  ; spell book
-
+;tiles for sprites : defined by a word (16 bits)
+; MSB : bank number
+; LSB : index number
+sk_spr_sword            equ    $0100 ; Sword
+sk_spr_heart_red        equ    $0101 ; red heart
+sk_spr_heart_empty      equ    $0102 ; empty heart
+sk_spr_key_gray         equ    $0103 ; gray key
+sk_spr_key_green        equ    $0104 ; green key
+sk_spr_key_red          equ    $0105 ; red key
+sk_spr_key_blue         equ    $0106 ; blue key
+sk_spr_key_purple       equ    $0107 ; purple key
+sk_spr_key_yellow       equ    $0108 ; yellow key
+sk_spr_hero_right1      equ    $0109 ; hero face to right open legs
+sk_spr_hero_right2      equ    $010A ; hero face to right close legs
+sk_spr_hero_left1       equ    $010B ; hero face to left open legs
+sk_spr_hero_left2       equ    $010C ; hero face to left close legs
+sk_spr_heart_yellow     equ    $010D ; yellow heart
+sk_spr_bottle_gray      equ    $010E ; gray bottle
+sk_spr_horse_right1     equ    $010F ; horse face to right close legs
+sk_spr_horse_right2     equ    $0110 ; horse face to right open legs
+sk_spr_hero_right_ride  equ    $0111 ; hero face to right riding 
+sk_spr_bat_sleep        equ    $0112 ; bat sleep
+sk_spr_bat_fly1         equ    $0113 ; bat fly wings up
+sk_spr_bat_fly2         equ    $0114 ; bat fly wings down
+sk_spr_skelguard_right1 equ    $0115 ; sword skeleton right open legs
+sk_spr_skelguard_right2 equ    $0116 ; sword skeleton right close legs
+sk_spr_skelguard_left1  equ    $0117 ; sword skeleton left open legs
+sk_spr_skelguard_left2  equ    $0118 ; sword skeleton left close legs
+sk_spr_guard_right1     equ    $0119 ; sword guard right open legs
+sk_spr_guard_right2     equ    $011A ; sword guard right close legs
+sk_spr_guard_left1      equ    $011B ; sword guard left open legs
+sk_spr_guard_left2      equ    $011C ; sword guard left close legs
+sk_spr_picks_ground     equ    $011D ; surface small picks
+sk_spr_skeleton_right1  equ    $011E ; Skeleton face to right open legs
+sk_spr_skeleton_right2  equ    $011F ; Skeleton face to left close legs
+sk_spr_skeleton_left1   equ    $0120 ; Skeleton face to left open legs
+sk_spr_skeleton_left2   equ    $0121 ; Skeleton face to left close legs
+sk_spr_fireskull_right  equ    $0122 ; fire skull face to right
+sk_spr_fireskull_left   equ    $0123 ; fire skull face to left
+sk_spr_herosword_right  equ    $0124 ; Hero sword attack to right
+sk_spr_herosword_left   equ    $0125 ; Hero sword attack to left
+sk_spr_fireball_right   equ    $0126 ; fireball to right
+sk_spr_fireball_left    equ    $0127 ; fireball to left
+sk_spr_whiteball        equ    $0128 ; white ball
+sk_spr_circle_small     equ    $0129 ; small gray circle
+sk_spr_circle_medium    equ    $012A ; medium gray circle
+sk_spr_circle_large     equ    $012B ; large gray circle
+sk_spr_fire_left        equ    $012C ; furnace fire danse left
+sk_spr_fire_right       equ    $012D ; furnace fire danse right
+sk_spr_boots            equ    $012E ; boots
+sk_spr_book             equ    $012F ; spell book
 
 
 ; Entry point
@@ -155,15 +157,13 @@ start:
             mbs3_wait_input
 
             ; show a sprite
-            mbs3_gfx_setPB1 0                       ; sprite 0
-            mov             b0, sk_spr_hero_left1   ; tile index
-            mov             b1, 1                   ; tile Bank
-            mbs3_gfx_setPW4 w0                      ; set index/bank
-            mbs3_gfx_setPB3 1                       ; tile surface
-            mbs3_gfx_setPW2 $3250                   ; coords x=80,y=50
-            mbs3_gfx_setPB5 232                     ; keycolor
-            mbs3_gfx_setPB6 $A1                     ; enabled|z=1|kc
-            mbs3_gfx_sprconf                        ; sprite config
+            mbs3_gfx_setPB1 0                   ; sprite 0
+            mbs3_gfx_setPW2 $3050               ; coords x=80,y=48
+            mbs3_gfx_setPB3 1                   ; tile surface
+            mbs3_gfx_setPW4 sk_spr_hero_left1   ; set index/bank
+            mbs3_gfx_setPB5 232                 ; keycolor
+            mbs3_gfx_setPB6 $A1                 ; enabled|z=1|keycolor
+            mbs3_gfx_sprconf                    ; sprite config
 
             ; shows all maps
             mov             b1, 0
