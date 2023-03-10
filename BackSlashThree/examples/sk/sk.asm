@@ -17,9 +17,71 @@ rom_sk_scr_menu     equ     6
 
     ; Game maps
 ; map layer address
-rom_map_layer0_addr equ     $E000
-rom_map_layer1_addr equ     $E0F0
-rom_map_layer2_addr equ     $E1E0
+rom_map_layer0_addr    equ     $E000
+rom_map_layer1_offset  equ     $00F0
+rom_map_layer2_offset  equ     $01E0
+
+; map navigation
+; x  -> y, z, s ; means the map x express way to go to map y, z and s
+; 0  -> 1, 5
+; 1  -> 0, 2
+; 2  -> 1, 3, 5
+; 3  -> 2, 4, 5, 7
+; 4  -> 3, 6, 8
+; 5  -> 0, 2, 3
+; 6  -> 4
+; 7  -> 3, 10
+; 8  -> 4, 9
+; 9  -> 8
+; 10 -> 7, 11
+; 11 -> 10, 12
+; 12 -> 11, 13
+; 13 -> 12
+; ?? -> 14 (14 is an empty map)
+; 14 -> ??
+; map layout 
+;  3 x (20 x 12) blocks
+; 1st (20x12) blocks is tile reference
+; 1st       2nd     3rd are   map metadata
+; ?          0       ?  : Air ... can move into
+; ?          1       ?  : player ground/wall 
+; ?          2       ?  : Ledder, stairs, platform(can go down)
+; when go to m2 from m1 then x,y corrdinates at m2
+;  is where there is a "go to " m1
+;  but if coords is at left border then move 1 block to the right
+;      if coords is at right border then move 1 block to the left 
+;  7         3       m  : door to go map 'm' (?m(x,y))
+;  0         3       m  : border to go map 'm' (?m(x,y))
+
+;  ?         4       0  : item, health (max health +1)
+;  ?         4       1  : item, silver key
+;  ?         4       2  : item, green key
+;  ?         4       3  : item, red key
+;  ?         4       4  : item, blue key
+;  ?         4       5  : item, purple key
+;  ?         4       6  : item, gold key
+;  ?         4       7  : item, health plus (max health +1)
+;  ?         4       8  : item, boots (double jump)
+;  ?         4       9  : item, diamond (metamorphose bat)
+;  ?         5       0  : enemy, bat
+;  ?         5       1  : enemy, skeleton
+;  ?         5       2  : enemy, red knight
+;  ?         6       x  : health -= x
+;  ?         7       0  : metamorphose hero to bat (if item diamond)
+;  ?         7       1  : metamorphose bat to hero
+;  ?         7      15  : game win, if all enemies are dead on map
+;  28        8       ?  : healing + savepoint
+;  ?         9       0  : emitter, fireball right
+;  ?         9       1  : emitter, fireball left
+;  ?         9       2  : emitter, fireskull right
+;  ?         9       3  : emitter, fireskull left
+;  ?         10      1  : lock, silver 
+;  ?         10      2  : lock, green
+;  ?         10      3  : lock, red
+;  ?         10      4  : lock, blue
+;  ?         10      5  : lock, purple
+;  ?         10      6  : lock, gold
+
 
 ; Map ROM bank number
 rom_sk_map0         equ     7
@@ -76,6 +138,8 @@ rom_sk_fonts        equ     26
     embed   "sk_tile_mask.bs3",     rom_sk_tile_mask,   0
     embed   "sk_fonts.bs3",         rom_sk_fonts,       0
 
+
+sk_tile_keycolor        equ     232
 ;tiles for sprites : defined by a word (16 bits)
 ; MSB : bank number
 ; LSB : index number
@@ -161,7 +225,7 @@ start:
             mbs3_gfx_setPW2 $3050               ; coords x=80,y=48
             mbs3_gfx_setPB3 1                   ; tile surface
             mbs3_gfx_setPW4 sk_spr_hero_left1   ; set index/bank
-            mbs3_gfx_setPB5 232                 ; keycolor
+            mbs3_gfx_setPB5 sk_tile_keycolor    ; keycolor
             mbs3_gfx_setPB6 $A1                 ; enabled|z=1|keycolor
             mbs3_gfx_sprconf                    ; sprite config
 
@@ -193,10 +257,31 @@ start:
 
             mbs3_gfx_vpgetconf
             mbs3_gfx_setPB1 1
-            mbs3_gfx_setPW2 $0060
+.blop
+            mov             w1, 0
+.again1     mbs3_gfx_setPW2     w1
             mbs3_gfx_vpconfig
             mbs3_gfx_refresh
-            mbs3_wait_input
+            inc             b2
+            cmp             b2, $60
+            jnz             .again1
+
+            mov             w1, $0060
+.again2     mbs3_gfx_setPW2     w1
+            mbs3_gfx_vpconfig
+            mbs3_gfx_refresh
+            dec             b2
+            cmp             b2, $ff
+            jnz             .again2
+
+            in              b0
+            jnz              .cont3
+            jump            .blop
+
+.cont3            
+            ; mbs3_wait_input
+
+
 
 
 .byebye            
@@ -290,7 +375,7 @@ sk_map_blit
                 ret
 .oldrom         db                  0
 
-; tile map a sk map
+; tile map load from sk map
 ; parameter
 ;    b0 : sk map number
 sk_tilemap
@@ -315,7 +400,7 @@ sk_tilemap
                 mbs3_gfx_tmconfig     ; set chosen tilemap config
                 ; common register for all tiles in map
                 mbs3_gfx_setPB3     1   ; surface where are tiles
-                mbs3_gfx_setPB5     232 ; keycolor
+                mbs3_gfx_setPB5     sk_tile_keycolor ; keycolor
                 mbs3_gfx_setPB6     $81 ; visible | use keycolor
                 ; get tile index
 .blit           ld                  b0, [w2] ; get image index
@@ -349,7 +434,7 @@ blit8x8frombank
                 pusha
                 mbs3_gfx_setPB1     $81     ; source surface
                 mbs3_gfx_setPW2     w0      ; source coordinates
-                mbs3_gfx_setPB3     232     ; key color (black)
+                mbs3_gfx_setPB3     sk_tile_keycolor
                 mbs3_gfx_setPB5     0       ; target surface
                 mbs3_gfx_setPW6     w1      ; target coordinates
                 mbs3_gfx_blitkcolor
@@ -445,7 +530,9 @@ trans8x8toGFX
                 ; first pixel : b3 4bits mask, b4 4bits data
                 tst                 b3, $F0 ; 1st pixel mask
                 jz                  .plot1st
-                mov                 b4, 232 ; black key color
+                cmp                 b4, 0
+                jnz                 .plot1st
+                mov                 b4, sk_tile_keycolor
                 ; transfer first pixel
 .plot1st        mbs3_gfx_setPB3     b4
                 call                lbs3_gfx_busywait
@@ -453,7 +540,9 @@ trans8x8toGFX
                 and                 b2, $0F
                 tst                 b3, $0F ; 2nd pixel mask
                 jz                  .plot2nd
-                mov                 b2, 232 ; black key color
+                cmp                 b2, 0
+                jnz                 .plot2nd
+                mov                 b2, sk_tile_keycolor
                 ; transfer second pixel
 .plot2nd        mbs3_gfx_setPB3     b2
                 call                lbs3_gfx_busywait                
@@ -472,5 +561,9 @@ trans8x8toGFX
 .oldrom         db                  0
                 align               2
 .surfcoords     dw                  0 
-.romimgaddr     dw                  0              
+.romimgaddr     dw                  0 
+
+; sk data
+sk_data         align               16
+
 ; end of sk.asm                

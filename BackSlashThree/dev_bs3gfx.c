@@ -559,7 +559,7 @@ void bs3_gfx_command_reset()
             }
         }
          bs3_gfx_command_refresh();
-         sleep(3);
+         sleep(2);
     }
     reg_bs3gfx.pb1 = 0;
     bs3_gfx_command_viewport_clear();
@@ -602,13 +602,15 @@ WORD bs3_gfx_bank_tile_coordinates(BYTE surface, BYTE bank, BYTE tileindex)
             tileoffset = (((WORD)tileindex & 0x03) << 6) ;
             break;
         default:
-            return 0xFFFF;
+            return 0xFFFF; /* Should never occur */
     }
     tileCoordinates  = (((WORD)(bank & 0x03)) << 14) + tileoffset;
     return tileCoordinates;
 
 }
 
+
+/* Blit a tile for tilemap or sprite */
 void bs3_gfx_tile_blit(struct dev_bs3gfx_tile * ptile, BYTE * targetSurface, int isSprite /* 1 for sprite , 0 for tilemap */)
 {
     WORD targetCoordinates;
