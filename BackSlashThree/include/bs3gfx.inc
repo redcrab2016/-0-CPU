@@ -300,6 +300,89 @@ mbs3_gfx_autorefresh_off macro
                 pop     b0
                         endm                 
 
+
+; push all gfx parameters to stack
+mbs3_gfx_pushparameters macro
+                sr    w0, [.savedw0]
+                ; push word paramters
+                ld    w0, [lbs3_gfx_reg1]
+                push_w0
+                ld    w0, [lbs3_gfx_reg2]
+                push_w0
+                ld    w0, [lbs3_gfx_reg3]
+                push_w0
+                ld    w0, [lbs3_gfx_reg4]
+                push_w0
+                ld    w0, [lbs3_gfx_reg5]
+                push_w0
+                ld    w0, [lbs3_gfx_reg6]
+                push_w0
+                ld    w0, [lbs3_gfx_reg7]
+                push_w0
+                ; push byte parameters
+                ld    b0, [lbs3_gfx_reg1]
+                push_b0
+                ld    b0, [lbs3_gfx_reg2]
+                push_b0
+                ld    b0, [lbs3_gfx_reg3]
+                push_b0
+                ld    b0, [lbs3_gfx_reg4]
+                push_b0
+                ld    b0, [lbs3_gfx_reg5]
+                push_b0
+                ld    b0, [lbs3_gfx_reg6]
+                push_b0
+                ld    b0, [lbs3_gfx_reg7]
+                push_b0
+                ld    w0, [.savedw0]
+                j     .endmacro
+.savedw0        dw    0
+.endmacro                
+                endm
+
+; pop all gfx parameters from stack
+mbs3_gfx_popparameters macro
+                sr    w0, [.savedw0]
+                ; pop byte parameters
+                pop_b0  
+                sr    b0, [lbs3_gfx_reg7]
+                pop_b0  
+                sr    b0, [lbs3_gfx_reg6]
+                pop_b0  
+                sr    b0, [lbs3_gfx_reg5]
+                pop_b0  
+                sr    b0, [lbs3_gfx_reg4]
+                pop_b0  
+                sr    b0, [lbs3_gfx_reg3]
+                pop_b0  
+                sr    b0, [lbs3_gfx_reg2]
+                pop_b0  
+                sr    b0, [lbs3_gfx_reg1]
+
+                ; pop word paramters
+                pop_w0
+                sr    w0, [lbs3_gfx_reg7]
+                pop_w0
+                sr    w0, [lbs3_gfx_reg6]
+                pop_w0
+                sr    w0, [lbs3_gfx_reg5]
+                pop_w0
+                sr    w0, [lbs3_gfx_reg4]
+                pop_w0
+                sr    w0, [lbs3_gfx_reg3]
+                pop_w0
+                sr    w0, [lbs3_gfx_reg2]
+                pop_w0
+                sr    w0, [lbs3_gfx_reg1]
+
+                ld    w0, [.savedw0]
+                j     .endmacro
+.savedw0        dw    0
+.endmacro                
+                endm
+
+
+
 lbs3_gfx_busywait
 .retry          ld      b0, [lbs3_gfx_status]
                 tst     b0, ebs3_gfx_status_busy

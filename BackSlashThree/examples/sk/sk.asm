@@ -53,7 +53,7 @@ rom_map_layer2_offset  equ     $01E0
 ;  7         3       m  : door to go map 'm' (?m(x,y))
 ;  0         3       m  : border to go map 'm' (?m(x,y))
 
-;  ?         4       0  : item, health (max health +1)
+;  ?         4       0  : item, health ???
 ;  ?         4       1  : item, silver key
 ;  ?         4       2  : item, green key
 ;  ?         4       3  : item, red key
@@ -66,7 +66,7 @@ rom_map_layer2_offset  equ     $01E0
 ;  ?         5       0  : enemy, bat
 ;  ?         5       1  : enemy, skeleton
 ;  ?         5       2  : enemy, red knight
-;  ?         6       x  : health -= x
+;  ?         6       x  : health -= x (if health <=0 , then dead)
 ;  ?         7       0  : metamorphose hero to bat (if item diamond)
 ;  ?         7       1  : metamorphose bat to hero
 ;  ?         7      15  : game win, if all enemies are dead on map
@@ -82,6 +82,9 @@ rom_map_layer2_offset  equ     $01E0
 ;  ?         10      5  : lock, purple
 ;  ?         10      6  : lock, gold
 
+sk_object_item      equ     4
+sk_object_enemy     equ     5
+sk_object_emitter   equ     9
 
 ; Map ROM bank number
 rom_sk_map0         equ     7
@@ -196,6 +199,10 @@ sk_spr_book             equ    $012F ; spell book
 ; Entry point
             mbs3_bootat start
 start:
+            ; init var
+            mov                 b0, $ff
+            sr                  b0, [sk_curr_map]
+            ; init gfx
             mbs3_gfx_reset
             ; load tiles and sprite into gfx device
             call            transromTileSpriteToGFX
@@ -381,8 +388,13 @@ sk_map_blit
 sk_tilemap
                 ; save env
                 pusha
+                ld                  b1, [sk_curr_map]
+                sr                  b1, [sk_prev_map]
+                sr                  b0, [sk_curr_map]
                 ld                  b1, [lbs3_bank_rom]
                 sr                  b1, [.oldrom]
+                ; hide map items 
+                call                sk_hideMapItems
                 ; select rom map
                 add                 b0, rom_sk_map0
                 sr                  b0, [lbs3_bank_rom]
@@ -407,6 +419,12 @@ sk_tilemap
                 mov                 b1, 0    ; tile bank 0
                 mbs3_gfx_setPW4     w0       ; set tile bank and index
                 mbs3_gfx_setPW2     w1       ; tile map coordinates
+                mov                 w0, rom_map_layer1_offset
+                ld                  b6, [w2 + w0]
+                mov                 w0, rom_map_layer2_offset
+                ld                  b7, [w2 + w0]
+                call                sk_map_meta
+                mbs3_gfx_setPW6     w3       ; set tile map meta data
                 mbs3_gfx_tmcellconf          ; set tile into tilemap
                 inc                 w2 ; next rom map tile address
                 ; next tilemap coordinates
@@ -423,6 +441,118 @@ sk_tilemap
                 popa
                 ret
 .oldrom         db                  0
+
+; meta processing
+; input : 
+;   w3 = meta : b6 map layer 1, b7 map layer 2
+;   w1 = tile coordinates YYXX (YY: 0..19, XX: 0..11)
+
+sk_map_meta
+                sr      w3, [.savedmeta]
+                sr      w1, [.savedcoord]
+                pusha
+                
+                cmp     b6, sk_object_item
+                jz      .item
+                cmp     b6, sk_object_enemy
+                jz      .enemy
+                cmp     b6, sk_object_emitter
+                jz      .emitter
+                j       .quitroutine
+.item           call    sk_showMapItem
+                j       .quitroutine
+.enemy          call    sk_showEnemy
+                j       .quitroutine
+.emitter        call    sk_showEmitter
+.quitroutine    popa
+                ret
+.savedmeta      dw      0
+.savedcoord     dw      0
+
+; hide all items on map
+sk_hideMapItems
+            pusha
+            mov     w1, 100
+.nextItem   mbs3_gfx_setPB1 b2
+            mbs3_gfx_sprgetconf
+            mbs3_gfx_setPB6 01
+            mbs3_gfx_sprconf
+            inc     b2
+            cmp     b2, 110
+            jnz     .nextItem
+            popa
+            ret
+
+; add Enemy 
+; input:
+;   b7 : Enemy 
+;   w2 = Enemy in tile coordinates YYXX (YY: 0..19, XX: 0..11)
+sk_showEnemy
+            ret
+
+; add  Emitter  if not already in gotten
+; input:
+;   b7 : emiter type from 0 to 3 (right, left, flame and skull)
+;   w2 = item in tile coordinates YYXX (YY: 0..19, XX: 0..11)
+sk_showEmitter
+            ret
+
+; add item if not already in gotten
+; input:
+;   b7 : item 
+;   w1 = item in tile coordinates YYXX (YY: 0..19, XX: 0..11)
+sk_showMapItem
+            pusha
+            ; prepare local variable
+            sr      b7, [.itemId]
+            sr      w1, [.itemTileCoords]
+            mbs3_gfx_pushparameters
+            ; test if the item is already gotten
+            ; compute item inventory address
+            mov     w0, sk_have_item ; base item inventory
+            ld      b2, [sk_curr_map]
+            and     w1, $000F
+            shl     w1
+            shl     w1
+            shl     w1
+            shl     w1
+            ; 16 inventory status per map
+            add     w0, w1 ; base item inv of current map
+            push    b7
+            pop     w1
+            add     w0, w1 ; item inv addr in current map
+            ld      b2, [w0] ; get if it is in inventory
+            cmp     b2, 0
+            jnz     .quitmapitem ;(in inventory then do not show up)
+
+            ; show item [.itemId] at location map [.itemTileCoords]
+            ld      b0, [.itemId]
+            add     b0, 100     ; sprite id from 100 to maxi 115
+            mbs3_gfx_setPB1 b0          ; sprite b0
+            ld      w0, [.itemTileCoords]
+            ; convert tile to pixel Coordinates
+            and     w0, $1F1F
+            shl     w0
+            shl     w0
+            shl     w0
+            mbs3_gfx_setPW2 w0          ; pixel coordinates
+            mbs3_gfx_setPB3 1           ; tile surface
+            mov     w0, sk_item_bankindex
+            ld      b2, [.itemId]
+            eor     b3, b3
+            shl     w1
+            ld      w0, [w0 + w1]
+            mbs3_gfx_setPW4 w0                  ; set index/bank
+            mbs3_gfx_setPB5 sk_tile_keycolor    ; keycolor
+            mbs3_gfx_setPB6 $A9                 ; enabled|z=1|coll|kc
+            mbs3_gfx_sprconf                    ; sprite config
+.quitmapitem    
+            mbs3_gfx_popparameters                 
+            popa
+            ret
+.itemId         db      0
+.itemTileCoords dw      0
+
 
 
 ; blit a 8x8 gfx image bank
@@ -564,6 +694,39 @@ trans8x8toGFX
 .romimgaddr     dw                  0 
 
 ; sk data
-sk_data         align               16
+sk_prev_map     db                  $FF
+sk_curr_map     db                  $FF
+sk_max_life     db                  3
+sk_curr_life    db                  3
+sk_tick         db                  0
 
-; end of sk.asm                
+                align               16
+sk_have_item   ; 0 : not yet in posession  != 0 gotten item
+                db                  0 ; item 0, health ?
+                db                  0 ; item 1, silver key
+                db                  0 ; item 2, green key
+                db                  0 ; item 3, red key
+                db                  0 ; item 4, blue key
+                db                  0 ; item 5, purple key
+                db                  0 ; item 6, gold key
+                db                  0 ; item 7, health plus
+                db                  0 ; item 8, boots
+                db                  0 ; item 9, diamond
+                align               16
+                ; max 16 maps of 16 items
+                ; if a item is unique in game, then if collected in A
+                ; map then it must be "as collected" in other map
+                space               256 ; each map has its inventory
+sk_item_bankindex
+                dw                  sk_spr_heart_yellow ; item 0 health
+                dw                  sk_spr_key_gray; item 1 silver key
+                dw                  sk_spr_key_green; item 2 green key
+                dw                  sk_spr_key_red; item 3 red key
+                dw                  sk_spr_key_blue; item 4 blue key
+                dw                  sk_spr_key_purple; i. 5 purple key
+                dw                  sk_spr_key_yellow; item 6 gold key
+                dw                  sk_spr_heart_yellow ;item 7 health+
+                dw                  sk_spr_boots ; item 8 boots
+                dw                  sk_spr_book ; item 9 diamond
+                align               16
+; end of sk.asm
