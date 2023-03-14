@@ -1112,14 +1112,19 @@ void bs3_gfx_command_surface_blit_operator()
 {
     BYTE sourceSurface;
     BYTE targetSurface;
+    BYTE colorFind;
+    BYTE colorReplace;
     WORD sourceAddr;
     WORD targetAddr;
     WORD size;
     BYTE operator;
     WORD offset;
+    BYTE colorSource;
     int x,y;
     int h,w;
     
+    colorFind       = (BYTE)((reg_bs3gfx.pw3 & 0xFF00 ) >> 8);
+    colorReplace    = (BYTE)( reg_bs3gfx.pw3 & 0x00FF);
     sourceSurface   = reg_bs3gfx.pb1 & 0x7F;
     targetSurface   = reg_bs3gfx.pb5 & 0x7F;
     sourceAddr      = (reg_bs3gfx.pb1 & 0x80)? bs3_gfx_bank_tile_coordinates(sourceSurface, (BYTE)((reg_bs3gfx.pw2 & 0xFF00)>>8), (BYTE)(reg_bs3gfx.pw2 & 0x00FF)):reg_bs3gfx.pw2;
@@ -1166,28 +1171,30 @@ void bs3_gfx_command_surface_blit_operator()
     {
         for (x = 0; x < w ; x++)
         {
+            colorSource  = reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+            colorSource = (colorSource == colorFind)?colorReplace:colorSource;
             switch (operator)
             {
                 case BS3_GFX_COMMAND_BLIT_OPERATOR_COPY:
-                    reg_bs3gfx.videoram[targetSurface][targetAddr] =  reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] = colorSource;
                     break;
                 case BS3_GFX_COMMAND_BLIT_OPERATOR_OR:
-                    reg_bs3gfx.videoram[targetSurface][targetAddr] |= reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] |= colorSource;
                     break;
                 case BS3_GFX_COMMAND_BLIT_OPERATOR_EOR:
-                    reg_bs3gfx.videoram[targetSurface][targetAddr] ^= reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] ^= colorSource;
                     break;
                 case BS3_GFX_COMMAND_BLIT_OPERATOR_AND:
-                    reg_bs3gfx.videoram[targetSurface][targetAddr] &= reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] &= colorSource;
                     break;
                 case BS3_GFX_COMMAND_BLIT_OPERATOR_ADD:
-                    reg_bs3gfx.videoram[targetSurface][targetAddr] += reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] += colorSource;
                     break;
                 case BS3_GFX_COMMAND_BLIT_OPERATOR_SUB:
-                    reg_bs3gfx.videoram[targetSurface][targetAddr] -= reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] -= colorSource;
                     break;
                 case BS3_GFX_COMMAND_BLIT_OPERATOR_MUL:
-                    reg_bs3gfx.videoram[targetSurface][targetAddr] *= reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+                    reg_bs3gfx.videoram[targetSurface][targetAddr] *= colorSource;
                     break;
             }
             targetAddr++;
@@ -1204,6 +1211,8 @@ void bs3_gfx_command_surface_blit_keycolor()
 {
     BYTE sourceSurface;
     BYTE targetSurface;
+    BYTE colorFind;
+    BYTE colorReplace;
     WORD sourceAddr;
     WORD targetAddr;
     WORD size;
@@ -1213,6 +1222,8 @@ void bs3_gfx_command_surface_blit_keycolor()
     int x,y;
     int h,w;
     
+    colorFind       = (BYTE)((reg_bs3gfx.pw3 & 0xFF00 ) >> 8);
+    colorReplace    = (BYTE)( reg_bs3gfx.pw3 & 0x00FF);
     sourceSurface   = reg_bs3gfx.pb1 & 0x7F;
     targetSurface   = reg_bs3gfx.pb5 & 0x7F;
     sourceAddr      = (reg_bs3gfx.pb1 & 0x80)? bs3_gfx_bank_tile_coordinates(sourceSurface, (BYTE)((reg_bs3gfx.pw2 & 0xFF00)>>8), (BYTE)(reg_bs3gfx.pw2 & 0x00FF)):reg_bs3gfx.pw2;
@@ -1254,6 +1265,7 @@ void bs3_gfx_command_surface_blit_keycolor()
         for (x = 0; x < w ; x++)
         {
             value = reg_bs3gfx.videoram[sourceSurface][sourceAddr];
+            value = (value == colorFind)?colorReplace:value;
             if (value != keycolor)
                 reg_bs3gfx.videoram[targetSurface][targetAddr] = value;
             targetAddr++;

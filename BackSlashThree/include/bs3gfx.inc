@@ -380,8 +380,29 @@ mbs3_gfx_popparameters macro
 .savedw0        dw    0
 .endmacro                
                 endm
+; set all gfx parameters to zero
+mbs3_gfx_resetparameters macro
+                push_w0
+                eor   w0, w0
 
-
+                push_w0
+                push_w0
+                push_w0
+                push_w0
+                push_w0
+                push_w0
+                push_w0
+                push_w0
+                push_w0
+                push_w0
+                push_w0
+                push_w0
+                push_w0
+                push_w0
+                mbs3_gfx_popparameters
+                
+                pop_w0
+                endm
 
 lbs3_gfx_busywait
 .retry          ld      b0, [lbs3_gfx_status]

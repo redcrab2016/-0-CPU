@@ -560,6 +560,9 @@ Parameter
         PW2 : if PB1 == 0 or 1, Source top left corner coordinates ($YYXX : MSB Y coordinate, LSB X coordinate) on source surface
               if PB1 == $80 or $81, PW2 = $BBII  : MSB BB is bank number, LSB II is index number
         PB3 : operator between source and target (0: COPY, 1: OR, 2: EOR, 3: AND, 4: ADD, 5: SUB, 6:MUL)
+        PW3 ; Colorize : change a source color by another color
+              $FFRR : FF MSB: color to replace, RR LSB: new color : if source color == FF then color == RR
+              the color is replaced before the operation
         PW4 : source blit rectangle size ($HHWW : MSB HH height (if 0 then 256) , LSB WW Width (if 0 then 256))
               if PB1 == $80 or $81 then PW4 is ignored, the size is the tile size of the bank specified in PW2
         PB5 : target Surface number (0 or 1, $80 or $81 for tile 8x8 grid mapping )
@@ -594,6 +597,9 @@ Parameter
         PW2 : if PB1 == 0 or 1, Source top left corner coordinates ($YYXX : MSB Y coordinate, LSB X coordinate) on source surface
               if PB1 == $80 or $81, PW2 = $BBII  : MSB BB is bank number, LSB II is index number
         PB3 : Key color 
+        PW3 ; Colorize : change a source color by another color
+              $FFRR : FF MSB: color to replace, RR LSB: new color : if source color == FF then color == RR
+              FF can be keycolor, RR can be keycolor 
         PW4 : source blit rectangle size ($HHWW : MSB HH height (if 0 then 256) , LSB WW Width (if 0 then 256))
               if PB1 == $80 or $81 then PW4 is ignored, the size is the tile size of the bank specified in PW2
         PB5 : target Surface number (0 or 1, $80 or $81 for tile 8x8 grid mapping )

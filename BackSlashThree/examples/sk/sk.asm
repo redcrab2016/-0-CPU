@@ -110,7 +110,9 @@ rom_sk_spr_mask     equ     23
     ; Tiles data and mask
 rom_sk_tile_data    equ     24
 rom_sk_tile_mask    equ     25
-rom_sk_fonts        equ     26
+rom_sk_fonts_data   equ     26
+rom_sk_fonts_mask   equ     27
+rom_sk_fonts_width  equ     28
 
     ; Embedded ROMs
     embed   "sk_scr_death.bs3",     rom_sk_scr_death,   0
@@ -139,7 +141,9 @@ rom_sk_fonts        equ     26
     embed   "sk_spr_mask.bs3",      rom_sk_spr_mask,    0
     embed   "sk_tile_data.bs3",     rom_sk_tile_data,   0
     embed   "sk_tile_mask.bs3",     rom_sk_tile_mask,   0
-    embed   "sk_fonts.bs3",         rom_sk_fonts,       0
+    embed   "sk_fonts_data.bs3",    rom_sk_fonts_data,  0
+    embed   "sk_fonts_mask.bs3",    rom_sk_fonts_mask,  0
+    embed   "sk_fonts.widthbs3",    rom_sk_fonts_width, 0
 
 
 sk_tile_keycolor        equ     232
@@ -594,6 +598,16 @@ transromTileSpriteToGFX
                 add                 w1, $0101
                 cmp                 b2, 48
                 jnz                 .transOneSpr
+                ; transfer fonts
+                mov                 b0, rom_sk_fonts_data
+                mov                 b1, rom_sk_fonts_mask
+                mov                 b4, 2 ; font gfx image bank
+                mov                 b2, 0 ; rom img idx 
+                mov                 b3, 0 ; gfx img idx 
+.transOneGlyph  c                   trans8x8toGFX
+                add                 w1, $0101
+                cmp                 b2, 128
+                jnz                 .transOneGlyph                
                 ret
 
 
@@ -692,6 +706,70 @@ trans8x8toGFX
                 align               2
 .surfcoords     dw                  0 
 .romimgaddr     dw                  0 
+
+; print a text in color 
+; w0 : address of a null terminated string to print
+; w1 : coordinates of the text
+;      $YYXX : YY MSB y coordinate
+;              XX LSB x coordinate
+; b4 : color of the text
+sk_print 
+                ; save env
+                pusha
+                mbs3_gfx_pushparameters
+                ld      b5, [lbs3_bank_rom]
+                sr      b5, [.oldrom]
+                ; set rom to font glyph width
+                mov     b5, rom_sk_fonts_width
+                sr      b5, [lbs3_bank_rom]
+                ; save parameters
+                sr      w0, [.textaddr]
+                sr      w1, [.coordinates]
+                sr      b4, [.color]
+                ; for each character in text string
+                mov     w3, w0 ; w3 = address text
+.nextchar
+                ld      b5, [w3]
+                cmp     b5, 0
+                jz      .endprint ; finish if end of string
+                ; print character at b5=[w3] with correct color
+                ; b4 color, w1 coordinates, b5 character
+                mbs3_gfx_setPB1     $81 ; tile surface 1
+                mov     b1, 2 ; tile bank 2 (font)
+                mov     b0, b5; tile index (mapped to character)
+                mbs3_gfx_setPW2     w0 ; tile bank/index
+                mbs3_gfx_setPB3     sk_tile_keycolor
+                mov     b1, $FF ; color find 
+                mov     b0, b4  ; color replace (text color)
+                mbs3_gfx_setPW3     w0 ; colorize
+                mbs3_gfx_setPB5     0 ; target surface
+                mbs3_gfx_setPW6     w1 ; target coordinates
+                mbs3_gfx_blitkcolor
+                ; move coordinates with the character width
+                ;   w0= address in glyph width rom
+                eor     w0, w0
+                mov     b0, b5
+                add     w0, $E000
+                ;   w0= glyph width
+                ld      b0, [w0]
+                eor     b1, b1
+                ; move coordinates to the right by glyph width
+                add     w1, w0 
+            
+                ; got to next character address
+                inc     w3 ; next character address
+                jump    b5 ; process next character
+.endprint                
+                ; restore env
+                ld      b5, [.oldrom]
+                sr      b5, [lbs3_bank_rom]
+                mbs3_gfx_popparameters
+                popa
+                ret
+.textaddr       dw      0
+.coordinates    dw      0
+.color          db      0
+.oldrom         db      0
 
 ; sk data
 sk_prev_map     db                  $FF

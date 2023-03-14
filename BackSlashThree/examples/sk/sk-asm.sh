@@ -47,12 +47,72 @@ function extract_MAP
 
 function extract_fonts
 {
-  echo "Fonts extract from $1 to $2"
-  echo ' include "bs3core.inc"' > "${targetPath}/$2"
-  echo "; Begin of Silly Knight $1 " >> "${targetPath}/$2"
-  echo "; each line, 8 times 8 bits : 8x8 1bpp" >> "${targetPath}/$2"
+  if [ "$3" != "width" ]; then
+    echo "Fonts extract from $1 to $2 for $3"
+    echo ' include "bs3core.inc"' > "${targetPath}/$2"
+    echo "; Begin of Silly Knight $1 " >> "${targetPath}/$2"
+    echo "; each line, 8 times 8 bits : 8x8 1bpp" >> "${targetPath}/$2"
+  else
+    echo "Font glyph width from $1 to $2"
+  fi
   echo ' org $E000' >> "${targetPath}/$2"
-   hexdump -v -e '" db "' -e '8/1 "$%02X,"' -e '"\n"' "${sourcePath}/$1" |  sed -e 's/,$//g' >> "${targetPath}/$2" 
+  i=0
+  c=0
+  BIT0='$00'
+  BIT1='$FF'
+  if [ "$3" == "mask" ]; then
+    BIT0='$FF'
+    BIT1='$00'
+  fi
+  if [ "$3" != "width" ]; then 
+    hexdump -v -e '1/1 "%02X"' -e '"\n"' "${sourcePath}/$1" | while read -r value; do
+      printf "%8b\n" $(bc <<< "ibase=16; obase=2; $value") | sed 's^ ^0^g'
+      echo ""
+    done | while read binvalue; do
+    if [ "$binvalue" != "" ]; then
+      if [ "$i" == "0" ]; then
+        echo "; font glyph #$c"
+      fi
+      i=$(( i + 1 )) 
+      if [ "$i" == "8" ]; then i=0;c=$(( c + 1 )); fi
+      if [ "$c" == "128" ]; then break; fi
+      echo -n " db "
+      b7=${binvalue:0:1}; b6=${binvalue:1:1}; b5=${binvalue:2:1}; b4=${binvalue:3:1}
+      b3=${binvalue:4:1}; b2=${binvalue:5:1}; b1=${binvalue:6:1}; b0=${binvalue:7:1}
+      if [ "$b7" == "0" ]; then echo -n "$BIT0,"; fi
+      if [ "$b7" == "1" ]; then echo -n "$BIT1,"; fi
+      if [ "$b6" == "0" ]; then echo -n "$BIT0,"; fi
+      if [ "$b6" == "1" ]; then echo -n "$BIT1,"; fi
+      if [ "$b5" == "0" ]; then echo -n "$BIT0,"; fi
+      if [ "$b5" == "1" ]; then echo -n "$BIT1,"; fi
+      if [ "$b4" == "0" ]; then echo -n "$BIT0,"; fi
+      if [ "$b4" == "1" ]; then echo -n "$BIT1,"; fi
+      if [ "$b3" == "0" ]; then echo -n "$BIT0,"; fi
+      if [ "$b3" == "1" ]; then echo -n "$BIT1,"; fi
+      if [ "$b2" == "0" ]; then echo -n "$BIT0,"; fi
+      if [ "$b2" == "1" ]; then echo -n "$BIT1,"; fi
+      if [ "$b1" == "0" ]; then echo -n "$BIT0,"; fi
+      if [ "$b1" == "1" ]; then echo -n "$BIT1,"; fi
+      if [ "$b0" == "0" ]; then echo    "$BIT0";  fi
+      if [ "$b0" == "1" ]; then echo    "$BIT1";  fi
+    fi
+    
+    done >> "${targetPath}/$2"
+  else
+    # generate font width
+    i=0
+    c=0
+    hexdump -v -e '1/1 "%02X"' -e '"\n"' "${sourcePath}/$1" | while read -r value; do
+      i=$(( i + 1 ))
+      if [ $i -gt 1024 ]; then
+        echo "; width for glyph #$c"
+        echo ' db $'$value
+        c=$(( c + 1 )) 
+      fi
+    done  >> "${targetPath}/$2"
+  fi  
+#   hexdump -v -e '" db "' -e '8/1 "$%02X,"' -e '"\n"' "${sourcePath}/$1" |  sed -e 's/,$//g' >> "${targetPath}/$2" 
+   
   bs3_compile "${targetPath}/$2"
 }
 
@@ -162,4 +222,6 @@ extract_sprite_or_data "SPRITES.DAT" "sk_spr_mask.s" "mask" "Sprite"
 extract_sprite_or_data "TILES.DAT" "sk_tile_data.s" "data" "Tile"
 extract_sprite_or_data "TILES.DAT" "sk_tile_mask.s" "mask" "Tile"
 
-extract_fonts "FONTS.DAT" "sk_fonts.s"
+extract_fonts "FONTS.DAT" "sk_fonts_data.s" data
+extract_fonts "FONTS.DAT" "sk_fonts_mask.s" mask
+extract_fonts "FONTS.DAT" "sk_fonts_width.s" width
