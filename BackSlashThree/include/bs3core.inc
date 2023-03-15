@@ -67,6 +67,8 @@ ebs3_gfx_cmd_sprconfig  equ     $15
 ebs3_gfx_cmd_sprgetconf equ     $16
 ebs3_gfx_cmd_sprcollcnt equ     $17
 ebs3_gfx_cmd_sprgetcoll equ     $18
+ebs3_gfx_cmd_renderconf equ     $19
+ebs3_gfx_cmd_rendergetconf equ  $20
 
 
 ebs3_gfx_status         equ     $0120
@@ -478,6 +480,13 @@ mbs3_wait_input macro
 .waitinput      in      b0
                 jz      .waitinput
                 pop     b0
+                endm
+
+; wait until input available
+; input value is in B0
+mbs3_get_input macro
+.waitinput      in      b0
+                jz      .waitinput
                 endm
 
 

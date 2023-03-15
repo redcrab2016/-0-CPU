@@ -968,3 +968,82 @@ Status
         1 : Device not initialized (device was not reset)
         13: incorrect sprite collision number
 
+>>> RENDER_CONFIG
+Command $19
+    Input
+        PB1 : layer visibility
+                7 6 5 4 3 2 1 0
+                | | | | | | | + 0: Layer 0 not rendered (surface is default to color PB3)
+                | | | | | | |   1: Layer 0 is rendered (surface content)
+                | | | | | | | 
+                | | | | | | +-- 0: layer 1 not rendered (no tile map 0 )
+                | | | | | |     1: layer 1 is rendered  (tile map 0)
+                | | | | | |     
+                | | | | | +---- 0: layer 2 not rendered (no tile map 1)
+                | | | | |       1: layer 2 is rendered  (tile map 1)
+                | | | | | 
+                +-+-+-+-+------ ignored
+        PB2 : Sprite Z visibility
+                7 6 5 4 3 2 1 0
+                | | | | | | | + 0: Sprite with Z=0 not rendered
+                | | | | | | |   1: Sprite with Z=0 is rendered 
+                | | | | | | | 
+                | | | | | | +-- 0: Sprite with Z=1 not rendered
+                | | | | | |     1: Sprite with Z=1 is rendered 
+                | | | | | |     
+                | | | | | +---- 0: Sprite with Z=2 not rendered
+                | | | | |       1: Sprite with Z=2 is rendered
+                | | | | | 
+                +-+-+-+-+------ ignored
+        PB3 : Color when layer 0 is not rendered        
+    Output
+        N/A
+Description
+    make visible/invisible layer and sprite at Z coordinate
+    at reset time all is visible
+    layer visibility is independant to TILE_MAP_CONFIG:
+        if tilemap is visible but render on layer is not visible : tile map is not visible
+        if tilemap is not visible but  render on layer is visible : tile map is not visible
+    sprite visibility is independant to SPRITE_CONFIG
+    to see the effect of this command, REFRESH need to be performed afterward.
+Status
+    COMMAND_STATUS_CODE
+        0 : render configuration set
+        1 : Device not initialized (device was not reset)
+
+>>> RENDER_GETCONFIG
+Command $20
+    Input
+        N/a
+    Output        
+        PB1 : layer visibility
+                7 6 5 4 3 2 1 0
+                | | | | | | | + 0: Layer 0 not rendered (surface is default to color PB3)
+                | | | | | | |   1: Layer 0 is rendered (surface content)
+                | | | | | | | 
+                | | | | | | +-- 0: layer 1 not rendered (no tile map 0 )
+                | | | | | |     1: layer 1 is rendered  (tile map 0)
+                | | | | | |     
+                | | | | | +---- 0: layer 2 not rendered (no tile map 1)
+                | | | | |       1: layer 2 is rendered  (tile map 1)
+                | | | | | 
+                +-+-+-+-+------ ignored
+        PB2 : Sprite Z visibility
+                7 6 5 4 3 2 1 0
+                | | | | | | | + 0: Sprite with Z=0 not rendered
+                | | | | | | |   1: Sprite with Z=0 is rendered 
+                | | | | | | | 
+                | | | | | | +-- 0: Sprite with Z=1 not rendered
+                | | | | | |     1: Sprite with Z=1 is rendered 
+                | | | | | |     
+                | | | | | +---- 0: Sprite with Z=2 not rendered
+                | | | | |       1: Sprite with Z=2 is rendered
+                | | | | | 
+                +-+-+-+-+------ ignored
+        PB3 : Color when layer 0 is not rendered        
+Description
+    retrieve render configuration (see RENDER_CONFIG)
+Status
+    COMMAND_STATUS_CODE
+        0 : render configuration retrieved
+        1 : Device not initialized (device was not reset)

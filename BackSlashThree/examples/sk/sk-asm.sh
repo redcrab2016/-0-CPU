@@ -58,11 +58,11 @@ function extract_fonts
   echo ' org $E000' >> "${targetPath}/$2"
   i=0
   c=0
-  BIT0='$00'
-  BIT1='$FF'
+  BIT0='0'
+  BIT1='F'
   if [ "$3" == "mask" ]; then
-    BIT0='$FF'
-    BIT1='$00'
+    BIT0='F'
+    BIT1='0'
   fi
   if [ "$3" != "width" ]; then 
     hexdump -v -e '1/1 "%02X"' -e '"\n"' "${sourcePath}/$1" | while read -r value; do
@@ -79,20 +79,20 @@ function extract_fonts
       echo -n " db "
       b7=${binvalue:0:1}; b6=${binvalue:1:1}; b5=${binvalue:2:1}; b4=${binvalue:3:1}
       b3=${binvalue:4:1}; b2=${binvalue:5:1}; b1=${binvalue:6:1}; b0=${binvalue:7:1}
-      if [ "$b7" == "0" ]; then echo -n "$BIT0,"; fi
-      if [ "$b7" == "1" ]; then echo -n "$BIT1,"; fi
+      if [ "$b7" == "0" ]; then echo -n '$'"$BIT0"; fi
+      if [ "$b7" == "1" ]; then echo -n '$'"$BIT1"; fi
       if [ "$b6" == "0" ]; then echo -n "$BIT0,"; fi
       if [ "$b6" == "1" ]; then echo -n "$BIT1,"; fi
-      if [ "$b5" == "0" ]; then echo -n "$BIT0,"; fi
-      if [ "$b5" == "1" ]; then echo -n "$BIT1,"; fi
+      if [ "$b5" == "0" ]; then echo -n '$'"$BIT0"; fi
+      if [ "$b5" == "1" ]; then echo -n '$'"$BIT1"; fi
       if [ "$b4" == "0" ]; then echo -n "$BIT0,"; fi
       if [ "$b4" == "1" ]; then echo -n "$BIT1,"; fi
-      if [ "$b3" == "0" ]; then echo -n "$BIT0,"; fi
-      if [ "$b3" == "1" ]; then echo -n "$BIT1,"; fi
+      if [ "$b3" == "0" ]; then echo -n '$'"$BIT0"; fi
+      if [ "$b3" == "1" ]; then echo -n '$'"$BIT1"; fi
       if [ "$b2" == "0" ]; then echo -n "$BIT0,"; fi
       if [ "$b2" == "1" ]; then echo -n "$BIT1,"; fi
-      if [ "$b1" == "0" ]; then echo -n "$BIT0,"; fi
-      if [ "$b1" == "1" ]; then echo -n "$BIT1,"; fi
+      if [ "$b1" == "0" ]; then echo -n '$'"$BIT0"; fi
+      if [ "$b1" == "1" ]; then echo -n '$'"$BIT1"; fi
       if [ "$b0" == "0" ]; then echo    "$BIT0";  fi
       if [ "$b0" == "1" ]; then echo    "$BIT1";  fi
     fi

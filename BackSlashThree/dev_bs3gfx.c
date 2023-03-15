@@ -119,6 +119,9 @@ struct dev_bs3gfx
     struct dev_bs3gfx_tile sprite[128];     /* 128 sprites */
     WORD spritecollision[256];
     BYTE spritecollisioncount;
+    BYTE render_layer;
+    BYTE render_spritez;
+    BYTE render_defaultcolor;
 };
 
 #define BS3_GFX_COMMAND_RESET                   0x00
@@ -147,6 +150,8 @@ struct dev_bs3gfx
 #define BS3_GFX_COMMAND_SPRITE_GETCONFIG        0x16
 #define BS3_GFX_COMMAND_SPRITE_COLLISION_COUNT  0x17
 #define BS3_GFX_COMMAND_SPRITE_GETCOLLISION     0x18
+#define BS3_GFX_COMMAND_RENDER_CONFIG           0x19
+#define BS3_GFX_COMMAND_RENDER_GETCONFIG        0x20
 
 #define BS3_GFX_COMMAND_BLIT_OPERATOR_COPY      0x00
 #define BS3_GFX_COMMAND_BLIT_OPERATOR_OR        0x01
@@ -537,6 +542,10 @@ void bs3_gfx_command_reset()
     }
     /* set color palette */
     _bs3_gfx_setpalette();
+    /* reset rendering visibility*/
+    reg_bs3gfx.render_defaultcolor  = 0;  /* default color on non render of layer 0 (surface) is black*/
+    reg_bs3gfx.render_layer         = 0x07; /* all layer renderable */
+    reg_bs3gfx.render_spritez       = 0x07; /* all sprite Z renderable*/
     /* reset status */
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
     reg_bs3gfx.ENABLE = 1;
@@ -796,24 +805,42 @@ void bs3_gfx_command_refresh()
     /* if bitmap only mode then do not do any layer composition*/
     if (reg_bs3gfx.tilemap[0].visible == 0 && reg_bs3gfx.tilemap[1].visible == 0 && spritecount == 0) 
     {
-        _bs3_gfx_screenrender(255); /* 255 means render the surface referenced by the view port */
+        if (reg_bs3gfx.render_layer & 0x01 )
+        {
+            _bs3_gfx_screenrender(255); /* 255 means render the surface referenced by the view port */
+        }
+        else
+        {
+            memset(&reg_bs3gfx.videoram[2][0], reg_bs3gfx.render_defaultcolor, 65536);
+            _bs3_gfx_screenrender(2);
+        }
         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
         return;
     }
     /* we need to do layer composition */
 
     /* layer 0 : get surface referenced by the view port */
-    memcpy(&reg_bs3gfx.videoram[2][0], &reg_bs3gfx.videoram[reg_bs3gfx.viewport_surface][0], 65536);
-    /* between layer 0 and 1 : sprites with Z == 0 */
-    for (i = 0; i < 128; i++)
+    if (reg_bs3gfx.render_layer & 0x01)
     {
-        if (reg_bs3gfx.sprite[i].enabled && reg_bs3gfx.sprite[i].z == 0 )
+        memcpy(&reg_bs3gfx.videoram[2][0], &reg_bs3gfx.videoram[reg_bs3gfx.viewport_surface][0], 65536);
+    }
+    else
+    {
+        memset(&reg_bs3gfx.videoram[2][0], reg_bs3gfx.render_defaultcolor, 65536);
+    }
+    /* between layer 0 and 1 : sprites with Z == 0 */
+    if (reg_bs3gfx.render_spritez & 0x01)
+    {
+        for (i = 0; i < 128; i++)
         {
-            bs3_gfx_tile_blit(&reg_bs3gfx.sprite[i], &reg_bs3gfx.videoram[2][0],  BS3_TILE_BLIT_SPRITE);
+            if (reg_bs3gfx.sprite[i].enabled && reg_bs3gfx.sprite[i].z == 0 )
+            {
+                bs3_gfx_tile_blit(&reg_bs3gfx.sprite[i], &reg_bs3gfx.videoram[2][0],  BS3_TILE_BLIT_SPRITE);
+            }
         }
     }
     /* layer 1 : tilemap 0 */
-    if (reg_bs3gfx.tilemap[0].visible)
+    if (reg_bs3gfx.tilemap[0].visible && (reg_bs3gfx.render_layer & 0x02))
     {
         for (y = 0; y < 32 ; y++)
         {
@@ -835,15 +862,18 @@ void bs3_gfx_command_refresh()
         }
     }
     /* between layer 1 and 2 : sprites with Z == 1 */
-    for (i = 0; i < 128; i++)
+    if (reg_bs3gfx.render_spritez & 0x02)
     {
-        if (reg_bs3gfx.sprite[i].enabled && reg_bs3gfx.sprite[i].z == 1 )
+        for (i = 0; i < 128; i++)
         {
-            bs3_gfx_tile_blit(&reg_bs3gfx.sprite[i], &reg_bs3gfx.videoram[2][0],  BS3_TILE_BLIT_SPRITE);
+            if (reg_bs3gfx.sprite[i].enabled && reg_bs3gfx.sprite[i].z == 1 )
+            {
+                bs3_gfx_tile_blit(&reg_bs3gfx.sprite[i], &reg_bs3gfx.videoram[2][0],  BS3_TILE_BLIT_SPRITE);
+            }
         }
     }
     /* layer 2 : tilemap 1 */
-    if (reg_bs3gfx.tilemap[1].visible)
+    if (reg_bs3gfx.tilemap[1].visible && (reg_bs3gfx.render_layer & 0x04))
     {
         for (y = 0; y < 32 ; y++)
         {
@@ -865,14 +895,16 @@ void bs3_gfx_command_refresh()
         }
     }
     /* above layer 2 : sprite with Z == 2 */
-    for (i = 0; i < 128; i++)
+    if (reg_bs3gfx.render_spritez & 0x04)
     {
-        if (reg_bs3gfx.sprite[i].enabled && reg_bs3gfx.sprite[i].z == 2 )
+        for (i = 0; i < 128; i++)
         {
-            bs3_gfx_tile_blit(&reg_bs3gfx.sprite[i], &reg_bs3gfx.videoram[2][0], BS3_TILE_BLIT_SPRITE);
+            if (reg_bs3gfx.sprite[i].enabled && reg_bs3gfx.sprite[i].z == 2 )
+            {
+                bs3_gfx_tile_blit(&reg_bs3gfx.sprite[i], &reg_bs3gfx.videoram[2][0], BS3_TILE_BLIT_SPRITE);
+            }
         }
     }
-
     _bs3_gfx_screenrender(2); /* 2 means render the compositing result surface */
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
@@ -1902,6 +1934,20 @@ void bs3_gfx_command_sprite_getcollision()
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
 
+void bs3_gfx_command_render_config()
+{
+    reg_bs3gfx.render_layer         = reg_bs3gfx.pb1 & 0x07;
+    reg_bs3gfx.render_spritez       = reg_bs3gfx.pb2 & 0x07;
+    reg_bs3gfx.render_defaultcolor  = reg_bs3gfx.pb3;
+}
+
+void bs3_gfx_command_render_getconfig()
+{
+    reg_bs3gfx.pb1 = reg_bs3gfx.render_layer;
+    reg_bs3gfx.pb2 = reg_bs3gfx.render_spritez;
+    reg_bs3gfx.pb3 = reg_bs3gfx.render_defaultcolor;
+}
+
 /* function executed by a dedicated thread to perform the device activities */
 static void * dev_bs3gfx_run(void * bs3_device_bus)
 {
@@ -2008,6 +2054,11 @@ static void * dev_bs3gfx_run(void * bs3_device_bus)
                     case BS3_GFX_COMMAND_SPRITE_GETCOLLISION:                        
                         bs3_gfx_command_sprite_getcollision();
                         break;
+                    case BS3_GFX_COMMAND_RENDER_CONFIG:
+                        bs3_gfx_command_render_config();
+                        break;
+                    case BS3_GFX_COMMAND_RENDER_GETCONFIG:
+                        bs3_gfx_command_render_getconfig();
                     default:
                         reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_UNKNOWN_CMD;
                 }

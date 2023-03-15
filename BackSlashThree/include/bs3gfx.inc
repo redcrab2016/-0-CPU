@@ -282,6 +282,17 @@ mbs3_gfx_sprgetcoll macro
                 mbs3_gfx_command  ebs3_gfx_cmd_sprgetcoll
                 endm
 
+; Render configuration
+; at return B0 has the status code
+mbs3_gfx_renderconf macro
+                mbs3_gfx_command ebs3_gfx_cmd_renderconf
+                endm
+
+;  Render get configuration
+; at return B0 has the status corder
+mbs3_gfx_rendergetconf  macro
+                mbs3_gfx_command  ebs3_gfx_cmd_rendergetconf
+                endm
 
 ; Enable auto refresh of the BS3 GFX device
 mbs3_gfx_autorefresh_on macro

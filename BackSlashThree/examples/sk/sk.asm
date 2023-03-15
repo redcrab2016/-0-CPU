@@ -143,7 +143,7 @@ rom_sk_fonts_width  equ     28
     embed   "sk_tile_mask.bs3",     rom_sk_tile_mask,   0
     embed   "sk_fonts_data.bs3",    rom_sk_fonts_data,  0
     embed   "sk_fonts_mask.bs3",    rom_sk_fonts_mask,  0
-    embed   "sk_fonts.widthbs3",    rom_sk_fonts_width, 0
+    embed   "sk_fonts_width.bs3",   rom_sk_fonts_width, 0
 
 
 sk_tile_keycolor        equ     232
@@ -202,7 +202,79 @@ sk_spr_book             equ    $012F ; spell book
 
 ; Entry point
             mbs3_bootat start
+
+handler_timer
+            push_w0
+            ld      w0, [sk_timer_count]
+            inc     w0
+            sr      w0, [sk_timer_count]
+            pop_w0
+            iret 
+
+handler_dummy
+            iret 
+
+timer_count dw 0
+
+; w0 number of 1/32 second
+timer_setperiod
+            pusha
+            pushf
+            cli
+            eor             w1, w1
+            sr              w1, [timer_count]
+            mov             w2, $7A12 ; 1/32 second
+            mul             w2, w0, w3
+            mbs3_starttimer w3, w2
+            popf
+            popa
+            ret                     
+
+timer_resetcount
+            pushf
+            push_w0
+            cli
+            eor             w0, w0
+            sr              w0, [timer_count]
+            pop_w0
+            popf
+            ret
+
+timer_wait_tick
+            push_w0
+            push_w1
+            pushf
+            cli
+            ld              w0, [timer_count]
+            popf
+.retry      ld              w1, [timer_count]
+            cmp             w1, w0
+            jz              .retry
+            pop_w1
+            pop_w0
+            ret
+
+; wait w0 times tick
+timer_wait_ntick
+            push_w0
+.loop       cmp             w0, 0
+            jz              .exit
+            call            timer_wait_tick
+            dec             w0
+            jump            .loop
+.exit            
+            pop_w0
+            ret
 start:
+            ; prepare handler
+            cli
+            mbs3_sethandler         lbs3int_timer       handler_timer
+            mbs3_sethandler         lbs3int_byteinput   handler_dummy
+            mbs3_sethandler         lbs3int_rtc72421    handler_dummy
+            mbs3_settimermode       ebs3_timer_mode_time
+            mov                 w0, $0001
+            call                timer_setperiod ; 1/32 second tick period
+            sti
             ; init var
             mov                 b0, $ff
             sr                  b0, [sk_curr_map]
@@ -213,23 +285,44 @@ start:
             mov             b0, rom_sk_scr_hv
             call            showromscreenshot
             mbs3_gfx_refresh
-            mbs3_wait_input
+            mov             w0, $0040
+            call            timer_wait_ntick
+           ; mbs3_wait_input
             mov             b0, rom_sk_scr_logo
             call            showromscreenshot
             mbs3_gfx_refresh
-            mbs3_wait_input
-            mov             b0, rom_sk_scr_menu
-            call            showromscreenshot
-            mbs3_gfx_refresh
-            mbs3_wait_input
+            mov             w0, $0040
+            call            timer_wait_ntick
+            ; mbs3_wait_input
+.menu       call            sk_menu
+            cmp             b0, 0
+            jz              .menu_new_game
+            cmp             b0, 1
+            jz              .menu_continue
+            cmp             b0, 2
+            jz              .menu_exit
+            jump            .menu ; should never occurs
+.menu_new_game
+            jump            .new_game
+.menu_continue
+            jump            .continue
+.menu_exit
+            jump            .byebye
+
+; ******* NEW GAME
+.new_game
             mov             b0, rom_sk_scr_intro1
             call            showromscreenshot
             mbs3_gfx_refresh
-            mbs3_wait_input
+            mov             w0, $0040
+            call            timer_wait_ntick            
+            ; mbs3_wait_input
             mov             b0, rom_sk_scr_intro2
             call            showromscreenshot
             mbs3_gfx_refresh
-            mbs3_wait_input
+            mov             w0, $0040
+            call            timer_wait_ntick
+            ; mbs3_wait_input
 
             ; show a sprite
             mbs3_gfx_setPB1 0                   ; sprite 0
@@ -254,7 +347,10 @@ start:
             inc             b1
             cmp             b1, 15
             jnz             .cont2 ; .cont
+            jump            .menu
 
+; ******* CONTINUE
+.continue
             ; hide tile map 0
             mbs3_gfx_setPB1 0
             mbs3_gfx_setPB2 0
@@ -265,6 +361,15 @@ start:
             mbs3_gfx_vpconfig
             mbs3_gfx_refresh
             mbs3_wait_input
+            mbs3_gfx_setPW2     $6400
+            mbs3_gfx_vpconfig
+            mbs3_gfx_refresh
+            mbs3_wait_input
+            mbs3_gfx_setPW2     $6460
+            mbs3_gfx_vpconfig
+            mbs3_gfx_refresh
+            mbs3_wait_input
+
 
             mbs3_gfx_vpgetconf
             mbs3_gfx_setPB1 1
@@ -289,15 +394,131 @@ start:
             jnz              .cont3
             jump            .blop
 
-.cont3            
-            ; mbs3_wait_input
+.cont3      
+            mbs3_gfx_vpgetconf
+            mbs3_gfx_setPB1 0
+            mbs3_gfx_setPW2 0
+            mbs3_gfx_vpconfig
+            jump            .menu
 
 
 
-
+; ******* EXIT
 .byebye            
             mbs3_gfx_end
             hlt
+
+; return b0: 0: new game, 1: Continue, 2 exit
+sk_menu
+            ; save env
+            pusha
+            ; fill surface with menu screenshot
+            mov             b0, rom_sk_scr_menu
+            call            showromscreenshot
+            mbs3_gfx_rendergetconf
+            ld              b0, [lbs3_gfx_reg1]
+            sr              b0, [.render_layer]
+            ld              b0, [lbs3_gfx_reg2]
+            sr              b0, [.render_spitez]
+            ld              b0, [lbs3_gfx_reg3]
+            sr              b0, [.render_defcolor]
+            ; render only layer 0 
+            mov             b0, 1
+            sr              b0, [lbs3_gfx_reg1]
+            mov             b0, 0
+            sr              b0, [lbs3_gfx_reg2]
+            mbs3_gfx_renderconf
+            ; 
+            mov             w0, sk_menu_new_game
+            mov             w1, $3C3E
+            mov             b4, 10 ; green
+            call            sk_print
+            mov             w0, sk_menu_continue
+            mov             w1, $463F
+            mov             b4, 15 ; white
+            call            sk_print
+            mov             w0, sk_menu_exit
+            mov             w1, $5048
+            mov             b4, 12 ; red
+            call            sk_print
+.showSelector            
+            ; side clear left/right hero "selector"
+            mbs3_gfx_setPB1 0 ; surface 0
+            mbs3_gfx_setPW2 $3A32
+            mbs3_gfx_setPB3 0 ; full black box
+            mbs3_gfx_setPW4 $1C08    ; size (WxH,16x30)
+            mbs3_gfx_boxfull
+            mbs3_gfx_setPW2 $3A65
+            mbs3_gfx_boxfull
+            ; draw hero selector
+            mov             w0, $3A32 ; hero top/left coords
+            ld              b7, [.menu_result]
+            cmp             b7, 1
+            jnz             .other1
+            add             b1, 10
+.other1     cmp             b7, 2
+            jnz             .other2
+            add             b1, 20
+.other2                                         
+            mbs3_gfx_setPB1 $81
+            mbs3_gfx_setPW2 sk_spr_hero_right1
+            mbs3_gfx_setPB3 sk_tile_keycolor
+            mbs3_gfx_setPW3 0
+            mbs3_gfx_setPB5 0
+            mbs3_gfx_setPW6 w0
+            push_w0
+            mbs3_gfx_blitkcolor ; left hero
+            pop_w0
+            mbs3_gfx_setPW2 sk_spr_hero_left1
+            mov             b0, $65
+            mbs3_gfx_setPW6 w0
+            mbs3_gfx_blitkcolor ; right hero
+            mbs3_gfx_refresh
+            ld              b1, [.menu_result]
+.getInput
+            mbs3_get_input
+            cmp             b0, 10
+            jz              .quitMenu
+            cmp             b0, 'A'
+            jz              .moveup
+            cmp             b0, 'B'
+            jz              .movedown
+            j               .getInput
+.moveup     
+            dec             b1
+            cmp             b1, $FF
+            jnz             .move
+            mov             b1, 2
+            j               .move
+.movedown
+            inc             b1
+            cmp             b1, 3
+            jnz             .move
+            eor             b1, b1
+.move
+            sr              b1, [.menu_result]
+            jump            .showSelector
+.quitMenu            
+            ; restore env
+            ld              b0, [.render_layer]
+            sr              b0, [lbs3_gfx_reg1]
+            ld              b0, [.render_spitez]
+            sr              b0, [lbs3_gfx_reg2]
+            ld              b0, [.render_defcolor]
+            sr              b0, [lbs3_gfx_reg3]
+            mbs3_gfx_renderconf
+            popa
+            ld              b0, [.menu_result]
+            ret
+.render_layer       db  0
+.render_spitez      db  0
+.render_defcolor    db  0
+.menu_result        db  0 ; 0:new game, 1:continue, 2:Exit
+
+sk_menu_new_game    db "NEW GAME",0
+sk_menu_continue    db "CONTINUE",0
+sk_menu_exit        db "EXIT",0
+
 
 ; show ROM screen shot in current view port
 ; use B0 as ROM bank number that
@@ -739,7 +960,7 @@ sk_print
                 mov     b0, b5; tile index (mapped to character)
                 mbs3_gfx_setPW2     w0 ; tile bank/index
                 mbs3_gfx_setPB3     sk_tile_keycolor
-                mov     b1, $FF ; color find 
+                mov     b1, $0F ; color find 
                 mov     b0, b4  ; color replace (text color)
                 mbs3_gfx_setPW3     w0 ; colorize
                 mbs3_gfx_setPB5     0 ; target surface
@@ -758,7 +979,7 @@ sk_print
             
                 ; got to next character address
                 inc     w3 ; next character address
-                jump    b5 ; process next character
+                jump    .nextchar ; process next character
 .endprint                
                 ; restore env
                 ld      b5, [.oldrom]
