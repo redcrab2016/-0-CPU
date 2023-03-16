@@ -176,16 +176,21 @@ struct bs3_asm_line * bs3_asm_getEQU(const char * symbol, struct bs3_asm_line * 
   return 0;
 }
 
-void bs3_asm_report(const char * filename, int line, int linecolumn, int message)
+void bs3_asm_report_msg(const char * filename, int line, int linecolumn, int message, const char * msg)
 {
   if (line > 0)
   {
-    fprintf(stderr, "In %s at line %d column %d : Error %d : %s\n", filename, line, linecolumn,message, bs3_asm_message[message]);
+    fprintf(stderr, "In %s at line %d column %d : Error %d : %s %s\n", filename, line, linecolumn,message, bs3_asm_message[message], msg);
   }
   else
   {
-    fprintf(stderr, "File %s : Error %d : %s\n", filename, message, bs3_asm_message[message]);
+    fprintf(stderr, "File %s : Error %d : %s %s\n", filename, message, bs3_asm_message[message], msg);
   }
+}
+
+void bs3_asm_report(const char * filename, int line, int linecolumn, int message)
+{
+   bs3_asm_report_msg(filename, line, linecolumn, message, "");
 }
 
 int bs3_asm_pass1_param_compatible(int destType, int srcType, long srcValue)
@@ -1252,7 +1257,7 @@ int bs3_asm_pass1_oneline(struct bs3_asm_line * bs3line, WORD linenum, WORD addr
           } 
           break;
 
-        /* After parameter, searching for another parameter */      
+        /* After parameter (or after ope), searching for another parameter (or first parameter) */      
         case BS3_ASM_PASS1_PARSE_STATE_APARAM:
           switch (c)
           {
@@ -2033,7 +2038,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
     /* Parse file line */
     if (isMacroExpansion) 
     {
-      /* find '{x}' (x is a number from 0 to n)in line and replace it by the parameter of asm line at index asmIndexMacro 
+      /* find '{x}' (x is a number from 1 to n)in line and replace it by the parameter of asm line at index asmIndexMacro 
          if 'x' does not exist in asm line at index asmIndexMacro, then error
          if expansion make the line too large , then error
          fileline & macroline
@@ -2079,7 +2084,7 @@ int bs3_asm_pass1_file( const char * filename, WORD address, WORD * addressout, 
                 k = sscanf(&fileline[m+1],"%d",&m);
                 fileline[i] = '}';
                 /* if param index is too large */
-                if (k > macrobs3_asm.nbParam || k == 0 || k == EOF) /* one based index */
+                if (m > macrobs3_asm.nbParam || k == 0 || k == EOF) /* one based index */
                 {
                   err = BS3_ASM_PASS1_PARSE_ERR_MACROREFPARAM;
                   bs3_asm_report(filename, linenum ,i, err) ;

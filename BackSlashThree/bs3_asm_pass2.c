@@ -60,7 +60,7 @@ int bs3_asm_pass2()
                     if (bs3_asm_line_atlabel(label, pbs3line, pbs3lineLabel) == ((void *)0)) /* label not found */
                     {
                         err = BS3_ASM_PASS2_ERR_LABELNOTFOUND; /* not found error */
-                        bs3_asm_report(bs3_asm_line_getFilename(pbs3line, filename), bs3line.linenum , bs3line.param[j] , err);
+                        bs3_asm_report_msg(bs3_asm_line_getFilename(pbs3line, filename), bs3line.linenum , bs3line.param[j] , err, label);
                         break;
                     }
                     /* compute address of update thanks to asmpattern */

@@ -239,6 +239,7 @@ int bs3_asm_effectivefilename(const char * currfilename, const char * wishfilena
 struct bs3_asm_line * bs3_asm_getEQU(const char * symbol, struct bs3_asm_line *  curbs3line, struct bs3_asm_line * foundbs3line);
 
 void bs3_asm_report(const char * filename, int line, int linecolumn, int message);
+void bs3_asm_report_msg(const char * filename, int line, int linecolumn, int message, const char * msg);
 int bs3_asm_pass1_param_compatible(int destType, int srcType, long srcValue);
 int bs3_asm_pass1_instructionCheck(struct bs3_asm_line * bs3line);
 int bs3_asm_pass1_assemble(struct bs3_asm_line * bs3line);

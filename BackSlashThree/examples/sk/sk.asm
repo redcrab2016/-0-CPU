@@ -85,6 +85,7 @@ rom_map_layer2_offset  equ     $01E0
 sk_object_item      equ     4
 sk_object_enemy     equ     5
 sk_object_emitter   equ     9
+sk_object_tomap     equ     3
 
 ; Map ROM bank number
 rom_sk_map0         equ     7
@@ -205,9 +206,9 @@ sk_spr_book             equ    $012F ; spell book
 
 handler_timer
             push_w0
-            ld      w0, [sk_timer_count]
+            ld      w0, [timer_count]
             inc     w0
-            sr      w0, [sk_timer_count]
+            sr      w0, [timer_count]
             pop_w0
             iret 
 
@@ -268,12 +269,12 @@ timer_wait_ntick
 start:
             ; prepare handler
             cli
-            mbs3_sethandler         lbs3int_timer       handler_timer
-            mbs3_sethandler         lbs3int_byteinput   handler_dummy
-            mbs3_sethandler         lbs3int_rtc72421    handler_dummy
+            mbs3_sethandler         int_timer,       handler_timer
+            mbs3_sethandler         int_byteinput,   handler_dummy
+            mbs3_sethandler         int_rtc72421,    handler_dummy
             mbs3_settimermode       ebs3_timer_mode_time
             mov                 w0, $0001
-            call                timer_setperiod ; 1/32 second tick period
+            call                timer_setperiod ; 1/32 sec. tick period
             sti
             ; init var
             mov                 b0, $ff
@@ -311,24 +312,38 @@ start:
 
 ; ******* NEW GAME
 .new_game
+            ; render only surface
+            mbs3_gfx_setPB1 1        ; only layer 0 rendered
+            mbs3_gfx_setPB2 0        ; no sprite rendered
+            mbs3_gfx_renderconf
+            
+            ; reset tile maps
+            mbs3_gfx_setPB1     0 ; choose tilemap 0
+            mbs3_gfx_tmreset      
+
+            ; show intro
             mov             b0, rom_sk_scr_intro1
             call            showromscreenshot
             mbs3_gfx_refresh
             mov             w0, $0040
             call            timer_wait_ntick            
-            ; mbs3_wait_input
             mov             b0, rom_sk_scr_intro2
             call            showromscreenshot
             mbs3_gfx_refresh
             mov             w0, $0040
             call            timer_wait_ntick
-            ; mbs3_wait_input
 
-            ; show a sprite
-            mbs3_gfx_setPB1 0                   ; sprite 0
-            mbs3_gfx_setPW2 $3050               ; coords x=80,y=48
+            ; render sprite and layers
+            mbs3_gfx_setPB1 7        ; all layers rendered
+            mbs3_gfx_setPB2 7        ; all sprite Z rendered
+            mbs3_gfx_renderconf
+
+            ; set default first hero location and looks
+            ;  location is set to hero map0 location 
+            mbs3_gfx_setPB1 127                 ; sprite 127 (hero)
+            mbs3_gfx_setPW2 $1018               ; coords x=24,y=16
             mbs3_gfx_setPB3 1                   ; tile surface
-            mbs3_gfx_setPW4 sk_spr_hero_left1   ; set index/bank
+            mbs3_gfx_setPW4 sk_spr_hero_right1  ; set index/bank
             mbs3_gfx_setPB5 sk_tile_keycolor    ; keycolor
             mbs3_gfx_setPB6 $A1                 ; enabled|z=1|keycolor
             mbs3_gfx_sprconf                    ; sprite config
@@ -339,14 +354,26 @@ start:
             ; clear viewport
             mbs3_gfx_setPB1     16
             mbs3_gfx_vpclear
+
+
             ; show map "b1"
-.cont2      mov             b0,        b1 ; map "b1"
+.cont2      mov             b0, b1 ; map "b1"
             call            sk_tilemap ; sk_map_blit
+.refresh            
+            call            sk_sprite_anim
             mbs3_gfx_refresh
-            mbs3_wait_input
+            wait
+            in              b0
+            jz              .refresh
+            cmp             b0, 10
+            jz              .cont4
+            jump            .refresh
+            ;bs3_wait_input
+
+.cont4
             inc             b1
             cmp             b1, 15
-            jnz             .cont2 ; .cont
+            jnz             .cont2 
             jump            .menu
 
 ; ******* CONTINUE
@@ -407,6 +434,38 @@ start:
 .byebye            
             mbs3_gfx_end
             hlt
+
+
+sk_sprite_anim
+            pusha
+        ; ****  item animate up/down
+            mov     b2, 100 ; first item sprite id
+            ld      w0, [timer_count]
+            tst     w0, $0008
+            jz      .item_up
+            mov     w3, $0101 ; item_down
+            j       .item_move
+.item_up
+            mov     w3, $0001
+.item_move
+            mbs3_gfx_setPB1 b2
+            mbs3_gfx_sprgetconf
+            ld      b0, [lbs3_gfx_reg6]
+            tst     b0, $80
+            jz      .item_next ; sprite disabled, go next item
+            ld      w0, [lbs3_gfx_reg2]
+            and     w0, $FEFE
+            or      w0, w3
+            sr      w0, [lbs3_gfx_reg2]
+            mbs3_gfx_sprconf
+.item_next
+            inc     b2
+            cmp     b2, 110 ; 109 is last item sprite id
+            jnz     .item_move
+
+            ; TODO , furnace fire, enemy etc...
+            popa
+            ret
 
 ; return b0: 0: new game, 1: Continue, 2 exit
 sk_menu
@@ -571,42 +630,6 @@ sk_scrblitrans
 .endblitrans
                 ret
 
-; draw a sk map
-; parameter
-;    b0 : map number
-sk_map_blit
-                ; save env
-                pusha
-                ld                  b1, [lbs3_bank_rom]
-                sr                  b1, [.oldrom]
-                ; select rom map
-                add                 b0, rom_sk_map0
-                sr                  b0, [lbs3_bank_rom]
-                ; select gfx image bank
-                mov                 b1, 0 ; tile gfx bank
-                ; first tile index address
-                mov                 w2, rom_map_layer0_addr
-                ; first gfx coordinate
-                mov                 w1, $0000
-                ; get tile index
-.blit           ld                  b0, [w2] ; get image index
-                ; blit tile b0 at w1(b3b2) coordinate on surface 0
-                call                blit8x8frombank ; blt tile b0 @ w1
-                inc                 w2 ; next tile address
-                add                 b2, 8
-                cmp                 b2, 160
-                jnz                 .blit
-                eor                 b2, b2
-                add                 b3, 8
-                cmp                 b3, 96
-                jnz                 .blit
-                ; restore env
-                ld                  b1, [.oldrom]
-                sr                  b1, [lbs3_bank_rom]
-                popa
-                ret
-.oldrom         db                  0
-
 ; tile map load from sk map
 ; parameter
 ;    b0 : sk map number
@@ -683,12 +706,16 @@ sk_map_meta
                 jz      .enemy
                 cmp     b6, sk_object_emitter
                 jz      .emitter
+                cmp     b6, sk_object_tomap
+                jz      .tomap
                 j       .quitroutine
 .item           call    sk_showMapItem
                 j       .quitroutine
 .enemy          call    sk_showEnemy
                 j       .quitroutine
 .emitter        call    sk_showEmitter
+                j       .quitroutine
+.tomap          call    sk_tomaphero                
 .quitroutine    popa
                 ret
 .savedmeta      dw      0
@@ -708,17 +735,41 @@ sk_hideMapItems
             popa
             ret
 
+; hero position ? at map load
+; input:
+;   b7 : map destination
+;   w1 : hero position? in tile coords  YYXX (YY: 0..19, XX: 0..11)
+sk_tomaphero
+            pusha
+            ld      b0, [sk_prev_map]
+            cmp     b0, b7
+            jz      .setherolocation
+            jump    .quitroutine
+.setherolocation            
+            mbs3_gfx_pushparameters
+            mbs3_gfx_setPB1 127 ; get hero sprite info
+            mbs3_gfx_sprgetconf
+            shl     w1
+            shl     w1
+            shl     w1
+            mbs3_gfx_setPW2 w1
+            mbs3_gfx_sprconf
+            mbs3_gfx_popparameters
+.quitroutine            
+            popa
+            ret
+
 ; add Enemy 
 ; input:
 ;   b7 : Enemy 
-;   w2 = Enemy in tile coordinates YYXX (YY: 0..19, XX: 0..11)
+;   w1 = Enemy in tile coordinates YYXX (YY: 0..19, XX: 0..11)
 sk_showEnemy
             ret
 
 ; add  Emitter  if not already in gotten
 ; input:
 ;   b7 : emiter type from 0 to 3 (right, left, flame and skull)
-;   w2 = item in tile coordinates YYXX (YY: 0..19, XX: 0..11)
+;   w1 = item in tile coordinates YYXX (YY: 0..19, XX: 0..11)
 sk_showEmitter
             ret
 
