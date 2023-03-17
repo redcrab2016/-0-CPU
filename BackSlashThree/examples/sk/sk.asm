@@ -87,6 +87,17 @@ sk_object_enemy     equ     5
 sk_object_emitter   equ     9
 sk_object_tomap     equ     3
 
+sk_sprid_hero       equ     $78
+sk_sprid_heroswordl equ     $79
+sk_sprid_heroswordr equ     $7A
+sk_sprid_item       equ     $60
+sk_sprid_item_last  equ     $6A 
+sk_sprid_bot_blk    equ     $0
+sk_sprid_bot_heart  equ     $20
+sk_sprid_bot_item   equ     $30
+sk_sprid_furnfire   equ     $77
+sk_sprid_blip       equ     $76  
+
 ; Map ROM bank number
 rom_sk_map0         equ     7
 rom_sk_map1         equ     8
@@ -151,6 +162,7 @@ sk_tile_keycolor        equ     232
 ;tiles for sprites : defined by a word (16 bits)
 ; MSB : bank number
 ; LSB : index number
+sk_spr_black            equ    $0000 ; Black opaque square
 sk_spr_sword            equ    $0100 ; Sword
 sk_spr_heart_red        equ    $0101 ; red heart
 sk_spr_heart_empty      equ    $0102 ; empty heart
@@ -320,7 +332,8 @@ start:
             ; reset tile maps
             mbs3_gfx_setPB1     0 ; choose tilemap 0
             mbs3_gfx_tmreset      
-
+            ; reset sk data
+            call            sk_init_data
             ; show intro
             mov             b0, rom_sk_scr_intro1
             call            showromscreenshot
@@ -340,14 +353,16 @@ start:
 
             ; set default first hero location and looks
             ;  location is set to hero map0 location 
-            mbs3_gfx_setPB1 127                 ; sprite 127 (hero)
+            mbs3_gfx_setPB1 sk_sprid_hero       ; sprite id hero
             mbs3_gfx_setPW2 $1018               ; coords x=24,y=16
             mbs3_gfx_setPB3 1                   ; tile surface
             mbs3_gfx_setPW4 sk_spr_hero_right1  ; set index/bank
             mbs3_gfx_setPB5 sk_tile_keycolor    ; keycolor
             mbs3_gfx_setPB6 $A1                 ; enabled|z=1|keycolor
             mbs3_gfx_sprconf                    ; sprite config
-
+            ; prepare sprites for bottom status
+            call            sk_preparebottom
+            call            sk_updatebottom
             ; shows all maps
             mov             b1, 0
 .cont            
@@ -436,10 +451,194 @@ start:
             hlt
 
 
+sk_init_data
+            pusha
+            ld      b0, $FF
+            sr      b0, [sk_prev_map]
+            sr      b0, [sk_curr_map]
+            mov     b0, 3
+            sr      b0, [sk_max_life]
+            sr      b0, [sk_curr_life]
+            mov     w0, sk_have_item
+            mov     w1, $0110
+            eor     b7, b7
+.loop            
+            cmp     w1, 0
+            jz      .quitroutine
+            sr      b7, [w0]
+            inc     w0
+            dec     w1
+            j       .loop
+            .quitroutine
+            popa
+            ret
+
+
+sk_preparebottom
+            pusha
+            ; black Sprites
+            mov     b2, sk_sprid_bot_blk
+            eor     b3, b3
+            mov     w2, $5C00
+.nextblack            
+            mbs3_gfx_setPB1 b2        
+            mbs3_gfx_setPW2 w2                  ; coords
+            mbs3_gfx_setPB3 1                   ; tile surface
+            mbs3_gfx_setPW4 sk_spr_black        ; set index/bank
+            mbs3_gfx_setPB5 sk_tile_keycolor    ; keycolor
+            mbs3_gfx_setPB6 $A1                 ; enabled|z=1|keycolor
+            mbs3_gfx_sprconf                    ; sprite config
+            add     w1, $0101
+            add     w2, $0008
+            cmp     b3, 20
+            jnz     .nextblack
+
+            ; heart sprites
+            mov     b2, sk_sprid_bot_heart
+            eor     b3, b3
+            mov     w2, $5D01
+.nextheart
+            mbs3_gfx_setPB1 b2        
+            mbs3_gfx_setPW2 w2                  ; coords
+            mbs3_gfx_setPB3 1                   ; tile surface
+            mbs3_gfx_setPW4 sk_spr_heart_empty  ; set index/bank
+            mbs3_gfx_setPB5 sk_tile_keycolor    ; keycolor
+            mbs3_gfx_setPB6 $A1                 ; enabled|z=1|keycolor
+            mbs3_gfx_sprconf                    ; sprite config
+            add     w1, $0101
+            add     w2, $0008
+            cmp     b3, 6
+            jnz     .nextheart
+
+            ; item sprites
+            mov     b2, sk_sprid_bot_item
+            eor     b3, b3
+            mov     w2, $5D99
+.nextitem
+            mbs3_gfx_setPB1 b2        
+            mbs3_gfx_setPW2 w2                  ; coords
+            mbs3_gfx_setPB3 1                   ; tile surface
+            mbs3_gfx_setPW4 sk_spr_black        ; set index/bank
+            mbs3_gfx_setPB5 sk_tile_keycolor    ; keycolor
+            mbs3_gfx_setPB6 $A1                 ; enabled|z=1|keycolor
+            mbs3_gfx_sprconf                    ; sprite config
+            add     w1, $0101
+            sub     w2, $0008
+            cmp     b3, 14
+            jnz     .nextitem                        
+            popa
+            ret
+
+sk_updatebottom
+            pusha
+            mov     b2, sk_sprid_bot_heart
+            ld      b4, [sk_curr_life]
+            ld      b5, [sk_max_life]
+            mov     b6, 6
+.currlife            
+            cmp     b4, 0
+            jz      .maxlife
+            mbs3_gfx_setPB1 b2
+            mbs3_gfx_sprgetconf
+            mbs3_gfx_setPW4 sk_spr_heart_red
+            mbs3_gfx_sprconf
+            inc     b2
+            dec     b4
+            dec     b5
+            dec     b6
+            j       .currlife
+
+.maxlife
+            cmp     b5,0
+            jz      .blanklife
+            mbs3_gfx_setPB1 b2
+            mbs3_gfx_sprgetconf
+            mbs3_gfx_setPW4 sk_spr_heart_empty
+            mbs3_gfx_sprconf
+            inc     b2
+            dec     b5
+            dec     b6
+            j       .maxlife
+
+.blanklife 
+            cmp     b6, 0
+            jz      .endheart
+            mbs3_gfx_setPB1 b2
+            mbs3_gfx_sprgetconf
+            mbs3_gfx_setPW4 sk_spr_black
+            mbs3_gfx_sprconf
+            inc     b2
+            dec     b6
+            j       .blanklife
+.endheart   
+; show item in bottom bar
+            mov     b2, sk_sprid_bot_item
+            eor     b3, b3
+            mov     w2, $5D9F ; start location at right
+            ld      b6, [sk_curr_map]
+            eor     b7, b7
+            shl     w3
+            shl     w3
+            shl     w3
+            shl     w3
+            add     w3, sk_have_item ; got item in map addr
+.item            
+            mbs3_gfx_setPB1 b2
+            mbs3_gfx_sprgetconf
+            ld      b0, [w3]
+            cmp     b0, 0
+            jz      .hideitem
+            cmp     b3, 0
+            jz      .nextitem
+            cmp     b3, 7
+            jz      .nextitem
+            cmp     b3, 6
+            jbe     .keysize
+            cmp     b3, 8
+            jz      .bootsize
+            cmp     b3, 9
+            jz      .diamondsize
+            ; default size
+            sub     w2, $0008
+            j       .tilebankindex
+.keysize    
+            sub     w2, $0006
+            j       .tilebankindex
+.bootsize
+            sub     w2, $0007
+            j       .tilebankindex
+.diamondsize            
+            sub     w2, $0007
+.tilebankindex            
+            mov     b0, b3
+            eor     b1, b1
+            shl     w0
+            add     w0, sk_item_bankindex
+            ld      w0, [w0]
+            mbs3_gfx_setPW2 w2
+            mbs3_gfx_setPW4 w0
+            mbs3_gfx_sprconf
+            j       .nextitem
+.hideitem
+            mbs3_gfx_setPW2 $5DA0
+            mbs3_gfx_sprconf
+.nextitem
+            inc     b2
+            inc     w3
+            inc     b3
+            cmp     b3,10
+            jz      .endBottom            
+            jump    .item   
+            
+.endBottom            
+            popa
+            ret
+
+
 sk_sprite_anim
             pusha
         ; ****  item animate up/down
-            mov     b2, 100 ; first item sprite id
+            mov     b2, sk_sprid_item ; first item sprite id
             ld      w0, [timer_count]
             tst     w0, $0008
             jz      .item_up
@@ -460,7 +659,7 @@ sk_sprite_anim
             mbs3_gfx_sprconf
 .item_next
             inc     b2
-            cmp     b2, 110 ; 109 is last item sprite id
+            cmp     b2, sk_sprid_item_last ; last item sprite+1
             jnz     .item_move
 
             ; TODO , furnace fire, enemy etc...
@@ -641,6 +840,8 @@ sk_tilemap
                 sr                  b0, [sk_curr_map]
                 ld                  b1, [lbs3_bank_rom]
                 sr                  b1, [.oldrom]
+                ; show correct bottom bar
+                call                sk_updatebottom
                 ; hide map items 
                 call                sk_hideMapItems
                 ; select rom map
@@ -724,13 +925,13 @@ sk_map_meta
 ; hide all items on map
 sk_hideMapItems
             pusha
-            mov     w1, 100
+            mov     w1, sk_sprid_item
 .nextItem   mbs3_gfx_setPB1 b2
             mbs3_gfx_sprgetconf
             mbs3_gfx_setPB6 01
             mbs3_gfx_sprconf
             inc     b2
-            cmp     b2, 110
+            cmp     b2, sk_sprid_item_last
             jnz     .nextItem
             popa
             ret
@@ -747,7 +948,7 @@ sk_tomaphero
             jump    .quitroutine
 .setherolocation            
             mbs3_gfx_pushparameters
-            mbs3_gfx_setPB1 127 ; get hero sprite info
+            mbs3_gfx_setPB1 sk_sprid_hero ; get hero info
             mbs3_gfx_sprgetconf
             shl     w1
             shl     w1
@@ -803,7 +1004,7 @@ sk_showMapItem
 
             ; show item [.itemId] at location map [.itemTileCoords]
             ld      b0, [.itemId]
-            add     b0, 100     ; sprite id from 100 to maxi 115
+            add     b0, sk_sprid_item   ; sprite id 
             mbs3_gfx_setPB1 b0          ; sprite b0
             ld      w0, [.itemTileCoords]
             ; convert tile to pixel Coordinates
@@ -1044,6 +1245,7 @@ sk_print
 .oldrom         db      0
 
 ; sk data
+
 sk_prev_map     db                  $FF
 sk_curr_map     db                  $FF
 sk_max_life     db                  3
@@ -1053,15 +1255,15 @@ sk_tick         db                  0
                 align               16
 sk_have_item   ; 0 : not yet in posession  != 0 gotten item
                 db                  0 ; item 0, health ?
-                db                  0 ; item 1, silver key
-                db                  0 ; item 2, green key
+                db                  1 ; item 1, silver key
+                db                  1 ; item 2, green key
                 db                  0 ; item 3, red key
                 db                  0 ; item 4, blue key
                 db                  0 ; item 5, purple key
                 db                  0 ; item 6, gold key
                 db                  0 ; item 7, health plus
-                db                  0 ; item 8, boots
-                db                  0 ; item 9, diamond
+                db                  1 ; item 8, boots
+                db                  1 ; item 9, diamond
                 align               16
                 ; max 16 maps of 16 items
                 ; if a item is unique in game, then if collected in A
