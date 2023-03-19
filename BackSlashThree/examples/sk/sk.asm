@@ -453,7 +453,7 @@ start:
 
 sk_init_data
             pusha
-            ld      b0, $FF
+            mov     b0, $FF
             sr      b0, [sk_prev_map]
             sr      b0, [sk_curr_map]
             mov     b0, 3
@@ -469,7 +469,7 @@ sk_init_data
             inc     w0
             dec     w1
             j       .loop
-            .quitroutine
+.quitroutine
             popa
             ret
 
