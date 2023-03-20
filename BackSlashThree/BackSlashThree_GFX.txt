@@ -842,7 +842,7 @@ Status
 Command $15
 Parameter
     Input
-        PB1 : Sprite number (from 0 to 128)
+        PB1 : Sprite number (from 0 to 127)
         PW2 : Sprite Coordinates (see bit 4 of PB6 ) $YYXX (MSB: Y coordinate, LSB: X coordinate)
         PB3 : tile image Surface number (0 or 1 or $80 or $81, (bit 7 is ignored))
         PW4 : (tile ref for Or or Keycolor operation) tile image bank number and index :  $BBII  : MSB BB is bank number, LSB II is index number
@@ -891,7 +891,7 @@ Status
 Command $16
 Parameter
     Input
-        PB1 : Sprite number (from 0 to 128)
+        PB1 : Sprite number (from 0 to 127)
     Output
         PW2 : Sprite Coordinates (see bit 4 of PB6 ) $YYXX (MSB: Y coordinate, LSB: X coordinate)
         PB3 : tile image Surface number (0 or 1 or $80 or $81, (bit 7 is ignored))
