@@ -11,7 +11,8 @@
 
 struct dev_bs3gfx_tile
 {
-    WORD metadata;                          /* custom data usable by BS3 CPU program */
+    WORD metadata1;                         /* custom data #1, usable by BS3 CPU program */
+    WORD metadata2;                         /* custom data #2, usable by BS3 CPU program */
     union 
     {
         WORD coordinates;                   /* tile coordinates(may be) for tile and sprite(if tileCoordinate == 1 ), or sprite absolute coordinates*/
@@ -1503,7 +1504,8 @@ void bs3_gfx_command_tile_map_cell_config()
     BYTE tileauxindex;
     BYTE tilekeycolor;
     BYTE cellconfig;
-    WORD cellmetadata;
+    WORD cellmetadata1;
+    WORD cellmetadata2;
     struct dev_bs3gfx_tile cell;
 
     /* get the information from the device registers */
@@ -1520,7 +1522,8 @@ void bs3_gfx_command_tile_map_cell_config()
     tileauxindex            = (BYTE)(tileauxbankindex & 0x00FF);
     tilekeycolor            = reg_bs3gfx.pb5;
     cellconfig              = reg_bs3gfx.pb6;
-    cellmetadata            = reg_bs3gfx.pw6;
+    cellmetadata1           = reg_bs3gfx.pw6;
+    cellmetadata2           = reg_bs3gfx.pw7;
 
     /* check value validity */
     if (tilemapid & 0xFE )
@@ -1577,7 +1580,8 @@ void bs3_gfx_command_tile_map_cell_config()
     reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].auxTileBank       = tileauxbank & 0x03;
     reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].auxTileBank       = tileauxindex;
     reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].keyColor          = tilekeycolor;
-    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].metadata          = cellmetadata;
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].metadata1         = cellmetadata1;
+    reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].metadata2         = cellmetadata2;
     
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 
@@ -1614,7 +1618,8 @@ void bs3_gfx_command_tile_map_cell_getconfig()
     reg_bs3gfx.pw4 = (((WORD)reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].mainTileBank & 0x03) << 8) | (WORD)reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].mainTileIndex;
     reg_bs3gfx.pw5 = (((WORD)reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].auxTileBank & 0x03) << 8) | (WORD)reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].auxTileBank;
     reg_bs3gfx.pb5 = reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].keyColor;
-    reg_bs3gfx.pw6 = reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].metadata;
+    reg_bs3gfx.pw6 = reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].metadata1;
+    reg_bs3gfx.pw7 = reg_bs3gfx.tilemap[tilemapid].map[tilemapcelly][tilemapcellx].metadata2;
     
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 
@@ -1632,7 +1637,8 @@ void bs3_gfx_command_sprite_reset()
         reg_bs3gfx.sprite[i].mainTileIndex  = 0;
         reg_bs3gfx.sprite[i].auxTileBank    = 0;
         reg_bs3gfx.sprite[i].auxTileIndex   = 0;
-        reg_bs3gfx.sprite[i].metadata       = 0;
+        reg_bs3gfx.sprite[i].metadata1      = 0;
+        reg_bs3gfx.sprite[i].metadata2      = 0;
     }
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }
@@ -1652,7 +1658,8 @@ void bs3_gfx_command_sprite_config()
     BYTE tileauxindex;
     BYTE tilekeycolor;
     BYTE spriteconfig;
-    WORD spritemetadata;
+    WORD spritemetadata1;
+    WORD spritemetadata2;
     struct dev_bs3gfx_tile sprite;
 
     /* get the information from the device registers */
@@ -1669,7 +1676,8 @@ void bs3_gfx_command_sprite_config()
     tileauxindex            = (BYTE)(tileauxbankindex & 0x00FF);
     tilekeycolor            = reg_bs3gfx.pb5;
     spriteconfig            = reg_bs3gfx.pb6;
-    spritemetadata          = reg_bs3gfx.pw6;
+    spritemetadata1         = reg_bs3gfx.pw6;
+    spritemetadata2         = reg_bs3gfx.pw7;
     sprite.config           = spriteconfig;
 
     /* check value validity */
@@ -1727,7 +1735,8 @@ void bs3_gfx_command_sprite_config()
     reg_bs3gfx.sprite[spriteid].auxTileBank     = tileauxbank & 0x03;
     reg_bs3gfx.sprite[spriteid].auxTileBank     = tileauxindex;
     reg_bs3gfx.sprite[spriteid].keyColor        = tilekeycolor;
-    reg_bs3gfx.sprite[spriteid].metadata        = spritemetadata;
+    reg_bs3gfx.sprite[spriteid].metadata1       = spritemetadata1;
+    reg_bs3gfx.sprite[spriteid].metadata2       = spritemetadata2;
     
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 
@@ -1754,7 +1763,8 @@ void bs3_gfx_command_sprite_getconfig()
     reg_bs3gfx.pw4 = (((WORD)reg_bs3gfx.sprite[spriteid].mainTileBank) << 8) | (WORD)reg_bs3gfx.sprite[spriteid].mainTileIndex;
     reg_bs3gfx.pw5 = (((WORD)reg_bs3gfx.sprite[spriteid].auxTileBank)  << 8) | (WORD)reg_bs3gfx.sprite[spriteid].auxTileBank;
     reg_bs3gfx.pb5 = reg_bs3gfx.sprite[spriteid].keyColor;
-    reg_bs3gfx.pw6 = reg_bs3gfx.sprite[spriteid].metadata;
+    reg_bs3gfx.pw6 = reg_bs3gfx.sprite[spriteid].metadata1;
+    reg_bs3gfx.pw7 = reg_bs3gfx.sprite[spriteid].metadata2;
     
     reg_bs3gfx.COMMAND_STATUS_CODE = BS3_GFX_STATUS_OK;
 }

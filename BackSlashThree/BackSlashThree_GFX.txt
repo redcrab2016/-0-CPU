@@ -762,7 +762,8 @@ Parameter
                 | 
                 +-------------- 0: invisible cell map (not rendered)
                                 1: visible cell map
-        PW6 : custom meta data                                
+        PW6 : custom meta data #1
+        PW7 : custom meta data #2           
     Output
         N/A 
 Description 
@@ -812,7 +813,8 @@ Parameter
                 | 
                 +-------------- 0: invisible cell map (not rendered)
                                 1: visible cell map
-        PW6 : custom meta data                                
+        PW6 : custom meta data #1
+        PW7 : custom meta data #2           
 Description 
     Get a tile map cell configuration. Parameters with same semantic as TILE_MAP_CELL_CONFIG
 Status
@@ -872,7 +874,8 @@ Parameter
                 | 
                 +-------------- 0: disable sprite (not rendered and ignored by the device)
                                 1: enable sprite
-        PW6 : custom meta data                                
+        PW6 : custom meta data #1
+        PW7 : custom meta data #2           
     Output 
         n/A
 Description
@@ -922,7 +925,8 @@ Parameter
                 | 
                 +-------------- 0: disabled sprite (not rendered and ignored by the device)
                                 1: enabled sprite
-        PW6 : custom meta data                                
+        PW6 : custom meta data #1
+        PW7 : custom meta data #2           
 Description
     get sprite configuration
 Status

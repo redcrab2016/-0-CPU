@@ -82,10 +82,19 @@ rom_map_layer2_offset  equ     $01E0
 ;  ?         10      5  : lock, purple
 ;  ?         10      6  : lock, gold
 
-sk_object_item      equ     4
-sk_object_enemy     equ     5
-sk_object_emitter   equ     9
-sk_object_tomap     equ     3
+sk_object_item              equ     4
+sk_object_enemy             equ     5
+sk_object_enemy_bat         equ     0
+sk_object_enemy_skeleton    equ     1
+sk_object_enemy_redknight   equ     2
+sk_object_emitter           equ     9
+sk_object_emitter_fireballr equ     0
+sk_object_emitter_fireballl equ     1
+sk_object_emitter_fireskulr equ     2
+sk_object_emitter_fireskull equ     3
+
+sk_object_tomap             equ     3
+
 
 sk_sprid_hero       equ     $78
 sk_sprid_heroswordl equ     $79
@@ -95,6 +104,7 @@ sk_sprid_item_last  equ     $6A
 sk_sprid_bot_blk    equ     $0
 sk_sprid_bot_heart  equ     $20
 sk_sprid_bot_item   equ     $30
+sk_sprid_enemie     equ     $40
 sk_sprid_furnfire   equ     $77
 sk_sprid_blip       equ     $76  
 
@@ -359,6 +369,8 @@ start:
             mbs3_gfx_setPW4 sk_spr_hero_right1  ; set index/bank
             mbs3_gfx_setPB5 sk_tile_keycolor    ; keycolor
             mbs3_gfx_setPB6 $A1                 ; enabled|z=1|keycolor
+            mbs3_gfx_setPW6 $0000               ; reset metadata 1
+            mbs3_gfx_setPW7 $0000               ; reset metadata 2
             mbs3_gfx_sprconf                    ; sprite config
             ; prepare sprites for bottom status
             call            sk_preparebottom
@@ -377,11 +389,24 @@ start:
 .refresh            
             call            sk_sprite_anim
             mbs3_gfx_refresh
-            wait
+            call            timer_wait_tick ;wait
+.getinput            
             in              b0
-            jz              .refresh
+            jz              .noaction
+            and             b0, $7F ; remove 7th bit
             cmp             b0, 10
             jz              .cont4
+            cmp             b0, ' ' ; attack
+            jz              .action            
+            cmp             b0, 'A' ; 
+            jl              .getinput
+            cmp             b0, 'D' ; down
+            ja              .getinput
+            j               .action
+.noaction            
+            eor             b0, b0 ; no hero action
+.action
+            call            sk_hero_action            
             jump            .refresh
             ;bs3_wait_input
 
@@ -472,7 +497,142 @@ sk_init_data
 .quitroutine
             popa
             ret
+;
+; Hero status:
+;    sub status #1: face to  left=1 | right=0
+;    sub status #2: normal=0 | hurted=1
+;     hurted tick counter 
+;     status tick counter
+;    status:
+;             stand 
+;             fall 
+;             move
+;             jump
+;             jumpmove
+;             doublejump ?
+;             doublejumpmove ?
+;             attack
+;             bat
+; 
+; b0 =action  
+;      'A' up , 'B' down, 'C' right, 'D' left
+;      ' ' attack , $00 no action     
+sk_hero_action
+            pusha
+            sr      b0, [.action]; store action 
+            ; get sprite hero info
+            mbs3_gfx_setPB1 sk_sprid_hero
+            mbs3_gfx_sprgetconf
+            ld      w0, [lbs3_gfx_reg2]
+            sr      w0, [.hero_coords]
+            ld      w0, [lbs3_gfx_reg6]
+            sr      w0, [.hero_meta1]
+            ld      w0, [lbs3_gfx_reg7]
+            sr      w0, [.hero_meta2]
+            ld      w0, [lbs3_gfx_reg4]
+            sr      w0, [.hero_bankindex]
+            ld      b0, [lbs3_gfx_reg6]
+            sr      b0, [.hero_config]
+            ; get surrounding tile info
+            ;  center
+            ld      w1, [.hero_coords]
+            sub     w1, $0101
+            add     w1, $0404
+            call    sk_map_getmeta
+            sr      w2, [.htm_center]
+            ;  left
+            ld      w1, [.hero_coords]
+            sub     w1, $0101
+            add     w1, $0400
+            call    sk_map_getmeta
+            sr      w2, [.htm_left]
+            ;  right
+            ld      w1, [.hero_coords]
+            sub     w1, $0101
+            add     w1, $0409
+            call    sk_map_getmeta
+            sr      w2, [.htm_right]
+            ;  top
+            ld      w1, [.hero_coords]
+            sub     w1, $0101
+            add     w1, $0004
+            call    sk_map_getmeta
+            sr      w2, [.htm_top]
+            ;  bottom
+            ld      w1, [.hero_coords]
+            sub     w1, $0101
+            add     w1, $0904
+            call    sk_map_getmeta
+            sr      w2, [.htm_bottom]
+            ; compute hero update
+            cmp     b4, 0
+            jnz     .cont1
+            ld      w0, [.hero_coords]
+            add     w0, $0200
+            sr      w0, [.hero_coords]
 
+.cont1
+
+            ; set hero sprite data
+            ld      w0, [.hero_coords]
+            sr      w0, [lbs3_gfx_reg2]
+            ld      w0, [.hero_bankindex]
+            sr      w0, [lbs3_gfx_reg4]
+            ld      b0, [.hero_config]
+            sr      b0, [lbs3_gfx_reg6]
+            ld      w0, [.hero_meta1]
+            sr      w0, [lbs3_gfx_reg6]
+            ld      w0, [.hero_meta2]
+            sr      w0, [lbs3_gfx_reg7]
+            mbs3_gfx_sprconf
+            popa
+            ret
+.action             db      0
+.hero_config        db      0
+.hero_coords        dw      0
+.hero_bankindex     dw      0
+.hero_meta1     
+.hero_status        db      0
+.hero_meta1high     db      0
+.hero_meta2     
+.hero_meta2low      db      0
+.hero_meta2high     db      0
+.htm_center
+.htm_center_l1      db      0
+.htm_center_l2      db      0
+.htm_top
+.htm_top_l1         db      0
+.htm_top_l2         db      0
+.htm_bottom
+.htm_bottom_l1      db      0
+.htm_bottom_l2      db      0
+.htm_left
+.htm_left_l1        db      0
+.htm_left_l2        db      0
+.htm_right
+.htm_right_l1       db      0
+.htm_right_l2       db      0
+
+
+; w1 = pixel coordinate
+; return w2 : metainfo1 of tile at coordinate
+sk_map_getmeta
+            pusha
+            mbs3_gfx_pushparameters
+            and     w1,$F8F8
+            shr     w1
+            shr     w1
+            shr     w1
+            mbs3_gfx_setPB1 0 ; tilemap 0
+            mbs3_gfx_setPW2 w1 ; tile coordinates
+            mbs3_gfx_tmcellgetconf
+            ld      w1, [lbs3_gfx_reg6]
+            sr      w1, [.metainfo1]
+            mbs3_gfx_popparameters
+            popa
+            ld      w2, [.metainfo1]
+            ret
+.metainfo1  dw      0
 
 sk_preparebottom
             pusha
@@ -844,6 +1004,8 @@ sk_tilemap
                 call                sk_updatebottom
                 ; hide map items 
                 call                sk_hideMapItems
+                ; hide enemy items
+                call                sk_hideMapEnemies
                 ; select rom map
                 add                 b0, rom_sk_map0
                 sr                  b0, [lbs3_bank_rom]
@@ -935,6 +1097,27 @@ sk_hideMapItems
             jnz     .nextItem
             popa
             ret
+; hide all enemies on map
+sk_hideMapEnemies
+            pusha
+            mov     b2, sk_sprid_enemie
+            eor     b3, b3
+.loopenemy            
+            mbs3_gfx_setPB1 b2 
+            mbs3_gfx_sprgetconf
+            ld      b4, [lbs3_gfx_reg6]
+            tst     b4, $80 ; is it enabled
+            jz      .nextenemy ; if already disable, next enemy
+            and     b4, $7F ; disable sprite
+            mbs3_gfx_setPB6 b4
+            mbs3_gfx_sprconf
+.nextenemy            
+            inc     b2
+            inc     b3
+            cmp     b3, $20
+            jnz     .loopenemy
+            popa
+            ret
 
 ; hero position ? at map load
 ; input:
@@ -960,11 +1143,80 @@ sk_tomaphero
             popa
             ret
 
+; set GFX PB1 with a free sprite id for enemy
+; set GFX PB1 with $FF is no free sprite id
+sk_enemy_getfreeesprid
+            pusha
+            mov     b2, sk_sprid_enemie
+            eor     b3, b3
+.nextSprite            
+            mbs3_gfx_setPB1 b2
+            mbs3_gfx_sprgetconf
+            ld      b6, [lbs3_gfx_reg6]
+            tst     b6, $80
+            jz      .found
+            inc     b2
+            inc     b3
+            cmp     b3, $20
+            jnz     .nextSprite
+            mbs3_gfx_setPB1 $FF
+.found            
+            popa
+            ret
+
 ; add Enemy 
 ; input:
 ;   b7 : Enemy 
 ;   w1 = Enemy in tile coordinates YYXX (YY: 0..19, XX: 0..11)
 sk_showEnemy
+            pusha
+            mbs3_gfx_pushparameters
+            ; get free sprite id 
+            call    sk_enemy_getfreeesprid
+            ld      b6, [lbs3_gfx_reg1]
+            cmp     b6, $FF
+            jnz     .spawn 
+            jump    .cantspawn ; no free sprite id
+.spawn            
+            ; prepare the sprite info PB1 is already set
+            ;  set coordinates
+            and     w1, $1F1F
+            shl     w1
+            shl     w1
+            shl     w1
+            mbs3_gfx_setPW2 w1
+            ;  set tile surface source
+            mbs3_gfx_setPB3 1
+            ; set tile bank/index
+            cmp     b7, sk_object_enemy_bat
+            jnz     .skeleton
+            mbs3_gfx_setPW4 sk_spr_bat_sleep
+            j       .cont
+.skeleton
+            cmp     b7, sk_object_enemy_skeleton
+            jnz     .redknight 
+            mbs3_gfx_setPW4 sk_spr_skelguard_right1
+            j       .cont
+.redknight
+            cmp     b7, sk_object_enemy_redknight
+            jnz     .cantspawn
+            mbs3_gfx_setPW4 sk_spr_guard_right1                
+.cont
+            ;  set keycolor
+            mbs3_gfx_setPB5 sk_tile_keycolor
+            ; enabled|z=1|collidable|keycolor
+            mbs3_gfx_setPB6 $A9
+            ; metadata1
+            mov     b6, b7
+            eor     b7, b7
+            mbs3_gfx_setPW6 w3 ; $00xx (xx = enemy type id)
+            ; metadata2
+            mbs3_gfx_setPW7 $0000
+            ; set sprite config
+            mbs3_gfx_sprconf
+.cantspawn            
+            mbs3_gfx_popparameters
+            popa
             ret
 
 ; add  Emitter  if not already in gotten

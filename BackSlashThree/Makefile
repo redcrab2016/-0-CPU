@@ -10,9 +10,9 @@ LINKERFLAG = -lm -pthread
 # maxi run speed
 #DEBUG = -std=gnu11 -O3
 # mini size
-#DEBUG = -Os
+DEBUG = -std=gnu11 -Os
 # debug info with default optimization
-DEBUG = -std=gnu11 -g  # for gdb debugging 
+#DEBUG = -std=gnu11 -g  # for gdb debugging 
 BINS := bs3asm bs3rt
 
 all: ${BINS} distribute
