@@ -499,21 +499,35 @@ sk_init_data
             ret
 ;
 ; Hero status:
-;    sub status #1: face to  left=1 | right=0
-;    sub status #2: normal=0 | hurted=1
-;     hurted tick counter 
-;     status tick counter
-;    status:
-;             stand 
-;             fall 
-;             move
-;             jump
-;             jumpmove
-;             doublejump ?
-;             doublejumpmove ?
-;             attack
-;             bat
-; 
+; pulse: vertical value (8 bits: countdown)
+;        horizontal value (8 bits countdown)
+; status :
+;       7 6 5 4 3 2 1 0
+;       | | | | | | | +- 0: Pulse horiz. right
+;       | | | | | | |    1: Pulse horiz. left
+;       | | | | | | | 
+;       | | | | | | +--- 0: Pulse verti. down
+;       | | | | | |      1: pulse verti. up
+;       | | | | | | 
+;       | | | | | +----- 0: Passive 
+;       | | | | |        1: Attack
+;       | | | | |
+;       | | | | +------- 0: Normal
+;       | | | |          1: invincible (blink)
+;       | | | |
+;       | | | +--------- 0: Double jump disabled
+;       | | |            1: Double jump enabled
+;       | | |
+;       | | +----------- 0: Double jump not used
+;       | |              1: Double jump used
+;       | | 
+;       | +------------- 0:
+;       |                1:
+;       |
+;       +--------------- 0: Hero
+;                        1: Bat
+;
+;  counter: 8 bits countdown (for invincibility )
 ; b0 =action  
 ;      'A' up , 'B' down, 'C' right, 'D' left
 ;      ' ' attack , $00 no action     
