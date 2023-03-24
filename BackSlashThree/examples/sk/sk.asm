@@ -498,7 +498,7 @@ sk_init_data
             popa
             ret
 ;
-; Hero status:
+; Hero info:
 ; pulse: vertical value (8 bits: countdown)
 ;        horizontal value (8 bits countdown)
 ; status :
@@ -509,11 +509,11 @@ sk_init_data
 ;       | | | | | | +--- 0: Pulse verti. down
 ;       | | | | | |      1: pulse verti. up
 ;       | | | | | | 
-;       | | | | | +----- 0: Passive 
-;       | | | | |        1: Attack
+;       | | | | | +----- 0: Mood Passive 
+;       | | | | |        1: Mood Attack
 ;       | | | | |
-;       | | | | +------- 0: Normal
-;       | | | |          1: invincible (blink)
+;       | | | | +------- 0: Human Normal
+;       | | | |          1: Human invincible (blink)
 ;       | | | |
 ;       | | | +--------- 0: Double jump disabled
 ;       | | |            1: Double jump enabled
@@ -521,16 +521,121 @@ sk_init_data
 ;       | | +----------- 0: Double jump not used
 ;       | |              1: Double jump used
 ;       | | 
-;       | +------------- 0:
-;       |                1:
+;       | +------------- 0: Morph Bat disabled
+;       |                1: Morph Bat enabled
 ;       |
-;       +--------------- 0: Hero
-;                        1: Bat
+;       +--------------- 0: Morph Hero
+;                        1: Morph Bat
 ;
 ;  counter: 8 bits countdown (for invincibility )
+; 
+;  tile on and around Hero sprite
+;            (x,y-1)       (x+7,y-1)
+;             u1                  u2
+;            +---------------------+
+; (x-1,y)  l1|(x,y) (spr coord)    |r1 (x+8,y)
+;            |                     |
+;            |                     |
+;            |        m(x+3,y+3)   |
+;            |                     |
+;            |                     |
+;            |                     |
+; (x-1,y+7)l2|                     |r2 (x+8,y+7)
+;            +---------------------+
+;             d1                  d2 
+;             (x,y+8)             (x+7, y+8)
+; Alternative coordinates
+; X = x-1, Y = y-1
+; u1 = (X+1, Y+0)
+; u2 = (X+8, Y+0)
+; l1 = (X+0, Y+1)
+; l2 = (X+0, Y+8)
+; d1 = (X+1, Y+9)
+; d2 = (X+8, Y+9)
+; r1 = (X+9, Y+1)
+; r2 = (X+9, Y+8)
+; m = (X+4, Y+4)
+; function canmove(x,y, tiledir, action)
+;   X = tile coord de x
+;   Y = tile coord de y
+;   if X >=20 return false
+;   if Y >=12 return false 
+;   T = tile type at (X,Y)
+;   P = tile parameter at (X, Y)
+;   if T = 0 return true 
+;   if T = 1 return false
+;   if T = 2
+;     if tiledir != 'DOWN' return true
+;     if (y  & $07 != 0) return true
+;     if (action = 'go down') return true
+;     return false
+;   if T = 10 (locked block)
+;      if P is owned (key item) return true
+;      return false
+;
+; u,d,l,r are boolean to indicate if move is possible
+; u = canmove(X+1,Y+0, 'UP' , action)
+; if u 
+;   u = canmove(X+8, Y+0, 'UP', action)
+; d = canmove(X+1, Y+9, 'DOWN', action)
+; if d 
+;    d= canmove(X+8, Y+9, 'DOWN', action)
+; l = canmove(X+0, Y+1, 'LEFT', action)
+; if l
+;    l = canmove(X+0, Y+8, 'LEFT', action)
+; r = canmove(X+9, Y+1, 'RIGHT', action)
+; if r
+;    r = canmove(X+9, Y+8)
+;
+; if !d & vertical pulse = 0
+;    double jump not used
+; 
+; if action = 'go up'
+;    if !d & u & vertical pulse = 0
+;              vertical pulse is up and = 6
+;    else
+;       if d & u and dbl jump enabled and double jump is not use
+;              vertical pulse is up and = 6
+;              spawn blip sprite at hero location 
+;
+; if pulse vertical is up & >0 and !u
+;    pulse vertical = 0
+; if pulse vertical is down & >0 and !d 
+;    pulse verticial = 0
+; if pulse horiz is left & >0 and !l 
+;    pulse horiz = 0
+; if pulse horiz is right & >0 and !r 
+;    pulse horiz = 0
+; 
+; 
 ; b0 =action  
 ;      'A' up , 'B' down, 'C' right, 'D' left
-;      ' ' attack , $00 no action     
+;      ' ' attack , $00 no action    
+sk_hs_pulseh_mask   equ     $01
+sk_hs_pulseh_right  equ     $00
+sk_hs_pulseh_left   equ     $01
+sk_hs_pulsev_mask   equ     $02
+sk_hs_pulsev_down   equ     $00
+sk_hs_pulsev_up     equ     $02
+sk_hs_mood_mask     equ     $04
+sk_hs_mood_passive  equ     $00
+sk_hs_mood_attack   equ     $04
+sk_hs_human_mask    equ     $08
+sk_hs_human_normal  equ     $00
+sk_hs_human_invicible equ   $08
+sk_hs_2jump_mask    equ     $10
+sk_hs_2jump_disable equ     $00
+sk_hs_2jump_enable  equ     $10
+sk_hs_u2jump_mask   equ     $20
+sk_hs_u2jump_nused  equ     $00
+sk_hs_u2jump_used   equ     $20
+sk_hs_morphbat_mask equ     $40
+sk_hs_morphbat_disable equ  $00
+sk_hs_morphbat_enable  equ  $40
+sk_hs_morph_mask    equ     $80
+sk_hs_morph_hero    equ     $00
+sk_hs_morph_bat     equ     $80
+
 sk_hero_action
             pusha
             sr      b0, [.action]; store action 
@@ -602,15 +707,17 @@ sk_hero_action
             popa
             ret
 .action             db      0
+
 .hero_config        db      0
 .hero_coords        dw      0
 .hero_bankindex     dw      0
 .hero_meta1     
 .hero_status        db      0
-.hero_meta1high     db      0
+.hero_counter       db      0
 .hero_meta2     
-.hero_meta2low      db      0
-.hero_meta2high     db      0
+.hero_pulsehoriz    db      0
+.hero_pulseverti    db      0
+
 .htm_center
 .htm_center_l1      db      0
 .htm_center_l2      db      0

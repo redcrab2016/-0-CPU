@@ -8,9 +8,9 @@ CC = @gcc
 
 LINKERFLAG = -lm -pthread
 # maxi run speed
-#DEBUG = -std=gnu11 -O3
+DEBUG = -std=gnu11 -O3
 # mini size
-DEBUG = -std=gnu11 -Os
+#DEBUG = -std=gnu11 -Os
 # debug info with default optimization
 #DEBUG = -std=gnu11 -g  # for gdb debugging 
 BINS := bs3asm bs3rt
