@@ -573,6 +573,8 @@ sk_init_data
 ;      if P is owned (key item) return true
 ;      return false
 ;
+;  // POSSIBLE MOVE
+;
 ; u,d,l,r are boolean to indicate if move is possible
 ; u = canmove(X+1,Y+0, 'UP' , action)
 ; if u 
@@ -590,24 +592,93 @@ sk_init_data
 ; if !d & vertical pulse = 0
 ;    double jump not used
 ; 
-; if action = 'go up'
-;    if !d & u & vertical pulse = 0
-;              vertical pulse is up and = 6
-;    else
-;       if d & u and dbl jump enabled and double jump is not use
-;              vertical pulse is up and = 6
-;              spawn blip sprite at hero location 
+; // ACTION to pulse 
 ;
-; if pulse vertical is up & >0 and !u
+; if action = 'go up'
+;    if hero morph human
+;      if !d & u & vertical pulse = 0
+;                vertical pulse is up and = 6
+;      else
+;         if d & u and dbl jump enabled and double jump is not use
+;                vertical pulse is up and = 6
+;                spawn blip sprite at hero location 
+;    else // hero is bat
+;      if u 
+;           vertical pulse is up and = 2
+;
+; if action = 'go down'
+;     if d & vertical pulse = 0
+;              vertical pulse is down and = 2 (or P ?)
+; 
+; if action = 'go left' & l
+;     if hero morph human
+;         horiz pulse is left and = 2
+;     else // hero morph bat
+;         horiz pulse is left and = 20
+;
+; if action = 'go right' & r 
+;     if hero morph human 
+;         horiz pulse is right and = 2
+;     else // hero morph bat
+;         horiz pulse is left and = 20
+;
+; // GRAVITY pulse
+; if d & vertical pulse = 0 
+;      vertical pulse is down and = 1
+;
+; // PHYSICAL pulse cancellation
+; if pulse vertical is up and !u
 ;    pulse vertical = 0
-; if pulse vertical is down & >0 and !d 
+; if pulse vertical is down and !d 
 ;    pulse verticial = 0
-; if pulse horiz is left & >0 and !l 
+; if pulse horiz is left and !l 
 ;    pulse horiz = 0
-; if pulse horiz is right & >0 and !r 
+; if pulse horiz is right and !r 
 ;    pulse horiz = 0
+;
+;  // APPEARANCE
+; Hero sprite Z = 1
+; if  hero invicible & countdown > 0
+;   countdown--
+;   if tick & 04 != 0 
+;      Hero Sprite Z = 3
+;   if countdown == 0 
+;     hero is normal (not invicible)
 ; 
-; 
+; if hero morph human 
+;   if horiz pulse is left
+;      hero tile face to left open leg
+;      if horiz pulse > 0 and tick & 02 != 0
+;         hero tile face to left close leg
+;   else
+;      hero tile face to right open leg
+;      if horiz pulse > 0 and tick & 02 != 0
+;         hero tile face to right close leg
+; else (morph bat)
+;      hero tile bat up wings
+;      if tick & 02 != 0
+;         hero tile bat down wings
+;
+; // LOCATION update by pulse
+; if pulse verical > 0
+;    pulse vertical--
+;    if pulse vertical is up
+;       hero y -=2
+;    else
+;       hero y +=2
+;
+; if pulse horiz > 0
+;    pulse horiz--
+;    if pulse horiz is left
+;        hero x -=2
+;    else
+;        hero x +=2
+;
+; // tile interact (Hurt, change map, morph to map/human, furnace)
+;
+; // Sprite interact
+;
+;
 ; b0 =action  
 ;      'A' up , 'B' down, 'C' right, 'D' left
 ;      ' ' attack , $00 no action    
