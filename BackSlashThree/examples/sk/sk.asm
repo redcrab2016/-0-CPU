@@ -1688,6 +1688,61 @@ sk_print
 .color          db      0
 .oldrom         db      0
 
+; B0 item number
+sk_hero_get_item
+                pusha
+                cmp     b0, 7
+                jnz     .allmapitem
+                ; only on current map (health +)
+                eor     w1,w1
+                ld      b2, [sk_curr_map]
+                shl     w1
+                shl     w1
+                shl     w1
+                shl     w1
+                add     w1, sk_have_item
+                eor     b1, b1
+                add     w1, w0
+                mov     b0, 1
+                sr      b0, [w1]
+                j       .quitroutine
+.allmapitem     
+                mov     w1, sk_have_item
+                eor     b1, b1
+                add     w1, w0
+                eor     b0,b0
+                mov     b1, 1
+.loopmap                
+                cmp     b0, $10
+                jz      .quitroutine
+                sr      b1, [w1]
+                add     w1, 16
+                inc     b0
+                j       .loopmap
+.quitroutine                
+                popa
+                ret
+
+; B0 item number
+; return B1 =0 not have !=0 having it
+sk_hero_has_item
+                pusha
+                eor     w1, w1
+                mov     b2, [sk_curr_map]
+                shl     w1
+                shl     w1
+                shl     w1
+                shl     w1
+                add     w1, sk_have_item
+                eor     b1,b1
+                add     w1, w0
+                ld      b0, [w1]
+                sr      b0, [.hasitem]
+                popa
+                ld      b1, [.hasitem]
+                ret
+.hasitem        db      0                               
+
 ; sk data
 
 sk_prev_map     db                  $FF
