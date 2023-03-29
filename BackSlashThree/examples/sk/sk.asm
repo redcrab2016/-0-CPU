@@ -372,6 +372,25 @@ start:
             mbs3_gfx_setPW6 $0000               ; reset metadata 1
             mbs3_gfx_setPW7 $0000               ; reset metadata 2
             mbs3_gfx_sprconf                    ; sprite config
+            ; set left sword
+            mbs3_gfx_setPB1 sk_sprid_heroswordl ; left hero sword
+            mbs3_gfx_setPW2 $0000               ; dummy coords
+            mbs3_gfx_setPB3 1                   ; tile surface
+            mbs3_gfx_setPW4 sk_spr_herosword_left ; set index/bank
+            mbs3_gfx_setPB6 $21                 ; disable|z=1|keycolor
+            mbs3_gfx_setPW6 $0000               ; zero metadata 1
+            mbs3_gfx_setPW7 $0000               ; zero metadata 2
+            mbs3_gfx_sprconf                    ; spr conf (left sword)
+            ; set right sword
+            mbs3_gfx_setPB1 sk_sprid_heroswordr ; right hero sword
+            mbs3_gfx_setPW2 $0000               ; dummy coords
+            mbs3_gfx_setPB3 1                   ; tile surface
+            mbs3_gfx_setPW4 sk_spr_herosword_right ; set index/bank
+            mbs3_gfx_setPB6 $21                 ; disable|z=1|keycolor
+            mbs3_gfx_setPW6 $0000               ; zero metadata 1
+            mbs3_gfx_setPW7 $0000               ; zero metadata 2
+            mbs3_gfx_sprconf                    ; spr conf(right sword)
+            
             ; prepare sprites for bottom status
             call            sk_preparebottom
             call            sk_updatebottom
@@ -573,6 +592,33 @@ sk_init_data
 ;      if P is owned (key item) return true
 ;      return false
 ;
+; // tile interact (Hurt, change map, morph to bat/human, furnace)
+; get tile meta $PPTT at X+4,Y+4 (P=PP, T = TT)
+; if T = 6 then
+;    hero life -= P
+;    if hero life = 0 or hero life > 128
+;        hero life = 0
+;        return dead
+;    refresh bottom bar
+;    set countdown = 30
+;    set human invincible
+; if T = 7 (morph) and morph bat enabled
+;     if P = 0(to bat) morp = bat
+;     else morph = human
+; if T = 3 (map change?)
+;     if    hero x = 0 and action 'go left'
+;        or hero x = 19 * 8 and action 'go right'
+;        or action 'go down' then
+;        return go to map P
+; if T=8
+;     hero life = max life
+;     savepoint coords = (hero X & $F8, hero Y & $F8)
+;     savepoint map = current map
+;     set furnace fire sprite at (hero X & $F8, hero Y & $F8)
+;
+; // Sprite interact (get item, get hurt by enemy)
+;
+;
 ;  // POSSIBLE MOVE
 ;
 ; u,d,l,r are boolean to indicate if move is possible
@@ -639,12 +685,21 @@ sk_init_data
 ;  // APPEARANCE
 ; Hero sprite Z = 1
 ; if  hero invicible & countdown > 0
+;   hero mood is passive
 ;   countdown--
-;   if tick & 04 != 0 
+;   if tick & 04 != 0 ; blink when invincible
 ;      Hero Sprite Z = 3
 ;   if countdown == 0 
 ;     hero is normal (not invicible)
-; 
+; else
+;   if hero mood is attack
+;     if countdown == 0 hero mood is passive
+;     if countdown > 0 countdown --
+;   if action 'attack' and hero morph human 
+;     hero mood is attack
+;     countdown = 2
+;   
+;
 ; if hero morph human 
 ;   if horiz pulse is left
 ;      hero tile face to left open leg
@@ -674,9 +729,15 @@ sk_init_data
 ;    else
 ;        hero x +=2
 ;
-; // tile interact (Hurt, change map, morph to map/human, furnace)
-;
-; // Sprite interact
+;  hero sword right is disabled
+;  hero sword left is disabled
+;  if hero mood attack
+;       if hero pulse horiz right then 
+;           hero sword right is enabled
+;           hero sword right location =  (hero x + 7, hero y)
+;       else 
+;           hero sword left is enabled
+;            hero sword left location = (hero x -4, hero y)
 ;
 ;
 ; b0 =action  
@@ -1728,7 +1789,7 @@ sk_hero_get_item
 sk_hero_has_item
                 pusha
                 eor     w1, w1
-                mov     b2, [sk_curr_map]
+                ld     b2, [sk_curr_map]
                 shl     w1
                 shl     w1
                 shl     w1
