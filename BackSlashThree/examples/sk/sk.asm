@@ -1804,7 +1804,7 @@ sk_hero_has_item
                 ret
 .hasitem        db      0                               
 
-; sk data
+; sk data 
 
 sk_prev_map     db                  $FF
 sk_curr_map     db                  $FF
