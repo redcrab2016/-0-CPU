@@ -5,6 +5,9 @@ bs3_main
 test.*
 !*.asm
 !*.inc
+bs3meta/tinyc/target
+bs3meta/tinyc/src/main/java/backslash/bs3/tinyc/generated/*
+!*.g4
 dist/*
 examples/sk/DATA
 examples/sk/*.s

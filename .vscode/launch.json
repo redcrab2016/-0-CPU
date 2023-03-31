@@ -5,6 +5,27 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "java",
+            "name": "BS3tinyc",
+            "request": "launch",
+            "mainClass": "backslash.bs3.tinyc.BS3tinyc",
+            "projectName": "tinyc"
+        },
+        {
+            "type": "java",
+            "name": "Tinyc2BS3",
+            "request": "launch",
+            "mainClass": "backslash.bs3.tinyc.Tinyc2BS3",
+            "projectName": "tinyc"
+        },
+        {
+            "type": "java",
+            "name": "App",
+            "request": "launch",
+            "mainClass": "backslash.bs3.App",
+            "projectName": "tinyc"
+        },
+        {
             "name": "(gdb) Pipe Launch",
             "type": "cppdbg",
             "request": "launch",
@@ -103,7 +124,5 @@
                 }
             ]
         }
-        
-
     ]
 }
