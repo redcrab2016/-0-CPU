@@ -57,13 +57,14 @@ program
 
 
 statement
-   : 'if' paren_expr statement                  
-   | 'if' paren_expr statement 'else' statement 
-   | 'while' paren_expr statement               
-   | 'do' statement 'while' paren_expr ';'      
-   | '{' statement* '}'                        
-   | expr ';'                                   
-   | ';'
+   locals [int subctx]
+   : 'if' paren_expr statement                     { $subctx = 1; }                  
+   | 'if' paren_expr statement 'else' statement    { $subctx = 2; } 
+   | 'while' paren_expr statement                  { $subctx = 3; } 
+   | 'do' statement 'while' paren_expr ';'         { $subctx = 4; } 
+   | '{' statement* '}'                            { $subctx = 5; } 
+   | expr ';'                                      { $subctx = 6; }     
+   | ';'                                           { $subctx = 7; } 
    ;
 
 paren_expr
@@ -76,14 +77,16 @@ expr
    ;
 
 test
-   : sum_            
-   | sum_ '<' sum_  
+   locals [int subctx]
+   : sum_                                          { $subctx = 1; } 
+   | sum_ '<' sum_                                 { $subctx = 2; } 
    ;
 
 sum_
-   : term            
-   | sum_ '+' term  
-   | sum_ '-' term  
+   locals [int subctx]
+   : term                                          { $subctx = 1; } 
+   | sum_ '+' term                                 { $subctx = 2; } 
+   | sum_ '-' term                                 { $subctx = 3; } 
    ;
 
 term

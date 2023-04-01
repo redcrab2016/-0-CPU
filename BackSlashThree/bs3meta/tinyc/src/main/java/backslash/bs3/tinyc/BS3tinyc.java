@@ -4,8 +4,6 @@ import backslash.bs3.tinyc.generated.*;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.*;
 
 import java.io.FileInputStream;
@@ -38,18 +36,13 @@ public class BS3tinyc
             parser.addErrorListener(new BS3tinycErrorListener());
             ParseTree tree = parser.program(); // parse 
             BS3tinycVisitor visitor = new BS3tinycVisitor();
-            //tree.accept(visitor);
-            //visitor.visitProgram(tree);
             ArrayList<Object> result = visitor.visit(tree);
 
             for (Object O : result)
             {
                 System.out.println("==>'"+ O.toString() + "'");
             }
-            //ParseTreeWalker walker = new ParseTreeWalker(); // create standard walker
-            //tinycListener extractor = new BS3tinycListener(System.out);
-            //parser.addParseListener(extractor);
-            //walker.walk(extractor, tree); // initiate walk of tree with listener
+
         } catch (Exception e)
         {
             e.printStackTrace();

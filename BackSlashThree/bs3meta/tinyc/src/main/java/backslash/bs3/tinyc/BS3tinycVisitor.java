@@ -75,9 +75,9 @@ public class BS3tinycVisitor extends tinycBaseVisitor<ArrayList<Object>> {
         ParseTree c;
         ArrayList<Object> childResult;
         String label ="._statement";
-        switch(ctx.getAltNumber())
+        switch(ctx.subctx)
         {
-            case 1: /* IF x THEN y */
+            case 1: /* IF x y */
                 _labelcnt++;
                 String labelif = label + String.valueOf(_labelcnt);
                 _labelcnt++;
@@ -91,12 +91,12 @@ public class BS3tinycVisitor extends tinycBaseVisitor<ArrayList<Object>> {
                 result.add("    jnz     "+labelif);
                 result.add("    jump    "+labelendif); 
                 result.add(labelif);
-                c = ctx.getChild(3);
+                c = ctx.getChild(2);
                 childResult = c.accept(this);
                 result = aggregateResult(result, childResult);
                 result.add(labelendif);
                 break;
-            case 2: /* IF x THEN y ELSE z */
+            case 2: /* IF x y ELSE z */
                 _labelcnt++;
                 labelif = label + String.valueOf(_labelcnt);
                 _labelcnt++;
@@ -110,12 +110,12 @@ public class BS3tinycVisitor extends tinycBaseVisitor<ArrayList<Object>> {
                 result.add("    jnz     "+labelif);
                 result.add("    jump    "+labelif2); 
                 result.add(labelif);
-                c = ctx.getChild(3);
+                c = ctx.getChild(2);
                 childResult = c.accept(this);
                 result = aggregateResult(result, childResult);
                 result.add("    jump    "+labelendif);
                 result.add(labelif2);
-                c = ctx.getChild(5);
+                c = ctx.getChild(4);
                 childResult = c.accept(this);
                 result = aggregateResult(result, childResult);
                 result.add(labelendif);
@@ -181,7 +181,7 @@ public class BS3tinycVisitor extends tinycBaseVisitor<ArrayList<Object>> {
         ArrayList<Object> result = new ArrayList<Object>();
         ParseTree c;
         ArrayList<Object> childResult;
-        switch(ctx.getAltNumber())
+        switch(ctx.subctx)
         {
             case 1:
                 c = ctx.getChild(0);
@@ -226,7 +226,7 @@ public class BS3tinycVisitor extends tinycBaseVisitor<ArrayList<Object>> {
         ParseTree c;
         ArrayList<Object> childResult;
         String label ="._test";
-        switch(ctx.getAltNumber())
+        switch(ctx.subctx)
         {
             case 1:
                 c = ctx.getChild(0);
