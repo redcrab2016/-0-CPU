@@ -7,7 +7,7 @@ import backslash.bs3.tinyc.*;
 }
 
 @parser::members {
-Map<String,BS3tinycSymbol> symbols = new HashMap<String,BS3tinycSymbol>();
+public Map<String,BS3tinycSymbol> symbols = new HashMap<String,BS3tinycSymbol>();
 public boolean addSymbol(String name, BS3tinycType aType, boolean isExtern)
 {
    if (symbols.containsKey(name)) return false;
@@ -72,7 +72,7 @@ type
 
 Bs3asm
    : (('{' [0-9]+ '}')[a-zA-Z0-9._[\]+$ \t",']+ ('{' [0-9]+ '}') )+
-   ; 
+   ;
 
 Bs3nl
    : [\r\n]+
@@ -86,7 +86,7 @@ bs3asmblock
    : Bs3asm Bs3comment? (Bs3nl bs3asmblock? )?
    | Bs3comment (Bs3nl bs3asmblock? )?
    | Bs3nl bs3asmblock
-   ;   
+   ;
 
 //BEGIN of  expression rules
 paren_expr
@@ -162,21 +162,24 @@ term
    ;
 
 targetvar
-   : id_ ('[' expr ']') ?
-   | '*' ('(' type ')')? expr
-   | regWord
-   | regByte
+   locals [int subctx]
+   : id_ ('[' expr ']') ?                          { $subctx = 0; }
+   | '*' ('(' type ')')? expr                      { $subctx = 1; }
+   | regWord                                       { $subctx = 2; }
+   | regByte                                       { $subctx = 3; }
    ;
 
 sourcevar
-   : ope=('&' | '*') ? id_ ( '[' expr ']') ?
-   | id_ '(' ')'
-   | id_ '(' expr  ')' // one param W0=expr
-   | id_ '(' expr ',' expr ')' // two params W0=1st expr, W1=2nd expr
-   | id_ '(' expr ',' expr ',' expr ')' // 3 aprams W0=1st expr, W1=2nd expr, W2=3rd expr
-   | id_ '(' expr ',' expr ',' expr ',' expr ')' // 4 params W0=1st expr, W1=2nd expr, W2=3rd expr and W3=4th expr
-   | regWord
-   | regByte
+   locals [int subctx]
+   : (ope='&' | ope='*' ('(' type ')')? ) ? 
+     id_ ( '[' expr ']') ?                         { $subctx = 0; }
+   | id_ '(' ')'                                   { $subctx = 1; }
+   | id_ '(' expr  ')'                             { $subctx = 2; } // one param W0=expr
+   | id_ '(' expr ',' expr ')'                     { $subctx = 3; } // two params W0=1st expr, W1=2nd expr
+   | id_ '(' expr ',' expr ',' expr ')'            { $subctx = 4; } // 3 aprams W0=1st expr, W1=2nd expr, W2=3rd expr
+   | id_ '(' expr ',' expr ',' expr ',' expr ')'   { $subctx = 5; } // 4 params W0=1st expr, W1=2nd expr, W2=3rd expr and W3=4th expr 
+   | regWord                                       { $subctx = 6; }
+   | regByte                                       { $subctx = 7; }
    ;
 
 regWord

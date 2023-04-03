@@ -9,6 +9,7 @@ import org.antlr.v4.runtime.tree.RuleNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import backslash.bs3.tinyc.generated.tinycBaseVisitor;
+import backslash.bs3.tinyc.generated.tinycParser;
 import backslash.bs3.tinyc.generated.tinycParser.AddexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.AndexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.AssignexprContext;
@@ -44,10 +45,14 @@ import backslash.bs3.tinyc.generated.tinycParser.UnaryexprContext;
 
 public class BS3tinycVisitor extends tinycBaseVisitor<List<Object>> {
 
+    private tinycParser parser;
+    public BS3tinycVisitor(tinycParser _parser) {
+        parser = _parser;
+    }
+
     @Override
     public List<Object> visitAddexpr(AddexprContext ctx) {
         // TODO Auto-generated method stub
-        ctx.addSymbol("",null,true);
         return super.visitAddexpr(ctx);
     }
 
@@ -126,6 +131,7 @@ public class BS3tinycVisitor extends tinycBaseVisitor<List<Object>> {
     @Override
     public List<Object> visitJump(JumpContext ctx) {
         // TODO Auto-generated method stub
+        
         return super.visitJump(ctx);
     }
 

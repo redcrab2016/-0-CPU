@@ -35,7 +35,7 @@ public class BS3tinyc
             tinycParser parser = new tinycParser(tokens);
             parser.addErrorListener(new BS3tinycErrorListener());
             ParseTree tree = parser.program(); // parse 
-            BS3tinycVisitor visitor = new BS3tinycVisitor();
+            BS3tinycVisitor visitor = new BS3tinycVisitor(parser);
             List<Object> result = visitor.visit(tree);
 
             for (Object O : result)
