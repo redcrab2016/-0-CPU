@@ -8,7 +8,7 @@ import org.antlr.v4.runtime.tree.*;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -36,7 +36,7 @@ public class BS3tinyc
             parser.addErrorListener(new BS3tinycErrorListener());
             ParseTree tree = parser.program(); // parse 
             BS3tinycVisitor visitor = new BS3tinycVisitor();
-            ArrayList<Object> result = visitor.visit(tree);
+            List<Object> result = visitor.visit(tree);
 
             for (Object O : result)
             {
