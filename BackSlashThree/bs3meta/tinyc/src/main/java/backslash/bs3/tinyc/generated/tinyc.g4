@@ -1,5 +1,6 @@
 grammar tinyc;
 
+options {contextSuperClass=org.antlr.v4.runtime.RuleContextWithAltNum;}
 
 @header {
 import java.util.*;
@@ -8,12 +9,18 @@ import backslash.bs3.tinyc.*;
 
 @parser::members {
 public Map<String,BS3tinycSymbol> symbols = new HashMap<String,BS3tinycSymbol>();
-public boolean addSymbol(String name, BS3tinycType aType, boolean isExtern)
+public BS3tinycStringData stringdata = new BS3tinycStringData();
+public boolean addSymbol(String name, BS3tinycType aType, boolean isExtern, String size)
 {
    if (symbols.containsKey(name)) return false;
-   BS3tinycSymbol s = new  BS3tinycSymbol(name,aType, isExtern);
+   BS3tinycSymbol s = new  BS3tinycSymbol(name,aType, isExtern,size);
    symbols.put(name, s);
    return true;
+}
+
+public boolean addSymbol(String name, BS3tinycType aType, boolean isExtern)
+{
+  return addSymbol(name, aType, isExtern, "1");
 }
 }
 
@@ -21,34 +28,32 @@ program
    : statement + EOF 
    ;
 
-
 statement
-   locals [int subctx]
-   : declare ';'                                      { $subctx = 0; }
-   | label                                            { $subctx = 1; }
-   | jump ';'                                         { $subctx = 2; }
-   | returnfct ';'                                    { $subctx = 3; }
-   | 'for' '(' expr ';' expr ';' expr ')' statement   { $subctx = 4; }
-   | 'if' paren_expr statement                        { $subctx = 5; }                  
-   | 'if' paren_expr statement 'else' statement       { $subctx = 6; } 
-   | 'while' paren_expr statement                     { $subctx = 7; } 
-   | 'do' statement 'while' paren_expr ';'            { $subctx = 8; } 
-   | '{' statement* '}'                               { $subctx = 9; } 
-   | expr ';'                                         { $subctx = 10; } 
-   | 'asm' Bs3asm ';'                                 { $subctx = 11; }
-   | 'asm' '{' bs3asmblock '}'                        { $subctx = 12; }
-   | ';'                                              { $subctx = 13; } 
+   : declare ';'                                      
+   | label                                            
+   | jump ';'                                         
+   | returnfct ';'                                    
+   | 'for' '(' expr ';' expr ';' expr ')' statement  
+   | 'if' paren_expr statement                       
+   | 'if' paren_expr statement 'else' statement      
+   | 'while' paren_expr statement                    
+   | 'do' statement 'while' paren_expr ';'           
+   | '{' statement* '}'                               
+   | expr ';'                                         
+   | 'asm' Bs3asm ';'                                 
+   | 'asm' '{' bs3asmblock '}'                        
+   | ';'                                              
    ;
 
 declare
-   : ext='extern'? type id_ {addSymbol($id_.text, $type.aType, $ext!=null)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>  
+   : ext='extern'? type id_ ('[' integer ']')? {addSymbol($id_.text, $type.aType, $ext!=null, $integer.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>  
      (
-      ',' id_ {addSymbol($id_.text, $type.aType, $ext!=null)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}> 
+      ',' id_ ('[' integer ']')? {addSymbol($id_.text, $type.aType, $ext!=null, $integer.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}> 
      )*    
-   ; 
+   ;
 
 label
-   : id_ ':' {addSymbol($id_.text, BS3tinycType._void(), false)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}> 
+   : id_ ':' {addSymbol($id_.text, BS3tinycType._void(), false)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>
    ;
 
 jump
@@ -56,18 +61,19 @@ jump
    ;
 
 returnfct
-   : 'return'
-   | 'return' expr
+   : 'return'              
+   | 'return' expr         
    ;
 
 type
    returns [ BS3tinycType aType ]
-   : BYTE                  { $aType = BS3tinycType._byte(); }
-   | WORD                  { $aType = BS3tinycType.word(); }
-   | 'signed' BYTE         { $aType = BS3tinycType.signedbyte(); }
-   | 'signed' WORD         { $aType = BS3tinycType.signedword(); }
-   | 'unsigned' BYTE       { $aType = BS3tinycType.unsignedbyte(); }
-   | 'unsigned' WORD       { $aType = BS3tinycType.unsignedword(); }
+   : BYTE                  
+   | WORD                 
+   | 'signed' BYTE       
+   | 'signed' WORD        
+   | 'unsigned' BYTE      
+   | 'unsigned' WORD      
+   | VOID                 
    ;
 
 Bs3asm
@@ -83,122 +89,224 @@ Bs3comment
    ;
 
 bs3asmblock
-   : Bs3asm Bs3comment? (Bs3nl bs3asmblock? )?
-   | Bs3comment (Bs3nl bs3asmblock? )?
-   | Bs3nl bs3asmblock
+   : Bs3asm Bs3comment? (Bs3nl bs3asmblock? )?  
+   | Bs3comment (Bs3nl bs3asmblock? )?          
+   | Bs3nl bs3asmblock                          
    ;
 
 //BEGIN of  expression rules
 paren_expr
-   : '(' expr ')'
+   returns [ BS3tinycType aType ]
+   : '(' expr ')'                            { $aType = $expr.aType; }
    ;
 
 expr
-   : assignexpr ( ',' assignexpr)*
+   returns [ BS3tinycType aType ]
+   : ase1=assignexpr                         { $aType = $ase1.aType; }
+   ( ',' asen=assignexpr                     { $aType = $asen.aType; }      
+   )*
    ;
 
 assignexpr
-   : condexpr
-   | targetvar '=' expr
+   returns [ BS3tinycType aType ]
+   : condexpr                                { $aType = $condexpr.aType; }
+   | targetvar '=' expr                      { $aType = $targetvar.aType; }
    ;
 
 condexpr
-   : logicORexpr ('?' expr ':' condexpr)?
+   returns [ BS3tinycType aType ]
+   : logicORexpr                             { $aType = $logicORexpr.aType; }
+   ('?' expr ':' condexpr                    { $aType = BS3tinycType.cond3Type($expr.aType, $condexpr.aType); }
+   )?
    ;
 
 logicORexpr
-   : logicANDexpr ( '||' logicANDexpr)*
+   returns [ BS3tinycType aType ]
+   : land1=logicANDexpr                      { $aType = $land1.aType; }
+   ( '||' logicANDexpr                       { $aType = BS3tinycType.unsignedbyte(); }
+   )*
    ;
 
 logicANDexpr
-   : incluORexpr ( '&&' incluORexpr)*
+   returns [ BS3tinycType aType ]
+   : ioe1=incluORexpr                        { $aType = $ioe1.aType; } 
+   ( '&&' ioen=incluORexpr                   { $aType = BS3tinycType.unsignedbyte(); }
+   )*
    ;
 
 incluORexpr
-   : excluORexpr ( '||' excluORexpr)*
+   returns [ BS3tinycType aType ]
+   : eoe1=excluORexpr                        { $aType = $eoe1.aType; }
+   ( '|' eoen=excluORexpr                    { $aType = BS3tinycType.iorType($aType, $eoen.aType); }      
+   )*
    ;
 
 excluORexpr
-   : andexpr ('^' andexpr)*
+   returns [ BS3tinycType aType ]
+   : ae1=andexpr                             { $aType = $ae1.aType; }
+   ('^' aen=andexpr                          { $aType = BS3tinycType.eorType($aType, $aen.aType); }
+   )*
    ;
 
 andexpr
-   : equaexpr ('&' equaexpr)*
+   returns [ BS3tinycType aType ]
+   : ee1=equaexpr                            { $aType = $ee1.aType; }
+   ('&' een=equaexpr                         { $aType = BS3tinycType.andType($aType, $een.aType); }
+   )*
    ;
 
 equaexpr
-   : relatexpr ( ope=('==' | '!=' ) relatexpr) *
+   returns [ BS3tinycType aType ]
+   : re1=relatexpr                           { $aType = $re1.aType; }
+   ( ope=('==' | '!=' ) relatexpr            { $aType = BS3tinycType.unsignedbyte(); }
+   ) *
    ;   
 
 relatexpr
-   : shiftexpr ( ope=('<' | '>' | '<=' | '>=') shiftexpr )*
+   returns [ BS3tinycType aType ]
+   : se1=shiftexpr                           { $aType = $se1.aType; }
+   ( ope=('<' | '>' | '<=' | '>=') shiftexpr { $aType = BS3tinycType.unsignedbyte(); }
+   )*
    ;
 
 shiftexpr
-   : addexpr (ope=('<<' | '>>') addexpr)*
+   returns [ BS3tinycType aType ]
+   : ae1=addexpr                             { $aType = $ae1.aType; }
+   (ope=('<<' | '>>') aen=addexpr            { $aType = BS3tinycType.shiftType($aType, $aen.aType); }
+   )* 
    ;
 
 addexpr
-   : mulexpr (ope=('+' | '-') mulexpr)*
+   returns [ BS3tinycType aType ]
+   : me1=mulexpr                             { $aType = $me1.aType; }
+   (ope=('+' | '-') men=mulexpr              { $aType = BS3tinycType.addType($aType, $men.aType); }
+   )*
    ;
 
 mulexpr
-   : castexpr (ope=('*' | '/' | '%') castexpr)
+   returns [ BS3tinycType aType ]
+   : ce1=castexpr                            { $aType = $ce1.aType; }
+   (ope=('*' | '/' | '%') cen=castexpr       { $aType = BS3tinycType.mulType($aType, $cen.aType); }
+   )*
    ;
 
 castexpr
-   :  '(' type ')' castexpr
-   | unaryexpr
+   returns [ BS3tinycType aType ]
+   :  '(' type ')' castexpr                  { $aType = $type.aType; }
+   | unaryexpr                               { $aType = $unaryexpr.aType; }
    ;
 
 unaryexpr
-   : ope=('+' | '-' | '~' | '!') ? term
+   returns [ BS3tinycType aType ]
+   : ope=('+' | '-' | '~' | '!') ? term      { $aType = $term.aType;
+                                                if ($ope != null) {
+                                                   if ($ope.text.charAt(0) == '!') {
+                                                      $aType = BS3tinycType.unsignedbyte();
+                                                   }
+                                                }
+                                             }
    ;
 
 term
-   : sourcevar
-   | integer
-   | paren_expr
+   returns [ BS3tinycType aType ]
+   : sourcevar                                     { $aType = $sourcevar.aType; }
+   | integer                                       { $aType = $integer.aType; }
+   | paren_expr                                    { $aType = $paren_expr.aType; }
    ;
 
 targetvar
-   locals [int subctx]
-   : id_ ('[' expr ']') ?                          { $subctx = 0; }
-   | '*' ('(' type ')')? expr                      { $subctx = 1; }
-   | regWord                                       { $subctx = 2; }
-   | regByte                                       { $subctx = 3; }
+   returns [ BS3tinycType aType ]
+   : id_ ('[' expr ']') ?                          { symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+                                                   { BS3tinycSymbol s = symbols.get($id_.text);
+                                                     $aType = s.type;
+                                                   }
+   | '*' ('(' type ')')? expr                      { if ($type.text == null) {
+                                                       $aType = BS3tinycType.unsignedword();
+                                                     } else {
+                                                       $aType = $type.aType;
+                                                     }
+                                                   }
+   | regWord                                       { $aType = $regWord.aType;}
+   | regByte                                       { $aType = $regByte.aType;}
    ;
 
 sourcevar
-   locals [int subctx]
+   returns [ BS3tinycType aType ]
    : (ope='&' | ope='*' ('(' type ')')? ) ? 
-     id_ ( '[' expr ']') ?                         { $subctx = 0; }
-   | id_ '(' ')'                                   { $subctx = 1; }
-   | id_ '(' expr  ')'                             { $subctx = 2; } // one param W0=expr
-   | id_ '(' expr ',' expr ')'                     { $subctx = 3; } // two params W0=1st expr, W1=2nd expr
-   | id_ '(' expr ',' expr ',' expr ')'            { $subctx = 4; } // 3 aprams W0=1st expr, W1=2nd expr, W2=3rd expr
-   | id_ '(' expr ',' expr ',' expr ',' expr ')'   { $subctx = 5; } // 4 params W0=1st expr, W1=2nd expr, W2=3rd expr and W3=4th expr 
-   | regWord                                       { $subctx = 6; }
-   | regByte                                       { $subctx = 7; }
+     id_ ( '[' expr ']') ?                         {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+                                                   { if ($ope ==  null) {
+                                                      BS3tinycSymbol s = symbols.get($id_.text);
+                                                      $aType = s.type;
+                                                     } else {
+                                                      if ($ope.text.charAt(0) == '&') {
+                                                         $aType = BS3tinycType.unsignedword();
+                                                      } else { // '*'
+                                                         if ($type.text == null) {
+                                                            $aType = BS3tinycType.unsignedword();
+                                                         } else {
+                                                            $aType = $type.aType;
+                                                         }
+                                                      }
+                                                     }
+                                                   }
+   | id_ '(' ')'                                   {symbols.get($id_.text) != null}?<fail={"Undefined label identifier '"+$id_+"'"}>
+                                                   { $aType = BS3tinycType.unsignedword(); }
+   | id_ '(' expr  ')'                             {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+                                                   { $aType = BS3tinycType.unsignedword(); } // one param W0=expr
+   | id_ '(' expr ',' expr ')'                     {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+                                                   { $aType = BS3tinycType.unsignedword(); } // two params W0=1st expr, W1=2nd expr
+   | id_ '(' expr ',' expr ',' expr ')'            {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+                                                   { $aType = BS3tinycType.unsignedword(); } // 3 aprams W0=1st expr, W1=2nd expr, W2=3rd expr
+   | id_ '(' expr ',' expr ',' expr ',' expr ')'   {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+                                                   { $aType = BS3tinycType.unsignedword(); } // 4 params W0=1st expr, W1=2nd expr, W2=3rd expr and W3=4th expr 
+   | regWord                                       { $aType = $regWord.aType;}
+   | regByte                                       { $aType = $regByte.aType;}
+   | stringdata                                    { $aType = $stringdata.aType; }
    ;
 
 regWord
-   : REGW
+   returns [ BS3tinycType aType ]
+   locals [ String strValue ]
+   : REGW                                          {$aType = BS3tinycType.unsignedword(); $strValue = $REGW.text; }
    ;
 
 regByte
-   : REGB
+   returns [ BS3tinycType aType ]
+   locals [String strValue ]
+   : REGB                                          {$aType = BS3tinycType.unsignedbyte(); $strValue  = $REGB.text; }
    ;
 
 id_
-   : STRING
+   : IDSTRING
    ;
 
 integer
-   : INT
+   returns [ BS3tinycType aType ]
+   locals [String strValue ]
+   : INT                                           { $aType = ($INT.text.charAt(0) == '+' || $INT.text.charAt(0) == '-')?BS3tinycType.signedword():BS3tinycType.unsignedword();
+                                                     if ($INT.text.charAt(0) == '+') {
+                                                       $strValue = $INT.text.substring(1);
+                                                     } else {
+                                                       $strValue = $INT.text;
+                                                     }
+                                                    }
+   ;
+
+stringdata
+   returns [ BS3tinycType aType ]
+   locals [ String strValue ]
+   : '"' stringdataraw '"'                                   { $aType = BS3tinycType.unsignedword(); stringdata.addString($stringdataraw.text); $strValue = $stringdataraw.text; }
    ;
 
 //END of  expression rules
+
+stringdataraw
+   : STRDATA*
+   ;
+
+STRDATA
+   : (~[\r\n"])
+   ;
 
 BYTE
    : 'char'
@@ -209,18 +317,23 @@ WORD
    : 'int'
    | 'short'
    | 'word'
-   ;   
+   ;
+
+VOID
+   : 'void'
+   | 'label'
+   ;
 
 REGW
-   : [wW] [0-3]
+   : [wW] [0-3]         { setText(getText().toLowerCase()); }
    ;
 
 REGB
-   : [bB] [0-7]
+   : [bB] [0-7]         { setText(getText().toLowerCase()); }
    ;
 
-STRING
-   : [a-z._][a-z0-9_]*
+IDSTRING
+   : [a-z._][a-z0-9_]*  { setText(getText().toLowerCase()); }
    ;
 
 INT

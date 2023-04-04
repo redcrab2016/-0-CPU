@@ -37,6 +37,7 @@ import backslash.bs3.tinyc.generated.tinycParser.ReturnfctContext;
 import backslash.bs3.tinyc.generated.tinycParser.ShiftexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.SourcevarContext;
 import backslash.bs3.tinyc.generated.tinycParser.StatementContext;
+import backslash.bs3.tinyc.generated.tinycParser.StringdataContext;
 import backslash.bs3.tinyc.generated.tinycParser.TargetvarContext;
 import backslash.bs3.tinyc.generated.tinycParser.TermContext;
 import backslash.bs3.tinyc.generated.tinycParser.TypeContext;
@@ -124,8 +125,9 @@ public class BS3tinycVisitor extends tinycBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitInteger(IntegerContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitInteger(ctx);
+        List<Object> result = new ArrayList<Object>();
+        result.add("    mov     w0, "+ctx.strValue);
+        return result;
     }
 
     @Override
@@ -173,13 +175,20 @@ public class BS3tinycVisitor extends tinycBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitRegByte(RegByteContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitRegByte(ctx);
+        List<Object> result = new ArrayList<Object>();
+        if (!ctx.strValue.equals("b0")) {
+            result.add("    mov     b0, "+ctx.strValue);
+        }
+        result.add("    eor     b1, b1");
+        return result;
     }
 
     @Override
     public List<Object> visitRegWord(RegWordContext ctx) {
-        // TODO Auto-generated method stub
+        List<Object> result = new ArrayList<Object>();
+        if (!ctx.strValue.equals("w0")) {
+            result.add("    mov     w0, "+ ctx.strValue);
+        }
         return super.visitRegWord(ctx);
     }
 
@@ -203,7 +212,76 @@ public class BS3tinycVisitor extends tinycBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitSourcevar(SourcevarContext ctx) {
-        // TODO Auto-generated method stub
+        List<Object> result = new ArrayList<Object>();
+        switch (ctx.altNum)
+        {
+            case 6:
+                result.add("    push_w3");
+            case 5:
+                result.add("    push_w2");
+            case 4:
+                result.add("    push_w1");
+                break;
+            default: 
+                break;
+        }
+        switch (ctx.altNum)
+        {
+            case 1:
+                break;
+            case 6:
+                result.addAll(ctx.getChild(8).accept(this));
+                result.add("    push_w0");
+            case 5:
+                result.addAll(ctx.getChild(6).accept(this));
+                result.add("    push_w0");            
+            case 4:
+                result.addAll(ctx.getChild(4).accept(this));
+                result.add("    push_w0");              
+            case 3:
+                result.addAll(ctx.getChild(2).accept(this));
+            case 2:
+                switch (ctx.altNum)
+                {
+                    case 6:
+                        result.add("    pop_w1");
+                        result.add("    pop_w2");
+                        result.add("    pop_w3");
+                        break;
+                    case 5:
+                        result.add("    pop_w1");
+                        result.add("    pop_w2");
+                        break;
+                    case 4:
+                        result.add("    pop_w1");
+                        break;
+                    default: 
+                        break;
+                }
+                result.add("    call        "+ctx.getChild(0).getText());
+                switch (ctx.altNum)
+                {
+                    case 6:
+                        result.add("    pop_w1");
+                        result.add("    pop_w2");
+                        result.add("    pop_w3");
+                    case 5:
+                        result.add("    pop_w1");
+                        result.add("    pop_w2");
+                    case 4:
+                        result.add("    pop_w1");
+                    break;
+                    default: 
+                        break;
+                }                
+                break;
+            case 7:
+            case 8:
+            case 9:
+                result = ctx.getChild(0).accept(this);
+                break;
+
+        }
         return super.visitSourcevar(ctx);
     }
 
@@ -276,6 +354,13 @@ public class BS3tinycVisitor extends tinycBaseVisitor<List<Object>> {
     public List<Object> visitTerminal(TerminalNode node) {
         // TODO Auto-generated method stub
         return super.visitTerminal(node);
+    }
+
+    @Override
+    public List<Object> visitStringdata(StringdataContext ctx) {
+        List<Object> result = new ArrayList<Object>();
+        result.add("    leaf_w0     "+ parser.stringdata.getBS3Label(ctx.strValue));
+        return result;
     }
 
 

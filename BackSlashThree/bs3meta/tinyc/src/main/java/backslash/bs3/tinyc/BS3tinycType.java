@@ -64,4 +64,98 @@ public class BS3tinycType {
         return unsignedbyte();
     }
 
+
+    public static BS3tinycType cond3Type(BS3tinycType left, BS3tinycType right)
+    {
+        BS3tinycType t = new BS3tinycType();
+        t.isWord = left.isWord || right.isWord;
+        t.isSigned = left.isSigned || right.isSigned;
+        t.isLabel = false;
+        t.isByte = !t.isWord;
+        t.isUnsigned = !t.isSigned;
+        return t;
+    }
+
+    public static BS3tinycType iorType(BS3tinycType left, BS3tinycType right)
+    {
+        BS3tinycType t = new BS3tinycType();
+        t.isWord = left.isWord || right.isWord;
+        t.isSigned = left.isSigned || right.isSigned;
+        t.isLabel = false;
+        t.isByte = !t.isWord;
+        t.isUnsigned = !t.isSigned;
+        return t;
+    }
+
+
+    public static BS3tinycType eorType(BS3tinycType left, BS3tinycType right)
+    {
+        BS3tinycType t = new BS3tinycType();
+        t.isWord = left.isWord || right.isWord;
+        t.isSigned = left.isSigned || right.isSigned;
+        t.isLabel = false;
+        t.isByte = !t.isWord;
+        t.isUnsigned = !t.isSigned;
+        return t;
+    }
+
+    public static BS3tinycType andType(BS3tinycType left, BS3tinycType right)
+    {
+        BS3tinycType t = new BS3tinycType();
+        t.isWord = left.isWord || right.isWord;
+        t.isSigned = left.isSigned || right.isSigned;
+        t.isLabel = false;
+        t.isByte = !t.isWord;
+        t.isUnsigned = !t.isSigned;
+        return t;
+    }
+
+
+    public static BS3tinycType shiftType(BS3tinycType left, BS3tinycType right)
+    {
+        BS3tinycType t = new BS3tinycType();
+        t.isWord = true;
+        t.isSigned = left.isSigned || right.isSigned;
+        t.isLabel = false;
+        t.isByte = !t.isWord;
+        t.isUnsigned = !t.isSigned;
+        return t;
+    }
+
+    public static BS3tinycType addType(BS3tinycType left, BS3tinycType right)
+    {
+        BS3tinycType t = new BS3tinycType();
+        t.isWord = true;
+        t.isSigned = left.isSigned || right.isSigned;
+        t.isLabel = false;
+        t.isByte = !t.isWord;
+        t.isUnsigned = !t.isSigned;
+        return t;
+    }
+
+    public static BS3tinycType mulType(BS3tinycType left, BS3tinycType right)
+    {
+        BS3tinycType t = new BS3tinycType();
+        t.isWord = true;
+        t.isSigned = left.isSigned || right.isSigned;
+        t.isLabel = false;
+        t.isByte = !t.isWord;
+        t.isUnsigned = !t.isSigned;
+        return t;
+    }
+
+    public BS3tinycType setSigned()
+    {
+        isSigned = true;
+        isUnsigned = false;       
+        return this;
+    }
+
+    public BS3tinycType setUnsigned()
+    {
+        isSigned = false;
+        isUnsigned = true;       
+        return this;
+    }
+
 }
