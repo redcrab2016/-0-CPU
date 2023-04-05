@@ -192,16 +192,19 @@ mulexpr
 
 castexpr
    returns [ BS3tinycType aType ]
-   :  '(' type ')' castexpr                  { $aType = $type.aType; }
+   :  '(' type ')' ce=castexpr               { $aType = $type.aType; }
    | unaryexpr                               { $aType = $unaryexpr.aType; }
    ;
 
 unaryexpr
    returns [ BS3tinycType aType ]
-   : ope=('+' | '-' | '~' | '!') ? term      { $aType = $term.aType;
+   : ope=('+' | '-' | '~' | '!') ? tr=term   { $aType = $term.aType;
                                                 if ($ope != null) {
                                                    if ($ope.text.charAt(0) == '!') {
                                                       $aType = BS3tinycType.unsignedbyte();
+                                                   }
+                                                   if ($ope.text.charAt(0) == '-') {
+                                                      $aType.setSigned();
                                                    }
                                                 }
                                              }
@@ -216,11 +219,11 @@ term
 
 targetvar
    returns [ BS3tinycType aType ]
-   : id_ ('[' expr ']') ?                          { symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+   : id_ ('[' er=expr ']') ?                       { symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
                                                    { BS3tinycSymbol s = symbols.get($id_.text);
                                                      $aType = s.type;
                                                    }
-   | '*' ('(' type ')')? expr                      { if ($type.text == null) {
+   | '*' ('(' tr=type ')')? er=expr                { if ($type.text == null) {
                                                        $aType = BS3tinycType.unsignedword();
                                                      } else {
                                                        $aType = $type.aType;
@@ -232,14 +235,14 @@ targetvar
 
 sourcevar
    returns [ BS3tinycType aType ]
-   : (ope='&' | ope='*' ('(' type ')')? ) ? 
-     id_ ( '[' expr ']') ?                         {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+   : (ope='&' | ope='*' ('(' tr=type ')')? ) ? 
+     ir=id_ ( '[' er=expr ']') ?                   {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
                                                    { if ($ope ==  null) {
                                                       BS3tinycSymbol s = symbols.get($id_.text);
                                                       $aType = s.type;
                                                      } else {
                                                       if ($ope.text.charAt(0) == '&') {
-                                                         $aType = BS3tinycType.unsignedword();
+                                                         $aType = BS3tinycType.unsignedword(); 
                                                       } else { // '*'
                                                          if ($type.text == null) {
                                                             $aType = BS3tinycType.unsignedword();
@@ -249,7 +252,7 @@ sourcevar
                                                       }
                                                      }
                                                    }
-   | id_ '(' ')'                                   {symbols.get($id_.text) != null}?<fail={"Undefined label identifier '"+$id_+"'"}>
+   | id_ '(' ')'                                   {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
                                                    { $aType = BS3tinycType.unsignedword(); }
    | id_ '(' expr  ')'                             {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
                                                    { $aType = BS3tinycType.unsignedword(); } // one param W0=expr
