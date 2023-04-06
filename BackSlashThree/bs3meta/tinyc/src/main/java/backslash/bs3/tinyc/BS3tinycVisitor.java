@@ -1,5 +1,6 @@
 package backslash.bs3.tinyc;
 
+import java.security.DrbgParameters.NextBytes;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -71,7 +72,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
         for (i = 1 ; i < ctx.getChildCount() ; i+=2) {
             result.add("    push_w1");
             result.add("    push_w0");
-            result.add(ctx.getChild(i+1).accept(this));
+            result.addAll(ctx.getChild(i+1).accept(this));
             result.add("    pop_w1");
             switch (ctx.getChild(i).getText().charAt(0)) {
                 case '+':
@@ -109,8 +110,12 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitAssignexpr(AssignexprContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitAssignexpr(ctx);
+        List<Object> result = new ArrayList<Object>();
+        int i;
+        for (i = ctx.getChildCount()-1; i >= 0 ; i--) {
+            result.addAll(ctx.getChild(i).accept(this));
+        }
+        return result;
     }
 
     @Override
@@ -140,8 +145,25 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitCondexpr(CondexprContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitCondexpr(ctx);
+        List<Object> result = ctx.getChild(0).accept(this);
+        String labelcond;
+        String labelcond2;
+        String labelcondend;
+        if (ctx.getChildCount()> 1) {
+            labelcond = getNextLabel();
+            labelcond2 = getNextLabel();
+            labelcondend = getNextLabel();
+            result.add("    cmp     w0, 0");
+            result.add("    jnz     "+labelcond);
+            result.add("    jump    "+labelcond2);
+            result.add(labelcond);
+            result.addAll(ctx.getChild(2).accept(this));
+            result.add("    jump    "+labelcondend);
+            result.add(labelcond2);
+            result.addAll(ctx.getChild(4).accept(this));
+            result.add(labelcondend);
+        } 
+        return result;
     }
 
     @Override
@@ -209,8 +231,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitExpr(ExprContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitExpr(ctx);
+        return visitChildren(ctx);
     }
 
     @Override
@@ -248,15 +269,16 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitJump(JumpContext ctx) {
-        // TODO Auto-generated method stub
-        
-        return super.visitJump(ctx);
+        List<Object> result = new ArrayList<Object>();
+        result.add("    jump        " + ctx.target.getText());
+        return result;
     }
 
     @Override
     public List<Object> visitLabel(LabelContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitLabel(ctx);
+        List<Object> result = new ArrayList<Object>();
+        result.add(ctx.getChild(0).getText());
+        return result;
     }
 
     @Override
@@ -289,8 +311,32 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitLogicORexpr(LogicORexprContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitLogicORexpr(ctx);
+        List<Object> result = ctx.land1.accept(this);
+        int i;
+        String labelcond;
+        String labelcondfinish;
+        
+        if (ctx.getChildCount() > 1) {
+            labelcondfinish = getNextLabel();
+            labelcond=getNextLabel();
+            result.add("    cmp     w0, 0");
+            result.add("    jz      " + labelcond);
+            result.add("    mov     w0, 1");
+            result.add("    jump    " + labelcondfinish);
+            result.add(labelcond);
+            for (i = 1 ; i < ctx.getChildCount() ; i+=2) {
+                labelcond=getNextLabel();
+                result.add(ctx.getChild(i+1).accept(this));
+                result.add("    cmp     w0, 0");
+                result.add("    jz      " + labelcond);
+                result.add("    mov     w0, 1");
+                result.add("    jump    " + labelcondfinish);
+                result.add(labelcond);
+            }
+            result.add("    eor     w0, w0");
+            result.add(labelcondfinish);
+        }        
+        return result;
     }
 
     @Override
@@ -300,7 +346,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
         for (i = 1 ; i < ctx.getChildCount() ; i+=2) {
             result.add("    push_w1");
             result.add("    push_w0");
-            result.add(ctx.getChild(i+1).accept(this));
+            result.addAll(ctx.getChild(i+1).accept(this));
             result.add("    pop_w1");
             switch (ctx.getChild(i).getText().charAt(0)) {
                 case '*':
@@ -332,14 +378,16 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitParen_expr(Paren_exprContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitParen_expr(ctx);
+        return ctx.getChild(1).accept(this);
     }
 
     @Override
     public List<Object> visitProgram(ProgramContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitProgram(ctx);
+        List<Object> result = visitChildren(ctx);
+        result.add("    hlt");
+        result.addAll(parser.symbols.generateASM());
+        result.addAll(parser.stringdata.generateASM());
+        return result;
     }
 
     @Override
@@ -422,8 +470,12 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitReturnfct(ReturnfctContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitReturnfct(ctx);
+        List<Object> result = new ArrayList<Object>();
+        if (ctx.getChildCount() > 1) {
+            result.addAll(ctx.getChild(1).accept(this));
+        }
+        result.add("    ret");
+        return result;
     }
 
     @Override
@@ -607,8 +659,72 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitStatement(StatementContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitStatement(ctx);
+        List<Object> result = new ArrayList<Object>();
+        String labelcond;
+        String labelcond2;
+        String labelcondend;
+        switch (ctx.altNum) {
+            case 5: // for ( x ; y ; z ) s
+                break;
+            case 6: // if x y 
+                labelcond = getNextLabel();
+                labelcondend = getNextLabel();
+                result.addAll(ctx.getChild(1).accept(this));
+                result.add("    cmp     w0,0");
+                result.add("    jnz     " + labelcond);
+                result.add("    jump    " + labelcondend);
+                result.add(labelcond);
+                result.addAll(ctx.getChild(2).accept(this));
+                result.add(labelcondend);
+                break;
+            case 7: // if x y else z
+                labelcond = getNextLabel();
+                labelcond2 = getNextLabel();
+                labelcondend = getNextLabel();
+                result.addAll(ctx.getChild(1).accept(this));
+                result.add("    cmp     w0,0");
+                result.add("    jnz     " + labelcond);
+                result.add("    jump    " + labelcond2);
+                result.add(labelcond);
+                result.addAll(ctx.getChild(2).accept(this));
+                result.add("    jump    " + labelcondend);
+                result.add(labelcond2);
+                result.addAll(ctx.getChild(4).accept(this));
+                result.add(labelcondend);
+            break;
+            case 8: // while x y
+                labelcond = getNextLabel();
+                labelcond2 = getNextLabel();
+                labelcondend = getNextLabel();
+                result.add(labelcond);
+                result.addAll(ctx.getChild(1).accept(this));
+                result.add("    cmp     w0,0");
+                result.add("    jnz     " + labelcond2);
+                result.add("    jump    " + labelcondend);
+                result.add(labelcond2);
+                result.addAll(ctx.getChild(2).accept(this));
+                result.add("    jump    " + labelcond);
+                result.add(labelcondend);
+                break;
+            case 9: // do x while y
+                labelcond = getNextLabel();
+                labelcond2 = getNextLabel();
+                labelcondend = getNextLabel();
+                result.add(labelcond);
+                result.addAll(ctx.getChild(1).accept(this));
+                result.addAll(ctx.getChild(2).accept(this));
+                result.add("    cmp     w0,0");
+                result.add("    jnz     " + labelcond2);
+                result.add("    jump    " + labelcondend);
+                result.add(labelcond2);
+                result.add("    jump    " + labelcond);
+                result.add(labelcondend);
+                break;
+            default: 
+                result.addAll(visitChildren(ctx));
+                break;
+        }
+        return result;
     }
 
     @Override
@@ -772,8 +888,9 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitBs3asmline(Bs3asmlineContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitBs3asmline(ctx);
+        List<Object> result = new ArrayList<Object>();
+        result.add(ctx.getText());
+        return result;
     }
 
     @Override
