@@ -3,9 +3,6 @@ package backslash.bs3.tinyc;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.lang.model.util.ElementScanner6;
-import javax.swing.plaf.basic.BasicInternalFrameTitlePane.MoveAction;
-
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.RuleNode;
@@ -17,6 +14,16 @@ import backslash.bs3.tinyc.generated.tinycParser.AddexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.AndexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.AssignexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.Bs3asmblockContext;
+import backslash.bs3.tinyc.generated.tinycParser.Bs3asmlabelContext;
+import backslash.bs3.tinyc.generated.tinycParser.Bs3asmlineContext;
+import backslash.bs3.tinyc.generated.tinycParser.Bs3commentContext;
+import backslash.bs3.tinyc.generated.tinycParser.Bs3labelrefContext;
+import backslash.bs3.tinyc.generated.tinycParser.Bs3macroContext;
+import backslash.bs3.tinyc.generated.tinycParser.Bs3macrodefContext;
+import backslash.bs3.tinyc.generated.tinycParser.Bs3opeContext;
+import backslash.bs3.tinyc.generated.tinycParser.Bs3paramContext;
+import backslash.bs3.tinyc.generated.tinycParser.Bs3paramsContext;
+import backslash.bs3.tinyc.generated.tinycParser.Bs3valueContext;
 import backslash.bs3.tinyc.generated.tinycParser.CastexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.CondexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.DeclareContext;
@@ -41,6 +48,7 @@ import backslash.bs3.tinyc.generated.tinycParser.ShiftexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.SourcevarContext;
 import backslash.bs3.tinyc.generated.tinycParser.StatementContext;
 import backslash.bs3.tinyc.generated.tinycParser.StringdataContext;
+import backslash.bs3.tinyc.generated.tinycParser.StringdatarawContext;
 import backslash.bs3.tinyc.generated.tinycParser.TargetvarContext;
 import backslash.bs3.tinyc.generated.tinycParser.TermContext;
 import backslash.bs3.tinyc.generated.tinycParser.TypeContext;
@@ -256,7 +264,6 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
         List<Object> result = ctx.ioe1.accept(this);
         int i;
         String labelcond;
-        String labelcondend;
         String labelcondfinish;
         
         if (ctx.getChildCount() > 1) {
@@ -264,14 +271,17 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
             labelcond=getNextLabel();
             result.add("    cmp     w0, 0");
             result.add("    jnz     " + labelcond);
-            result.add("    jump    "+ labelcondfinish);
+            result.add("    jump    " + labelcondfinish);
             result.add(labelcond);
-        for (i = 1 ; i < ctx.getChildCount() ; i+=2) {
+            for (i = 1 ; i < ctx.getChildCount() ; i+=2) {
+                labelcond=getNextLabel();
                 result.add(ctx.getChild(i+1).accept(this));
                 result.add("    cmp     w0, 0");
                 result.add("    jnz     " + labelcond);
                 result.add("    jump    "+ labelcondfinish);
+                result.add(labelcond);
             }
+            result.add("    mov     w0, 1");
             result.add(labelcondfinish);
         }        
         return result;
@@ -750,8 +760,74 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
     @Override
     public List<Object> visitStringdata(StringdataContext ctx) {
         List<Object> result = new ArrayList<Object>();
-        result.add("    leaf_w0     "+ parser.stringdata.getBS3Label(ctx.strValue));
+        result.add("    mov     w0, "+ parser.stringdata.getBS3Label(ctx.strValue));
         return result;
+    }
+
+    @Override
+    public List<Object> visitBs3asmlabel(Bs3asmlabelContext ctx) {
+        // TODO Auto-generated method stub
+        return super.visitBs3asmlabel(ctx);
+    }
+
+    @Override
+    public List<Object> visitBs3asmline(Bs3asmlineContext ctx) {
+        // TODO Auto-generated method stub
+        return super.visitBs3asmline(ctx);
+    }
+
+    @Override
+    public List<Object> visitBs3comment(Bs3commentContext ctx) {
+        // TODO Auto-generated method stub
+        return super.visitBs3comment(ctx);
+    }
+
+    @Override
+    public List<Object> visitBs3labelref(Bs3labelrefContext ctx) {
+        // TODO Auto-generated method stub
+        return super.visitBs3labelref(ctx);
+    }
+
+    @Override
+    public List<Object> visitBs3macro(Bs3macroContext ctx) {
+        // TODO Auto-generated method stub
+        return super.visitBs3macro(ctx);
+    }
+
+    @Override
+    public List<Object> visitBs3macrodef(Bs3macrodefContext ctx) {
+        // TODO Auto-generated method stub
+        return super.visitBs3macrodef(ctx);
+    }
+
+    @Override
+    public List<Object> visitBs3ope(Bs3opeContext ctx) {
+        // TODO Auto-generated method stub
+        return super.visitBs3ope(ctx);
+    }
+
+    @Override
+    public List<Object> visitBs3param(Bs3paramContext ctx) {
+        // TODO Auto-generated method stub
+        return super.visitBs3param(ctx);
+    }
+
+    @Override
+    public List<Object> visitBs3params(Bs3paramsContext ctx) {
+        // TODO Auto-generated method stub
+        return super.visitBs3params(ctx);
+    }
+
+    @Override
+    public List<Object> visitBs3value(Bs3valueContext ctx) {
+        // TODO Auto-generated method stub
+        return super.visitBs3value(ctx);
+    }
+
+    @Override
+    public List<Object> visitStringdataraw(StringdatarawContext ctx) {
+        // TODO Auto-generated method stub
+        return super.visitStringdataraw(ctx);
     }
 
     @Override

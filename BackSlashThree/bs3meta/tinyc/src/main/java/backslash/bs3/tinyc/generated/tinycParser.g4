@@ -8,20 +8,8 @@ import backslash.bs3.tinyc.*;
 }
 
 @parser::members {
-public Map<String,BS3tinycSymbol> symbols = new HashMap<String,BS3tinycSymbol>();
+public BS3tinycSymbolSet symbols = new BS3tinycSymbolSet();
 public BS3tinycStringData stringdata = new BS3tinycStringData();
-public boolean addSymbol(String name, BS3tinycType aType, boolean isExtern, String size)
-{
-   if (symbols.containsKey(name)) return false;
-   BS3tinycSymbol s = new  BS3tinycSymbol(name,aType, isExtern,size);
-   symbols.put(name, s);
-   return true;
-}
-
-public boolean addSymbol(String name, BS3tinycType aType, boolean isExtern)
-{
-  return addSymbol(name, aType, isExtern, "1");
-}
 }
 
 program
@@ -45,14 +33,17 @@ statement
    ;
 
 declare
-   : ext='extern'? type id_ ('[' integer ']')? {addSymbol($id_.text, $type.aType, $ext!=null, $integer.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>  
+   : ext='extern'? type id_ ('[' integer ']')?  {!symbols.has($id_.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>  
+                                                {symbols.add($id_.text, $type.aType, $ext!=null, $integer.text);}
      (
-      COMMA id_ ('[' integer ']')? {addSymbol($id_.text, $type.aType, $ext!=null, $integer.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}> 
+      COMMA id_ ('[' integer ']')?              {!symbols.has($id_.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}> 
+                                                {symbols.add($id_.text, $type.aType, $ext!=null, $integer.text);}
      )*    
    ;
 
 label
-   : id_ COLON {addSymbol($id_.text, BS3tinycType._void(), false)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>
+   : id_ COLON                                  {!symbols.has($id_.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>
+                                                {symbols.add($id_.text,  BS3tinycType._void(), false);}
    ;
 
 jump
@@ -66,13 +57,15 @@ returnfct
 
 type
    returns [ BS3tinycType aType ]
-   : BYTE                  
-   | WORD                 
-   | 'signed' BYTE       
-   | 'signed' WORD        
-   | 'unsigned' BYTE      
-   | 'unsigned' WORD      
-   | VOID                 
+   : SBYTE                          { $aType = BS3tinycType.signedbyte(); }
+   | BYTE                           { $aType = BS3tinycType.unsignedbyte(); }
+   | SWORD                          { $aType = BS3tinycType.signedword(); }
+   | WORD                           { $aType = BS3tinycType.unsignedword(); }
+   | 'signed' (BYTE | SBYTE)        { $aType = BS3tinycType.signedbyte(); }
+   | 'signed' (WORD | SWORD)        { $aType = BS3tinycType.signedword(); }
+   | 'unsigned' (BYTE | SBYTE)      { $aType = BS3tinycType.unsignedbyte(); }
+   | 'unsigned' (WORD | SWORD)      { $aType = BS3tinycType.unsignedword(); }
+   | VOID                           { $aType = BS3tinycType._void(); }
    ;
 
 bs3asmblock
@@ -134,7 +127,7 @@ paren_expr
 expr
    returns [ BS3tinycType aType ]
    : ase1=assignexpr                         { $aType = $ase1.aType; }
-   ( COMMA asen=assignexpr                     { $aType = $asen.aType; }      
+   ( COMMA asen=assignexpr                   { $aType = $asen.aType; }      
    )*
    ;
 
@@ -147,7 +140,7 @@ assignexpr
 condexpr
    returns [ BS3tinycType aType ]
    : logicORexpr                             { $aType = $logicORexpr.aType; }
-   ('?' expr COLON condexpr                    { $aType = BS3tinycType.cond3Type($expr.aType, $condexpr.aType); }
+   ('?' expr COLON condexpr                  { $aType = BS3tinycType.cond3Type($expr.aType, $condexpr.aType); }
    )?
    ;
 
@@ -250,7 +243,7 @@ term
 
 targetvar
    returns [ BS3tinycType aType ]
-   : id_ ('[' er=expr ']') ?                       { symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+   : id_ ('[' er=expr ']') ?                       { symbols.has($id_.text)}?<fail={"Undefined identifier '"+$id_+"'"}>
                                                    { BS3tinycSymbol s = symbols.get($id_.text);
                                                      $aType = s.type;
                                                    }
@@ -267,7 +260,7 @@ targetvar
 sourcevar
    returns [ BS3tinycType aType ]
    : (ope='&' | ope='*' ('(' tr=type ')')? ) ? 
-     ir=id_ ( '[' er=expr ']') ?                   {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+     ir=id_ ( '[' er=expr ']') ?                   {symbols.has($id_.text)}?<fail={"Undefined identifier '"+$id_+"'"}>
                                                    { if ($ope ==  null) {
                                                       BS3tinycSymbol s = symbols.get($id_.text);
                                                       $aType = s.type;

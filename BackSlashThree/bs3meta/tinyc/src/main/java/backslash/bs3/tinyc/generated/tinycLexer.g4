@@ -49,15 +49,20 @@ SIGNED:                    'signed';
 ASM:                       'asm' -> pushMode(ASSEMBLER);
 
 
-BYTE
+SBYTE
    : 'char'
-   | 'byte'
+   ;
+BYTE   
+   : 'byte'
    ;
 
-WORD
+SWORD
    : 'int'
    | 'short'
-   | 'word'
+   ;
+
+WORD   
+   : 'word'
    ;
 
 VOID
