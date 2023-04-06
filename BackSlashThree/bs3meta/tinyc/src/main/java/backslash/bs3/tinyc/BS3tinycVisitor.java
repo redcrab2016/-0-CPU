@@ -11,7 +11,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.RuleNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
-import backslash.bs3.tinyc.generated.tinycBaseVisitor;
+import backslash.bs3.tinyc.generated.tinycParserBaseVisitor;
 import backslash.bs3.tinyc.generated.tinycParser;
 import backslash.bs3.tinyc.generated.tinycParser.AddexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.AndexprContext;
@@ -47,7 +47,7 @@ import backslash.bs3.tinyc.generated.tinycParser.TypeContext;
 import backslash.bs3.tinyc.generated.tinycParser.UnaryexprContext;
 
 
-public class BS3tinycVisitor extends tinycBaseVisitor<List<Object>> {
+public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
 
     private tinycParser parser;
     private int labelcounter;

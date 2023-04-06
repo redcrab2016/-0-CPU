@@ -1,6 +1,6 @@
-grammar tinyc;
+parser grammar tinycParser;
 
-options {contextSuperClass=org.antlr.v4.runtime.RuleContextWithAltNum;}
+options {tokenVocab=tinycLexer; contextSuperClass=org.antlr.v4.runtime.RuleContextWithAltNum;}
 
 @header {
 import java.util.*;
@@ -38,22 +38,21 @@ statement
    | 'if' paren_expr statement 'else' statement      
    | 'while' paren_expr statement                    
    | 'do' statement 'while' paren_expr ';'           
-   | '{' statement* '}'                               
-   | expr ';'                                         
-   | 'asm' Bs3asm ';'                                 
-   | 'asm' '{' bs3asmblock '}'                        
-   | ';'                                              
+   | OPEN_BRACE statement* CLOSE_BRACE
+   | expr ';'
+   | 'asm' ASMBEGIN bs3asmblock ASMEND                        
+   | ';'                               
    ;
 
 declare
    : ext='extern'? type id_ ('[' integer ']')? {addSymbol($id_.text, $type.aType, $ext!=null, $integer.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>  
      (
-      ',' id_ ('[' integer ']')? {addSymbol($id_.text, $type.aType, $ext!=null, $integer.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}> 
+      COMMA id_ ('[' integer ']')? {addSymbol($id_.text, $type.aType, $ext!=null, $integer.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}> 
      )*    
    ;
 
 label
-   : id_ ':' {addSymbol($id_.text, BS3tinycType._void(), false)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>
+   : id_ COLON {addSymbol($id_.text, BS3tinycType._void(), false)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>
    ;
 
 jump
@@ -76,22 +75,54 @@ type
    | VOID                 
    ;
 
-Bs3asm
-   : (('{' [0-9]+ '}')[a-zA-Z0-9._[\]+$ \t",']+ ('{' [0-9]+ '}') )+
-   ;
-
-Bs3nl
-   : [\r\n]+
-   ;
-
-Bs3comment
-   : ';' ~[\r\n]*
-   ;
-
 bs3asmblock
-   : Bs3asm Bs3comment? (Bs3nl bs3asmblock? )?  
-   | Bs3comment (Bs3nl bs3asmblock? )?          
-   | Bs3nl bs3asmblock                          
+   : (Bs3nl | Bs3WS Bs3nl)* bs3asmline ( (Bs3nl | Bs3WS Bs3nl)+ bs3asmline )*  (Bs3nl | Bs3WS)*
+   ;
+
+bs3asmline
+   : (bs3asmlabel (bs3ope (bs3params)?)?)? bs3comment ? 
+   | bs3macrodef Bs3nl?
+   ;
+
+
+bs3macrodef
+   : bs3asmlabel bs3macro Bs3macroline+ Bs3macroend
+   ;
+
+
+bs3asmlabel
+   : (Bs3labeldot ? Bs3id Bs3labelcolon ?)? Bs3WS
+   ;
+
+bs3ope
+   : Bs3id
+   ;
+
+bs3params
+   : Bs3WS bs3param ( Bs3WS* Bs3paramsep Bs3WS* bs3param )*
+   ;
+
+bs3param
+   : Bs3reg | bs3labelref | bs3value | Bs3accessmode | Bs3string
+   ;
+
+bs3labelref
+   : Bs3id ( Bs3labeldot Bs3id )?
+   | Bs3labeldot Bs3id
+   ;
+
+bs3value
+   : Bs3decimal
+   | Bs3hexa
+   | Bs3char
+   ;
+
+bs3comment
+   : Bs3WS? Bs3comment
+   ;
+
+bs3macro
+   : Bs3macro
    ;
 
 //BEGIN of  expression rules
@@ -103,7 +134,7 @@ paren_expr
 expr
    returns [ BS3tinycType aType ]
    : ase1=assignexpr                         { $aType = $ase1.aType; }
-   ( ',' asen=assignexpr                     { $aType = $asen.aType; }      
+   ( COMMA asen=assignexpr                     { $aType = $asen.aType; }      
    )*
    ;
 
@@ -116,7 +147,7 @@ assignexpr
 condexpr
    returns [ BS3tinycType aType ]
    : logicORexpr                             { $aType = $logicORexpr.aType; }
-   ('?' expr ':' condexpr                    { $aType = BS3tinycType.cond3Type($expr.aType, $condexpr.aType); }
+   ('?' expr COLON condexpr                    { $aType = BS3tinycType.cond3Type($expr.aType, $condexpr.aType); }
    )?
    ;
 
@@ -256,11 +287,11 @@ sourcevar
                                                    { $aType = BS3tinycType.unsignedword(); }
    | id_ '(' expr  ')'                             {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
                                                    { $aType = BS3tinycType.unsignedword(); } // one param W0=expr
-   | id_ '(' expr ',' expr ')'                     {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+   | id_ '(' expr COMMA expr ')'                     {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
                                                    { $aType = BS3tinycType.unsignedword(); } // two params W0=1st expr, W1=2nd expr
-   | id_ '(' expr ',' expr ',' expr ')'            {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+   | id_ '(' expr COMMA expr COMMA expr ')'            {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
                                                    { $aType = BS3tinycType.unsignedword(); } // 3 aprams W0=1st expr, W1=2nd expr, W2=3rd expr
-   | id_ '(' expr ',' expr ',' expr ',' expr ')'   {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
+   | id_ '(' expr COMMA expr COMMA expr COMMA expr ')'   {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
                                                    { $aType = BS3tinycType.unsignedword(); } // 4 params W0=1st expr, W1=2nd expr, W2=3rd expr and W3=4th expr 
    | regWord                                       { $aType = $regWord.aType;}
    | regByte                                       { $aType = $regByte.aType;}
@@ -298,7 +329,7 @@ integer
 stringdata
    returns [ BS3tinycType aType ]
    locals [ String strValue ]
-   : '"' stringdataraw '"'                                   { $aType = BS3tinycType.unsignedword(); stringdata.addString($stringdataraw.text); $strValue = $stringdataraw.text; }
+   : DBLQUOTE stringdataraw DBLQUOTEEND                                   { $aType = BS3tinycType.unsignedword(); stringdata.addString($stringdataraw.text); $strValue = $stringdataraw.text; }
    ;
 
 //END of  expression rules
@@ -306,55 +337,3 @@ stringdata
 stringdataraw
    : STRDATA*
    ;
-
-STRDATA
-   : (~[\r\n"])
-   ;
-
-BYTE
-   : 'char'
-   | 'byte'
-   ;
-
-WORD
-   : 'int'
-   | 'short'
-   | 'word'
-   ;
-
-VOID
-   : 'void'
-   | 'label'
-   ;
-
-REGW
-   : [wW] [0-3]         { setText(getText().toLowerCase()); }
-   ;
-
-REGB
-   : [bB] [0-7]         { setText(getText().toLowerCase()); }
-   ;
-
-IDSTRING
-   : [a-z._][a-z0-9_]*  { setText(getText().toLowerCase()); }
-   ;
-
-INT
-   : [+\-]?[0-9] +
-   | '0x' [0-9A-Fa-f]+  { setText("$" + getText().substring(2)); }
-   | '\'' ~['\r\n] '\'' { setText(String.valueOf((int)getText().charAt(1))); }
-   ;
-
-WS
-   : [ \r\n\t] -> skip
-   ;
-
-BlockComment
-    :   '/*' .*? '*/'
-        -> skip
-    ;
-
-LineComment
-    :   '//' ~[\r\n]*
-        -> skip
-    ;

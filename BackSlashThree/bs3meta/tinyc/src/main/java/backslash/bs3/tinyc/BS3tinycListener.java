@@ -4,7 +4,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
-import backslash.bs3.tinyc.generated.tinycBaseListener;
+import backslash.bs3.tinyc.generated.tinycParserBaseListener;
 import backslash.bs3.tinyc.generated.tinycParser.AddexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.AndexprContext;
 import backslash.bs3.tinyc.generated.tinycParser.AssignexprContext;
@@ -39,7 +39,7 @@ import backslash.bs3.tinyc.generated.tinycParser.UnaryexprContext;
 
 
 
-public class BS3tinycListener extends tinycBaseListener {
+public class BS3tinycListener extends tinycParserBaseListener {
 
     @Override
     public void enterAddexpr(AddexprContext ctx) {
