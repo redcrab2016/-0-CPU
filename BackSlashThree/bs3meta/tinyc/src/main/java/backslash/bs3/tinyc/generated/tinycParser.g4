@@ -47,7 +47,7 @@ label
    ;
 
 jump
-   : ('jump' | 'goto') id_
+   : ('jump' | 'goto') target=id_
    ;
 
 returnfct
