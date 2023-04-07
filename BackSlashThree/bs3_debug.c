@@ -768,7 +768,7 @@ void bs3_debug_comm(struct bs3_debug_data * pbs3debug)
                len = sizeof(pbs3debug->cli); 
                newco = accept(pbs3debug->sockfd, (SA*)&cli, &len); 
                if (newco > 0) {
-                    write(newco,reject, strlen(reject) );
+                    len = write(newco,reject, strlen(reject) );
                     close(newco);
                }
             }
