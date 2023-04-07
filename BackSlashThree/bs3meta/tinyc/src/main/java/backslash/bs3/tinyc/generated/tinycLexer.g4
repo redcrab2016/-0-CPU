@@ -104,6 +104,43 @@ LineComment
 
 mode ASSEMBLER;
 
+Bs3ope_directive
+   : 'align'|'db'|'dw'|'embed'|'equ'|'include'|'space' | 'dist' | 'org'
+   ;
+
+Bs3ope_je  : 'je'  {setText("jz"); } -> type(Bs3ope_branch) ;
+Bs3ope_jne : 'jne' {setText("jnz");} -> type(Bs3ope_branch) ;
+Bs3ope_jae : 'jae' {setText("jc"); } -> type(Bs3ope_branch) ;
+Bs3ope_jb  : 'jb'  {setText("jnc");} -> type(Bs3ope_branch) ;
+
+Bs3ope_branch
+   : 'c'|'call'|'c_w0'|'c_w1'|'c_w2'|'c_w3' |'ret'
+   |'int_0'|'int_1'|'int_10'|'int_11'|'int_12'|'int_13'|'int_14'|'int_15'|'int_2'|'int_3'|'int_4'|'int_5'|'int_6'|'int_7'|'int_8'|'int_9'|'iret'
+   |'j'|'ja'|'jbe'|'jc'|'jg'|'jge'|'jl'|'jle'|'jn'|'jnc'|'jnn'|'jnv'|'jnz'|'jump'|'jv'|'jz'|'j_w0'|'j_w1'|'j_w2'|'j_w3' 
+   ;
+
+Bs3ope_UAL
+   : 'adc'|'add'|'and'|'bic'|'cmp'|'dec'|'div'|'eor'|'idiv'|'imul'|'inc'|'mul'|'neg'|'not'|'or'|'rol'|'ror'|'sar'|'sbb'|'shl'|'shr'|'sub'|'tst'
+   ;
+
+Bs3ope_stack
+   : 'drop' | 'dup'
+   | 'popa'|'popf'|'poppc'|'pop_b0'|'pop_b1'|'pop_b2'|'pop_b3'|'pop_b4'|'pop_b5'|'pop_b6'|'pop_b7'|'pop_w0'|'pop_w1'|'pop_w2'|'pop_w3'
+   |'pusha'|'pushf'|'pushpc'|'push_b0'|'push_b1'|'push_b2'|'push_b3'|'push_b4'|'push_b5'|'push_b6'|'push_b7'|'push_w0'|'push_w1'|'push_w2'|'push_w3'
+   ;
+
+Bs3ope_transfer
+   : 'ld'|'leaf_w0'|'leaf_w1'|'leaf_w2'|'leaf_w3'|'lean_w0'|'lean_w1'|'lean_w2'|'lean_w3'|'mov'|'sr'|'swp'
+   ;
+
+Bs3ope_misc
+   : 'clc'|'cli'|'cln'|'clv'|'clz'|'hevt'|'hlt'|'nop'|'reset'|'stc'|'sti'|'stn'|'stv'|'stz'|'wait'
+   ;
+
+Bs3ope_inout
+   : 'in'| 'out' | 'out2'
+   ;
+
 ASMBEGIN:   '{';
 
 ASMEND:     '}' -> popMode;
@@ -141,7 +178,7 @@ Bs3hexa
    ;
 
 Bs3string
-   : '"' ((~[\r\n"])* Bs3macrosubst?)+  '"'
+   : '"' (~[\r\n"]*)?  '"'
    ;
 
 Bs3nl

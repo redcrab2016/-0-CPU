@@ -28,7 +28,7 @@ statement
    | 'do' statement 'while' paren_expr ';'           
    | OPEN_BRACE statement* CLOSE_BRACE
    | expr ';'
-   | 'asm' ASMBEGIN bs3asmblock ASMEND                        
+   | 'asm' Bs3WS* ASMBEGIN bs3asmblock ASMEND                        
    | ';'                               
    ;
 
@@ -68,12 +68,14 @@ type
    | VOID                           { $aType = BS3tinycType._void(); }
    ;
 
+// BS3 assembly code 
+
 bs3asmblock
    : (Bs3nl | Bs3WS Bs3nl)* bs3asmline ( (Bs3nl | Bs3WS Bs3nl)+ bs3asmline )*  (Bs3nl | Bs3WS)*
    ;
 
 bs3asmline
-   : (bs3asmlabel (bs3ope (bs3params)?)?)? bs3comment ? 
+   : bs3asmlabel? (Bs3WS bs3ope (bs3params)?)? bs3comment ? 
    | bs3macrodef Bs3nl?
    ;
 
@@ -84,11 +86,18 @@ bs3macrodef
 
 
 bs3asmlabel
-   : (Bs3labeldot ? Bs3id Bs3labelcolon ?)? Bs3WS
+   : Bs3labeldot ? Bs3id Bs3labelcolon? 
    ;
 
 bs3ope
-   : Bs3id
+   : Bs3id 
+   | Bs3ope_directive 
+   | Bs3ope_branch 
+   | Bs3ope_inout 
+   | Bs3ope_misc 
+   | Bs3ope_stack 
+   | Bs3ope_transfer 
+   | Bs3ope_UAL
    ;
 
 bs3params
@@ -243,9 +252,12 @@ term
 
 targetvar
    returns [ BS3tinycType aType ]
-   : id_ ('[' er=expr ']') ?                       { symbols.has($id_.text)}?<fail={"Undefined identifier '"+$id_+"'"}>
-                                                   { BS3tinycSymbol s = symbols.get($id_.text);
-                                                     $aType = s.type;
+   : id_ ('[' er=expr ']') ?                       { BS3tinycSymbol s = symbols.get($id_.text);
+                                                     if (s == null) {
+                                                      notifyErrorListeners("Undefined identifier '" + $id_.text + "'");
+                                                     } else {  
+                                                      $aType = s.type;
+                                                     }
                                                    }
    | '*' ('(' tr=type ')')? er=expr                { if ($type.text == null) {
                                                        $aType = BS3tinycType.unsignedword();
@@ -260,32 +272,50 @@ targetvar
 sourcevar
    returns [ BS3tinycType aType ]
    : (ope='&' | ope='*' ('(' tr=type ')')? ) ? 
-     ir=id_ ( '[' er=expr ']') ?                   {symbols.has($id_.text)}?<fail={"Undefined identifier '"+$id_+"'"}>
-                                                   { if ($ope ==  null) {
-                                                      BS3tinycSymbol s = symbols.get($id_.text);
-                                                      $aType = s.type;
-                                                     } else {
-                                                      if ($ope.text.charAt(0) == '&') {
-                                                         $aType = BS3tinycType.unsignedword(); 
-                                                      } else { // '*'
-                                                         if ($type.text == null) {
-                                                            $aType = BS3tinycType.unsignedword();
+     ir=id_ ( '[' er=expr ']') ?                   {  if (!symbols.has($id_.text)) {
+                                                         notifyErrorListeners("Undefined identifier '" + $id_.text + "'");
+                                                      } else {
+                                                         if ($ope ==  null) {
+                                                            BS3tinycSymbol s = symbols.get($id_.text);
+                                                            $aType = s.type;
                                                          } else {
-                                                            $aType = $type.aType;
+                                                            if ($ope.text.charAt(0) == '&') {
+                                                               $aType = BS3tinycType.unsignedword(); 
+                                                            } else { // '*'
+                                                               if ($type.text == null) {
+                                                                  $aType = BS3tinycType.unsignedword();
+                                                               } else {
+                                                                  $aType = $type.aType;
+                                                               }
+                                                            }
                                                          }
                                                       }
+                                                   }
+   | id_ '(' ')'                                   { $aType = BS3tinycType.unsignedword(); 
+                                                     if (!symbols.has($id_.text)) {
+                                                         notifyErrorListeners("Undefined identifier '" + $id_.text + "'");
                                                      }
                                                    }
-   | id_ '(' ')'                                   {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
-                                                   { $aType = BS3tinycType.unsignedword(); }
-   | id_ '(' expr  ')'                             {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
-                                                   { $aType = BS3tinycType.unsignedword(); } // one param W0=expr
-   | id_ '(' expr COMMA expr ')'                     {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
-                                                   { $aType = BS3tinycType.unsignedword(); } // two params W0=1st expr, W1=2nd expr
-   | id_ '(' expr COMMA expr COMMA expr ')'            {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
-                                                   { $aType = BS3tinycType.unsignedword(); } // 3 aprams W0=1st expr, W1=2nd expr, W2=3rd expr
-   | id_ '(' expr COMMA expr COMMA expr COMMA expr ')'   {symbols.get($id_.text) != null}?<fail={"Undefined identifier '"+$id_+"'"}>
-                                                   { $aType = BS3tinycType.unsignedword(); } // 4 params W0=1st expr, W1=2nd expr, W2=3rd expr and W3=4th expr 
+   | id_ '(' expr  ')'                             { $aType = BS3tinycType.unsignedword(); 
+                                                     if (!symbols.has($id_.text)) {
+                                                         notifyErrorListeners("Undefined identifier '" + $id_.text + "'");
+                                                     }
+                                                   } // one param W0=expr
+   | id_ '(' expr COMMA expr ')'                   { $aType = BS3tinycType.unsignedword(); 
+                                                     if (!symbols.has($id_.text)) {
+                                                         notifyErrorListeners("Undefined identifier '" + $id_.text + "'");
+                                                     }
+                                                   } // two params W0=1st expr, W1=2nd expr
+   | id_ '(' expr COMMA expr COMMA expr ')'        { $aType = BS3tinycType.unsignedword(); 
+                                                     if (!symbols.has($id_.text)) {
+                                                         notifyErrorListeners("Undefined identifier '" + $id_.text + "'");
+                                                     }
+                                                   } // 3 aprams W0=1st expr, W1=2nd expr, W2=3rd expr
+   | id_ '(' expr COMMA expr COMMA expr COMMA expr ')'   { $aType = BS3tinycType.unsignedword(); 
+                                                     if (!symbols.has($id_.text)) {
+                                                         notifyErrorListeners("Undefined identifier '" + $id_.text + "'");
+                                                     }
+                                                   } // 4 params W0=1st expr, W1=2nd expr, W2=3rd expr and W3=4th expr 
    | regWord                                       { $aType = $regWord.aType;}
    | regByte                                       { $aType = $regByte.aType;}
    | stringdata                                    { $aType = $stringdata.aType; }

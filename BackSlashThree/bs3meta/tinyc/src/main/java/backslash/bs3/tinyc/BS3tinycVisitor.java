@@ -1,6 +1,5 @@
 package backslash.bs3.tinyc;
 
-import java.security.DrbgParameters.NextBytes;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -97,7 +96,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
         }
         for (i = 1 ; i < ctx.getChildCount() ; i+=2) {
             result.add("    push_w0");
-            result.add(ctx.getChild(i+1).accept(this));
+            result.addAll(ctx.getChild(i+1).accept(this));
             result.add("    pop_w1");
             result.add("    and     w1, w0");
             result.add("    mov     w0, w1");
@@ -185,7 +184,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
             labelcond=getNextLabel();
             labelcondend=getNextLabel();
             result.add("    push_w0");
-            result.add(ctx.getChild(i+1).accept(this));
+            result.addAll(ctx.getChild(i+1).accept(this));
             result.add("    pop_w1");
             result.add("      cmp       w1, w0");
             // 'left' ope 'right', w1=left w0=right
@@ -218,7 +217,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
         }
         for (i = 1 ; i < ctx.getChildCount() ; i+=2) {
             result.add("    push_w0");
-            result.add(ctx.getChild(i+1).accept(this));
+            result.addAll(ctx.getChild(i+1).accept(this));
             result.add("    pop_w1");
             result.add("    eor     w1, w0");
             result.add("    mov     w0, w1");
@@ -249,7 +248,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
         }
         for (i = 1 ; i < ctx.getChildCount() ; i+=2) {
             result.add("    push_w0");
-            result.add(ctx.getChild(i+1).accept(this));
+            result.addAll(ctx.getChild(i+1).accept(this));
             result.add("    pop_w1");
             result.add("    eor     w1, w0");
             result.add("    mov     w0, w1");
@@ -297,7 +296,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
             result.add(labelcond);
             for (i = 1 ; i < ctx.getChildCount() ; i+=2) {
                 labelcond=getNextLabel();
-                result.add(ctx.getChild(i+1).accept(this));
+                result.addAll(ctx.getChild(i+1).accept(this));
                 result.add("    cmp     w0, 0");
                 result.add("    jnz     " + labelcond);
                 result.add("    jump    "+ labelcondfinish);
@@ -326,7 +325,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
             result.add(labelcond);
             for (i = 1 ; i < ctx.getChildCount() ; i+=2) {
                 labelcond=getNextLabel();
-                result.add(ctx.getChild(i+1).accept(this));
+                result.addAll(ctx.getChild(i+1).accept(this));
                 result.add("    cmp     w0, 0");
                 result.add("    jz      " + labelcond);
                 result.add("    mov     w0, 1");
@@ -415,7 +414,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
             lblcond = getNextLabel();
             lblcondend = getNextLabel();
             result.add("    push_w0");
-            result.add(ctx.getChild(i+1).accept(this));
+            result.addAll(ctx.getChild(i+1).accept(this));
             senTypeRight = ((ShiftexprContext)ctx.getChild(i+1)).aType;
             result.add("    pop_w1");
             result.add("    cmp     w1, w0");
@@ -452,7 +451,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
                     }
                     break;
             } // end switch
-            result.add("  eor       w0, w0");
+            result.add("    eor       w0, w0");
             result.add("    j       "+lblcondend);
             result.add(lblcond);
             result.add("    mov     w0, 1");
@@ -485,7 +484,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
         for (i = 1 ; i < ctx.getChildCount() ; i+=2) {
             result.add("    push_w1");
             result.add("    push_w0");
-            result.add(ctx.getChild(i+1).accept(this));
+            result.addAll(ctx.getChild(i+1).accept(this));
             result.add("    pop_w1");
             switch (ctx.getChild(i).getText().charAt(0)) {
                 case '<':
@@ -665,12 +664,26 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
         String labelcondend;
         switch (ctx.altNum) {
             case 5: // for ( x ; y ; z ) s
+                labelcond = getNextLabel();
+                labelcond2 = getNextLabel();
+                labelcondend = getNextLabel();
+                result.addAll(ctx.getChild(2).accept(this)); // eval x
+                result.add(labelcond);
+                result.addAll(ctx.getChild(4).accept(this)); // eval y
+                result.add("    or      w0, w0");
+                result.add("    jnz     " + labelcond2);
+                result.add("    jump    " + labelcondend);
+                result.add(labelcond2);
+                result.addAll(ctx.getChild(8).accept(this));
+                result.addAll(ctx.getChild(6).accept(this));
+                result.add("    jump    " + labelcond );
+                result.add(labelcondend);
                 break;
             case 6: // if x y 
                 labelcond = getNextLabel();
                 labelcondend = getNextLabel();
                 result.addAll(ctx.getChild(1).accept(this));
-                result.add("    cmp     w0,0");
+                result.add("    or      w0, w0");
                 result.add("    jnz     " + labelcond);
                 result.add("    jump    " + labelcondend);
                 result.add(labelcond);
@@ -682,7 +695,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
                 labelcond2 = getNextLabel();
                 labelcondend = getNextLabel();
                 result.addAll(ctx.getChild(1).accept(this));
-                result.add("    cmp     w0,0");
+                result.add("    or      w0, w0");
                 result.add("    jnz     " + labelcond);
                 result.add("    jump    " + labelcond2);
                 result.add(labelcond);
@@ -698,7 +711,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
                 labelcondend = getNextLabel();
                 result.add(labelcond);
                 result.addAll(ctx.getChild(1).accept(this));
-                result.add("    cmp     w0,0");
+                result.add("    or      w0, w0");
                 result.add("    jnz     " + labelcond2);
                 result.add("    jump    " + labelcondend);
                 result.add(labelcond2);

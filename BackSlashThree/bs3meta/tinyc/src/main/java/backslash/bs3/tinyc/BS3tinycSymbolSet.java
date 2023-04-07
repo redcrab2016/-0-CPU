@@ -38,19 +38,21 @@ public class BS3tinycSymbolSet extends HashMap<String, BS3tinycSymbol> {
 
     List<Object> generateASM() {
         List<Object> result = new ArrayList<Object>();
+        result.add("    align   2");
         for (Entry<String, BS3tinycSymbol> e : entrySet()) {
             BS3tinycSymbol s =  e.getValue();
-            if (s.type != null && (s.type.isWord || s.type.isByte) && !s.type.isLabel && !s.isExtern) {
-                if (s.type.isWord) {
-                    result.add(s.name + "    dw  0");
-                    if (s.size > 1)
-                        result.add("    space   "+String.valueOf((s.size-1)*2));
-                } else {
-                    result.add(s.name + "   db  0");
-                    if (s.size > 1)
-                        result.add("    space   "+String.valueOf(   (s.size % 2) == 1? s.size: s.size-1   ));
-                }
-
+            if (s.type != null && (s.type.isWord ) && !s.type.isLabel && !s.isExtern) {
+                result.add(s.name + "    dw  0");
+                if (s.size > 1)
+                    result.add("    space   "+String.valueOf((s.size-1)*2));
+            }
+        }
+        for (Entry<String, BS3tinycSymbol> e : entrySet()) {
+            BS3tinycSymbol s =  e.getValue();
+            if (s.type != null && (s.type.isByte) && !s.type.isLabel && !s.isExtern) {
+                result.add(s.name + "   db  0");
+                if (s.size > 1)
+                    result.add("    space   "+String.valueOf(   (s.size % 2) == 1? s.size: s.size-1   ));
             }
         }
         return result;
