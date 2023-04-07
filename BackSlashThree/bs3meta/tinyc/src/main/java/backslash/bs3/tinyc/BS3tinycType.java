@@ -51,12 +51,12 @@ public class BS3tinycType {
 
     public static BS3tinycType unsignedbyte()
     {
-        return new BS3tinycType(true, false);
+        return new BS3tinycType(false, false);
     }
 
     public static BS3tinycType signedbyte()
     {
-        return new BS3tinycType(true, true);
+        return new BS3tinycType(false, true);
     }
 
     public static BS3tinycType _byte()

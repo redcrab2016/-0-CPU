@@ -2,7 +2,7 @@
 # make        # compile all binary
 # make clean  # remove ALL binaries and objects
 
-.PHONY = all clean bs3rt bs3asm distribute
+.PHONY = all clean bs3rt bs3asm bs3meta distribute
 
 CC = @gcc
 
@@ -15,7 +15,7 @@ DEBUG = -std=gnu11 -O3
 #DEBUG = -std=gnu11 -g  # for gdb debugging 
 BINS := bs3asm bs3rt
 
-all: ${BINS} distribute
+all: ${BINS} bs3meta distribute
 
 distribute: ${BINS}
 	@echo ">>> Distribute into dist folder."
@@ -26,6 +26,13 @@ distribute: ${BINS}
 	@cp -pv bs3rt dist/.
 	@cp -prv include/* dist/include/.
 	@cp -prv examples/* dist/examples/.
+	@cp -pv bs3tinyc.sh dist/.
+	@cp -pv bs3meta/tinyc/target/*dependencies.jar dist/bs3tinyc.jar
+
+bs3meta: ${BINS}
+	@echo ">>> Build bs3tinyc"
+	@mvn -f bs3meta/tinyc/pom.xml clean package install org.apache.maven.plugins:maven-assembly-plugin:single
+	
 
 bs3rt: bs3_mainrt.o dev_bs3gfx.o dev_bs3rambank.o dev_bs3rombank.o dev_bs3timer.o dev_bs3inout.o dev_rtc72421.o bs3_bus.o bs3.o bs3_asm_code_map.o
 	@echo ">>> Creating" $@

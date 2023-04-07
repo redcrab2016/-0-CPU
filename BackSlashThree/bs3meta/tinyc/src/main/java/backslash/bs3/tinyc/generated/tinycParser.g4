@@ -33,17 +33,20 @@ statement
    ;
 
 declare
-   : ext='extern'? type id_ ('[' integer ']')?  {!symbols.has($id_.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>  
-                                                {symbols.add($id_.text, $type.aType, $ext!=null, $integer.text);}
+   : ext='extern'? type id_ ('[' integer ']')?  {  if (symbols.has($id_.text)) notifyErrorListeners("duplicate identifier declaration '" + $id_.text + "'");
+                                                   symbols.add($id_.text, $type.aType, $ext!=null, $integer.text);
+                                                }
      (
-      COMMA id_ ('[' integer ']')?              {!symbols.has($id_.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}> 
-                                                {symbols.add($id_.text, $type.aType, $ext!=null, $integer.text);}
+      COMMA id_ ('[' integer ']')?              {  if (symbols.has($id_.text)) notifyErrorListeners("duplicate identifier declaration '" + $id_.text + "'");
+                                                   symbols.add($id_.text, $type.aType, $ext!=null, $integer.text);}
      )*    
    ;
 
 label
-   : id_ COLON                                  {!symbols.has($id_.text)}?<fail={"duplicate identifier declaration '"+$id_.text+"'"}>
-                                                {symbols.add($id_.text,  BS3tinycType._void(), false);}
+   : id_ COLON                                  {  if (!symbols.add($id_.text,  BS3tinycType._void(), false)){
+                                                      notifyErrorListeners("duplicate declaration '" + $id_.text + "'"); 
+                                                   }
+                                                }
    ;
 
 jump

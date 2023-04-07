@@ -51,6 +51,7 @@ public class BS3tinyc
                 for (String msg : errorListener.getReport()) {
                     System.out.println("  #"+ String.valueOf(i++) + " " + msg);
                 }
+                System.exit(1);
             } else {
                 BS3tinycVisitor visitor = new BS3tinycVisitor(parser);
                 List<Object> result = visitor.visit(tree);
@@ -59,6 +60,7 @@ public class BS3tinyc
                 {
                     System.out.println(O.toString() );
                 }
+                System.exit(0);
             }
         } catch (Exception e)
         {
