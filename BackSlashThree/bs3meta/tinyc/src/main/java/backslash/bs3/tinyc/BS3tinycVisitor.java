@@ -167,8 +167,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
 
     @Override
     public List<Object> visitDeclare(DeclareContext ctx) {
-        // TODO Auto-generated method stub
-        return super.visitDeclare(ctx);
+        return defaultResult();
     }
 
     @Override

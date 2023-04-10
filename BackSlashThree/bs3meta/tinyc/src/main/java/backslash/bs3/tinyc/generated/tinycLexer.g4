@@ -83,7 +83,7 @@ IDSTRING
    ;
 
 INT
-   : [+\-]?[0-9] +
+   : [0-9] +
    | '0x' [0-9A-Fa-f]+  { setText("$" + getText().substring(2)); }
    | '\'' ~['\r\n] '\'' { setText(String.valueOf((int)getText().charAt(1))); }
    ;
