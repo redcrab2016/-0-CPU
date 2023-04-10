@@ -653,7 +653,7 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
                 break;
 
         }
-        return super.visitSourcevar(ctx);
+        return result;
     }
 
     @Override
