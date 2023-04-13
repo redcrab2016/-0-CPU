@@ -157,7 +157,7 @@ Human Mnemonic (47 Human handlable instructions)
 	Core I/O	
 		IN, OUT, OUT2
 	Unconditional branching	
-		INT, J, C, RET, IRET
+		INT, J, JUMP, C, CALL, RET, IRET
 	Conditional Branching	
 		Jx
 	Direct Memory Access	
