@@ -26,9 +26,12 @@ if [ "$ext" == "tc" ]; then
     basename="${last%.*}"
     nametinyc="${basename}.tc_"
     nameasm="${basename}.asm"
-    cpp "$last" |  grep -E -v '^# [0-9]+.*$' > "$nametinyc"
+    namecpperr="${basename}.cpperr"
+    cpp "$last" |  grep -E -v '^# [0-9]+.*$' 2> "$namecpperr" > "$nametinyc"
     result=$?
     if [ "$result" != "0" ]; then 
+        cat "$namecpperr"
+        rm -f "$namecpperr"
         echo "Error with preprocessing of $last"
         exit 1
     fi

@@ -26,7 +26,7 @@ distribute: ${BINS}
 	@cp -pv bs3rt dist/.
 	@cp -prv include/* dist/include/.
 	@cp -prv examples/* dist/examples/.
-	@cp -pv bs3tinyc.sh dist/.
+	@cp -pv bs3c.sh dist/.
 	@cp -pv bs3meta/tinyc/target/*dependencies.jar dist/bs3tinyc.jar
 
 bs3meta: ${BINS}
