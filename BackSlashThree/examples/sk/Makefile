@@ -1,6 +1,6 @@
 .PHONY = all clean sk.bs3
 
-BS3ASM = @../../bs3asm
+BS3ASM = @../../bs3tinyc.sh
 
 all: intro clean gen_sk_asset sk.bs3
 
@@ -19,7 +19,7 @@ clean:
 	@rm -fv *.rpt
 	@rm -fv sk
 
-sk.bs3: sk.asm 
-	@echo ">>> Create sk.* from sk.asm"
-	$(BS3ASM) sk.asm
+sk.bs3: sk.tc 
+	@echo ">>> Create sk.* from sk.tc"
+	$(BS3ASM) sk.tc
 

@@ -9,23 +9,28 @@
     "makefile.launchConfigurations": [
         {
             "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
-            "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
-            "binaryArgs": ["test.asm"]
+            "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/dist/examples/sk/sk",
+            "binaryArgs": []
         },
         {
             "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
             "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
-            "binaryArgs": ["-D","dist/examples/rtc/hellortc.asm"]
+            "binaryArgs": ["-KD","dist/examples/rtc/hellortc.asm"]
         },
         {
             "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
             "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
-            "binaryArgs": ["-D","dist/examples/ansigfx/helloansigfx.asm"]
+            "binaryArgs": ["-KD","dist/examples/ansigfx/helloansigfx.asm"]
         },
         {
             "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
             "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
-            "binaryArgs": ["-D","dist/examples/gfx/hellogfx.asm"]
+            "binaryArgs": ["-KD","dist/examples/gfx/hellogfx.asm"]
+        },
+        {
+            "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
+            "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
+            "binaryArgs": ["-D","dist/examples/sk/sk.asm"]
         }
     ],
     "C_Cpp.dimInactiveRegions": false,

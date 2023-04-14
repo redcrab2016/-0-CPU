@@ -1,3 +1,4 @@
+asm {
     include "bs3core.inc"
     include "bs3gfx.inc"
 
@@ -1842,3 +1843,4 @@ sk_item_bankindex
                 dw                  sk_spr_book ; item 9 diamond
                 align               16
 ; end of sk.asm
+}

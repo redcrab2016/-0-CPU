@@ -67,6 +67,19 @@ public class BS3tinycVisitor extends tinycParserBaseVisitor<List<Object>> {
     protected List<Object> addComment(List<Object> asmresult, String comment) {
         comment = String.valueOf(comment);
         if (comment.length() >70) comment = comment.substring(0, 70);
+        int i;
+        String cc="";
+        char c=0;
+        for (i = 0 ; i < comment.length(); i++) {
+            c = comment.charAt(i);
+            if (c == '\r' || c == '\n' ) return asmresult;
+            if (c< 32) {
+                cc = cc + "\\"+String.valueOf((int)c);
+            } else {
+                cc =cc + c;
+            }
+        }
+        comment = cc;
         asmresult.add("; " +  comment);
         return asmresult;
     }
