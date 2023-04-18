@@ -35,6 +35,7 @@ if [ "$ext" == "tc" ]; then
         echo "Error with preprocessing of $last"
         exit 1
     fi
+    rm -f "$namecpperr"
     cat "$nametinyc" | java -jar $p/bs3tinyc.jar $@ > "$nameasm"
     result=$?
     if [ "$result" != "0" ]; then 
