@@ -27,7 +27,7 @@ if [ "$ext" == "tc" ]; then
     nametinyc="${basename}.tc_"
     nameasm="${basename}.asm"
     namecpperr="${basename}.cpperr"
-    cpp "$last" |  grep -E -v '^# [0-9]+.*$' 2> "$namecpperr" > "$nametinyc"
+    cpp -I "$p/include" "$last" |  grep -E -v '^# [0-9]+.*$' 2> "$namecpperr" > "$nametinyc"
     result=$?
     if [ "$result" != "0" ]; then 
         cat "$namecpperr"
