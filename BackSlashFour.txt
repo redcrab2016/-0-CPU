@@ -1,0 +1,103 @@
+16 registers 8 bits
+8 conditional execution 
+64 KiB address
+16 bits per instruction
+
+registers: - R0 to R15 (designated by 4 bits)
+R0  : 0000 : general , dedicated for "move R0, imm" instruction
+R1  : 0001 : general
+R2  : 0010 : general
+R3  : 0011 : general
+R4  : 0100 : general
+R5  : 0101 : general
+R6  : 0110 : general
+R7  : 0111 : general
+R8  : 1000 : Data access paragraph, dedicated for "mov Rx, [ Ry ]" and "mov [ Rx ], Ry"
+R9  : 1001 : multiplication carries, dedicated for "mul Rx, Ry" result MSB
+R10 : 1010 : general
+R11 : 1011 : general
+R12 : 1100 : always Zero (write does nothing, read gives only zero)
+R13 : 1101 : flags)  -Z -C S E
+R14 : 1110 : PC in paragraph address
+R15 : 1111 : PC paragraph
+
+Instructions:
+cond  operation param1 [,param2]
+ param can be Rx, [ Rx ], imm
+
+
+conds: 0000 : C      : C
+       0001 : Z      : Z
+       0010 : !C     : NC
+       0011 : !Z     : NZ
+       0100 : C | Z  : COZ
+       0101 : C & Z  : CZ
+       0110 : C & !Z : CNZ
+       1111 : always : A 
+
+operations:
+mov, jpl, jps, not, mlb, mrb, and, or, inc, dec, add, mul
+
+operations with parameters:
+mov  Rx, Ry
+	code : cccc 0000 yyyy xxxx
+        Rx = Ry
+
+mov  R0, imm
+        code : cccc 0001 iiii iiii
+        R0 = imm
+
+mov  R14, imm (same as "jps imm" )
+        code : cccc 0010 iiii iiii
+        R14 = imm
+
+jpl  imm 
+        code : cccc 0011 iiii iiii
+        Atomic double instructions:
+         mov R14, R12
+         mov R15, imm
+
+mov  Rx, [ Ry ]
+        code : cccc 0100 yyyy xxxx
+        Rx = [ Ry + R8 * 256 ]
+
+mov  [ Rx ],  Ry  
+        code : cccc 0101 yyyy xxxx
+        [ Rx + R8 * 256 ] =  Ry
+
+jps  Rx 
+        same as mov R14, Rx
+        code : cccc 0000 1110 xxxx        
+        R14 = Rx
+
+not  Rx
+        code : cccc 0110 0000 xxxx
+        Rx = ~Rx
+
+mlb  Rx, Ry  (4 lsb of Ry => CNNN : C for carry as new bit otherwise zero, execute NNN + 1 times)
+	code : cccc 0111 yyyy xxxx
+
+mrb  Rx, Ry  (4 lsb of Ry => CNNN : C for carry as new bit otherwise zero, execute NNN + 1 times)
+        code : cccc 1000 yyyy xxxx
+
+and  Rx, Ry
+        code : cccc 1001 yyyy xxxx
+
+or   Rx, Ry
+        code : cccc 1010 yyyy xxxx
+
+inc  Rx
+	code : cccc 1011 0000 xxxx
+
+dec  Rx
+	code : cccc 1100 0000 xxxx
+
+add  Rx, Ry
+	code : cccc 1101 yyyy xxxx
+
+sub  Rx, Ry
+        code : cccc 1110 yyyy xxxx
+
+mul  Rx, Ry
+        code : cccc 1111 yyyy xxxx
+
