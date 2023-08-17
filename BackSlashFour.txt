@@ -1,6 +1,8 @@
-16 registers 8 bits
-8 conditional execution 
-64 KiB address
+16 registers 16 bits (word)
+16 conditional execution 
+64 Ki word address per paragraph
+64 Ki paragraph
+absolute address = address + paragraph << 8 ( 256 * 65536 = 16 MiW = 32 MiB content)
 16 bits per instruction
 
 registers: - R0 to R15 (designated by 4 bits)
@@ -13,11 +15,11 @@ R5  : 0101 : general
 R6  : 0110 : general
 R7  : 0111 : general
 R8  : 1000 : Data access paragraph, dedicated for "mov Rx, [ Ry ]" and "mov [ Rx ], Ry"
-R9  : 1001 : multiplication carries, dedicated for "mul Rx, Ry" result MSB
-R10 : 1010 : general
-R11 : 1011 : general
+R9  : 1001 : multiplication carries, dedicated for "mul Rx, Ry" result MSW / remainer (modulo) of division
+R10 : 1010 : Auxiliary Data in paragraph address
+R11 : 1011 : Auxiliary Data address paragraph
 R12 : 1100 : always Zero (write does nothing, read gives only zero)
-R13 : 1101 : flags)  -Z -C S E
+R13 : 1101 : flags)  ------- N---OZCE
 R14 : 1110 : PC in paragraph address
 R15 : 1111 : PC paragraph
 
@@ -26,78 +28,220 @@ cond  operation param1 [,param2]
  param can be Rx, [ Rx ], imm
 
 
-conds: 0000 : C      : C
-       0001 : Z      : Z
-       0010 : !C     : NC
-       0011 : !Z     : NZ
-       0100 : C | Z  : COZ
-       0101 : C & Z  : CZ
-       0110 : C & !Z : CNZ
-       1111 : always : A 
+conditions: cccc
+0000	al (or omitted)	Always executed.					No flag tested.
+0001	eq		Equal.							Z==1
+0010	ne		Not equal.						Z==0
+0011	cs or hs	Unsigned higher or same (or carry set).			C==1
+0100	cc or lo	Unsigned lower (or carry clear).			C==0
+0101	mi		Negative. The mnemonic stands for "minus".		N==1
+0110	pl		Positive or zero. The mnemonic stands for "plus".	N==0
+0111	os		Signed overflow. The mnemonic stands for "O set".	O==1
+1000	oc		No signed overflow. The mnemonic stands for "O clear".	O==0
+1001	hi		Unsigned higher.					(C==1) && (Z==0)
+1010	ls		Unsigned lower or same.					(C==0) || (Z==1)
+1011	ge		Signed greater than or equal.				N==O
+1100	lt		Signed less than.					N!=O
+1101	gt		Signed greater than.					(Z==0) && (N==O)
+1110	le		Signed less than or equal.				(Z==1) || (N!=O)
+1111	no		never executed (NOP)					No flag tested
+
 
 operations:
-mov, jpl, jps, not, mlb, mrb, and, or, inc, dec, add, mul
+raw mnemonic:
+	mov, not, and, or, jump, shl, shr, rol, ror, bs, bc, neg, inc, dec, xsg, add, mul, div
 
 operations with parameters:
-mov  Rx, Ry
+0000 : mov  Rx, Ry
+	no flag modified
 	code : cccc 0000 yyyy xxxx
         Rx = Ry
+	if x==15, then R14 = 0
 
-mov  R0, imm
+0001 : mov  R0, low imm8
+        no flag modified
         code : cccc 0001 iiii iiii
-        R0 = imm
+        R0 = (R0 & 0xFF00 ) | imm8
 
-mov  R14, imm (same as "jps imm" )
+0010 : mov  R0, high imm8 
+        no flag modified
         code : cccc 0010 iiii iiii
-        R14 = imm
+        R0 = (R0 & 0x00FF ) | (imm8 << 8)
 
-jpl  imm 
-        code : cccc 0011 iiii iiii
-        Atomic double instructions:
-         mov R14, R12
-         mov R15, imm
+0011 : mov  Rx, [ Ry ]
+        no flag modified
+        code : cccc 0011 yyyy xxxx
+        Rx = [ Ry + R8 << 8 ]
 
-mov  Rx, [ Ry ]
+0100 : mov  [ Rx ],  Ry  
+        no flag modified
         code : cccc 0100 yyyy xxxx
-        Rx = [ Ry + R8 * 256 ]
+        [ Rx + R8 << 8 ] =  Ry
 
-mov  [ Rx ],  Ry  
-        code : cccc 0101 yyyy xxxx
-        [ Rx + R8 * 256 ] =  Ry
-
-jps  Rx 
-        same as mov R14, Rx
-        code : cccc 0000 1110 xxxx        
-        R14 = Rx
-
-not  Rx
-        code : cccc 0110 0000 xxxx
+0101-0000 : not  Rx
+        flags : ZEN
+        code : cccc 0101 0000 xxxx
         Rx = ~Rx
 
-mlb  Rx, Ry  (4 lsb of Ry => CNNN : C for carry as new bit otherwise zero, execute NNN + 1 times)
-	code : cccc 0111 yyyy xxxx
+0101-0001 : inc  Rx
+	flags : ZENC
+	code : cccc 0101 0001 xxxx
 
-mrb  Rx, Ry  (4 lsb of Ry => CNNN : C for carry as new bit otherwise zero, execute NNN + 1 times)
+0101-0010 : dec  Rx
+        flags : ZENC
+	code : cccc 0101 0010 xxxx
+
+0101-0011 : slh Rx
+        flags : ZENC
+	code : cccc 0101 0011 xxxx
+
+0101-0100 : shl  Rx
+        flags : ZENC
+	code : cccc 0101 0100 xxxx
+
+0101-0101 : shr  Rx
+        flags : ZENC
+        code : cccc 0101 0101 xxxx
+
+0101-0110 : sar  Rx
+        flags : ZENC
+        code : cccc 0101 0110 xxxx
+
+0101-0111 : rol  Rx
+        flags : ZENC
+	code : cccc 0101 0111 xxxx
+
+0101-1000 : ror  Rx
+        flags : ZENC
+	code : cccc 0101 1000 xxxx
+
+0101-1001 : mov Rx, [ aux ]
+        no flag modified
+	code : cccc 0101 1001 xxxx
+        aux is the address by [ R10 + R11 << 8 ]
+
+0101-1010 : mov [ aux ], Rx
+        no flag modified
+	code : cccc 0101 1010 xxxx
+        aux is the address by [ R10 + R11 << 8 ]
+
+0101-1011 : xsg  Rx
+	no flag modified
+	code : cccc 0101 1011 xxxx
+	extend sign
+	Rx bit 8 to 15 = Rx bit 7
+
+0101-1100 : neg Rx
+	flags : ZN
+	code : cccc 0101 1100 xxxx
+
+0110 : bs   Rx, imm4
+        no flag modified
+	code : cccc 0110 iiii xxxx
+        set bit number imm4 of Rx
+
+0111 : bc   Rx, imm4
+        no flag modified
+	code : cccc 1001 iiii xxxx
+        clear bit number imm4 of Rx
+
+1000 : and  Rx, Ry
+	flags : ZEN
         code : cccc 1000 yyyy xxxx
+	Rx = Rx & Ry
 
-and  Rx, Ry
-        code : cccc 1001 yyyy xxxx
+1001 : or   Rx, Ry
+	flags : ZEN
+        code : cccc 0111 yyyy xxxx
+        Rx = Rx | Ry
 
-or   Rx, Ry
+1010 : jump Rx, Ry
+        no flag modified
         code : cccc 1010 yyyy xxxx
+	T1=R14
+	T2=R15
+        R14 = Ry
+	R15 = Rx
+	Ry=T1
+	Rx=T2
 
-inc  Rx
-	code : cccc 1011 0000 xxxx
+1011 : jps simm8
+        no flag modified
+        code : cccc 1011 siii iiii
+	short relative jump
+	R14 += simm8 (signed value -128 to + 127)
 
-dec  Rx
-	code : cccc 1100 0000 xxxx
+1100 : add  Rx, Ry
+        flags: ZENCO
+	code : cccc 1100 yyyy xxxx
 
-add  Rx, Ry
-	code : cccc 1101 yyyy xxxx
+1101 : sub  Rx, Ry
+        flags: ZENCO
+        code : cccc 1101 yyyy xxxx
 
-sub  Rx, Ry
+1110 : mul  Rx, Ry
+        flags: ZENC
         code : cccc 1110 yyyy xxxx
+        Rx = low16(Rx * Ry)
+	carries in R9 (high16(Rx * Ry))
+        C=1 if R9 != 0
 
-mul  Rx, Ry
-        code : cccc 1111 yyyy xxxx
+1111 : div Rx, Ry
+        flags: ZENCO
+	code : cccc 1111 yyyy xxxx
+	Rx = Rx / Ry (Rx unchanged if Ry == 0)
+	R9 contains the remainder (modulo)
+	O=1 if Ry==0
 
+extended assembler instruction (ccc is condition)
+	ccc nop
+		no mov R12, R0
+
+	ccc swp Rx, Ry
+		ccc mov R0, Rx
+		ccc mov Rx, Ry
+		ccc mov Ry, R0
+
+	ccc mov [ Rx ], [ Ry ]
+		ccc mov R0, [ Ry ]
+		ccc mov [ Rx ], R0
+
+	al mov Rx, [ Ry + Rz ]
+		al mov R0, Ry
+		al add R0, Rz
+		al mov Rx, [ R0 ]
+
+	al mov  [ Rx +  Ry ], Rz 
+		al mov R0, Rx
+		al add R0, Ry
+		al mov [ R0 ], Rz
+
+	ccc mov R0, imm16
+		ccc mov R0, low L8(imm16)
+		ccc mov R0, high H8(imm16)
+
+	ccc setl imm8
+		ccc mov R0, low imm8
+
+	ccc seth imm8
+		ccc mov R0, high imm8
+
+	ccc set imm16
+		ccc mov R0, low L8(imm16)
+		ccc mov R0, high H8(imm16)
+
+	ccc jpas Rx 
+		ccc mov R14, Rx
+
+	ccc jpal Rx
+		ccc mov R15, Rx
+
+	ccc jpas imm16
+		ccc mov R0, low L8(imm16)
+		ccc mov R0, high H8(imm16)
+		ccc mov R14, R0
+
+	ccc jpal imm16
+		ccc mov R0, low L8(imm16)
+		ccc mov R0, high H8(imm16)
+		ccc mov R15, R0
