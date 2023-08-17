@@ -6,10 +6,10 @@ absolute address = address + paragraph << 8 ( 256 * 65536 = 16 MiW = 32 MiB cont
 16 bits per instruction
 
 registers: - R0 to R15 (designated by 4 bits)
-R0  : 0000 : general , dedicated for "move R0, imm" instruction
-R1  : 0001 : general
-R2  : 0010 : general
-R3  : 0011 : general
+R0  : 0000 : versatile (used in extended assembler) , dedicated for "move R0, imm" instruction
+R1  : 0001 : versatile (used in extended assembler)
+R2  : 0010 : versatile (used in extended assembler)
+R3  : 0011 : versatile (used in extended assembler)
 R4  : 0100 : general
 R5  : 0101 : general
 R6  : 0110 : general
@@ -19,7 +19,7 @@ R9  : 1001 : multiplication carries, dedicated for "mul Rx, Ry" result MSW / rem
 R10 : 1010 : Auxiliary Data in paragraph address
 R11 : 1011 : Auxiliary Data address paragraph
 R12 : 1100 : always Zero (write does nothing, read gives only zero)
-R13 : 1101 : flags)  ------- N---OZCE
+R13 : 1101 : flags)  H------ N---OZCE
 R14 : 1110 : PC in paragraph address
 R15 : 1111 : PC paragraph
 
@@ -58,12 +58,12 @@ operations with parameters:
         Rx = Ry
 	if x==15, then R14 = 0
 
-0001 : mov  R0, low imm8
+0001 : mov  low R0, imm8
         no flag modified
         code : cccc 0001 iiii iiii
         R0 = (R0 & 0xFF00 ) | imm8
 
-0010 : mov  R0, high imm8 
+0010 : mov  high R0, imm8 
         no flag modified
         code : cccc 0010 iiii iiii
         R0 = (R0 & 0x00FF ) | (imm8 << 8)
@@ -115,12 +115,12 @@ operations with parameters:
         flags : ZENC
 	code : cccc 0101 1000 xxxx
 
-0101-1001 : mov Rx, [ aux ]
+0101-1001 : mov Rx, [ R11:R10 ]
         no flag modified
 	code : cccc 0101 1001 xxxx
         aux is the address by [ R10 + R11 << 8 ]
 
-0101-1010 : mov [ aux ], Rx
+0101-1010 : mov [ R11:R10 ], Rx
         no flag modified
 	code : cccc 0101 1010 xxxx
         aux is the address by [ R10 + R11 << 8 ]
@@ -194,8 +194,28 @@ operations with parameters:
 	O=1 if Ry==0
 
 extended assembler instruction (ccc is condition)
-	ccc nop
-		no mov R12, R0
+	ccc nop   (ccc="no" preferably)
+		ccc mov R12, R0
+
+	ccc adc Rx, Ry
+		ccc jps 1
+		al  jps 6
+		cs  inc Rx
+		cs  jps 2
+		al  add Rx, Ry
+		al  jps 2
+		al  add Rx, Ry
+		al  bs  R13, 2
+
+	ccc sbb Rx, Ry
+		ccc jps 1
+		al  jps 6
+		cs  dec Rx
+		cs  jps 2
+		al  sub Rx, Ry
+		al  jps 2
+		al  sub Rx, Ry
+		al  bs  R13, 2
 
 	ccc swp Rx, Ry
 		ccc mov R0, Rx
@@ -206,42 +226,56 @@ extended assembler instruction (ccc is condition)
 		ccc mov R0, [ Ry ]
 		ccc mov [ Rx ], R0
 
-	al mov Rx, [ Ry + Rz ]
-		al mov R0, Ry
-		al add R0, Rz
-		al mov Rx, [ R0 ]
+	ccc mov Rx, [ Ry + Rz ]
+		ccc jps 1
+                al  jps 3
+		al  mov R0, Ry
+		al  add R0, Rz
+		al  mov Rx, [ R0 ]
 
-	al mov  [ Rx +  Ry ], Rz 
-		al mov R0, Rx
-		al add R0, Ry
-		al mov [ R0 ], Rz
+	ccc mov  [ Rx +  Ry ], Rz 
+		ccc jps 1
+		al  jps 3
+		al  mov R0, Rx
+		al  add R0, Ry
+		al  mov [ R0 ], Rz
 
 	ccc mov R0, imm16
-		ccc mov R0, low L8(imm16)
-		ccc mov R0, high H8(imm16)
+		ccc mov low R0, L8(imm16)
+		ccc mov high R0, H8(imm16)
 
 	ccc setl imm8
-		ccc mov R0, low imm8
+		ccc mov low R0, imm8
 
 	ccc seth imm8
-		ccc mov R0, high imm8
+		ccc mov high R0, imm8
 
 	ccc set imm16
-		ccc mov R0, low L8(imm16)
-		ccc mov R0, high H8(imm16)
+		ccc mov low R0, L8(imm16)
+		ccc mov high R0, H8(imm16)
 
-	ccc jpas Rx 
-		ccc mov R14, Rx
+	ccc jpas Rx
+		ccc jps 1
+		al  jps 3
+		al  mov R0, 1
+		al  add R0, R14
+		al  mov R14, Rx
 
 	ccc jpal Rx
-		ccc mov R15, Rx
+		ccc jps 1
+		al  jps 5
+		al  mov R1, R15
+		al  mov R0, R12
+		al  inc R0
+		al  add R0, R14
+		al  mov R15, Rx
 
 	ccc jpas imm16
-		ccc mov R0, low L8(imm16)
-		ccc mov R0, high H8(imm16)
+		ccc mov low R0, L8(imm16)
+		ccc mov high R0, H8(imm16)
 		ccc mov R14, R0
 
 	ccc jpal imm16
-		ccc mov R0, low L8(imm16)
-		ccc mov R0, high H8(imm16)
+		ccc mov low R0, L8(imm16)
+		ccc mov high R0, H8(imm16)
 		ccc mov R15, R0
