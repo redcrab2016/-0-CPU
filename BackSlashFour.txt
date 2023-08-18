@@ -3,7 +3,7 @@
 64 Ki word address per segment
 64 Ki segment
 absolute address = address + segment << 8 ( 256 * 65536 = 16 MiW = 32 MiB content)
-16 bits per instruction
+16 bits per instruction ( one word per instruction)
 
 registers: - R0 to R15 (designated by 4 bits)
 R0  : 0000 :A0: versatile (used in extended assembler) , dedicated for "move R0, imm" instruction
@@ -23,9 +23,21 @@ R13 : 1101 :FL: flags)  H------ N---OZCE
 R14 : 1110 :PC: Program address
 R15 : 1111 :PS: Program segment
 
-Instructions:
-cond  operation param1 [,param2]
- param can be Rx, [ Rx ], imm
+Instructions formats:
+cccc oooo yyyy xxxx 
+cccc oooo iiii iiii 
+cccc oooo siii iiii 
+cccc oooo iiii xxxx
+cccc oooo oooo xxxx
+cccc oooo oooo oooo
+
+cccc: condition 
+oooo: operation code
+xxxx: Register index X
+yyyy: Register index Y
+iiii: integer unsigned
+siii: integer signed
+
 
 conditions: cccc
 0000	al (or omitted)	Always executed.					No flag tested.
@@ -53,139 +65,206 @@ operations with parameters:
 0000 : mov  Rx, Ry
 	no flag modified
 	code : cccc 0000 yyyy xxxx
+	Transfer value of Ry into register Rx
         Rx = Ry
 	if x==15, then R14 = 0
 
 0001 : mov  low R0, imm8
         no flag modified
         code : cccc 0001 iiii iiii
+	Transfer immediate 8 bits value into LSB register R0
         R0 = (R0 & 0xFF00 ) | imm8
 
 0010 : mov  high R0, imm8 
         no flag modified
         code : cccc 0010 iiii iiii
+	Transfer immediate 8 bits value into MSB register R0
         R0 = (R0 & 0x00FF ) | (imm8 << 8)
 
 0011 : mov  Rx, [ R8:Ry ]
         no flag modified
         code : cccc 0011 yyyy xxxx
+	Transfer value in memory address R8:Ry (or DS:Ry) into register Rx
         Rx = [ Ry + R8 << 8 ]
 
 0100 : mov  [ R8:Rx ],  Ry  
         no flag modified
         code : cccc 0100 yyyy xxxx
+	Transfer value of register Ry into address R8:Ry (or DS:Ry)
         [ Rx + R8 << 8 ] =  Ry
 
 0101-0000 : not  Rx
         flags : ZEN
         code : cccc 0101 0000 xxxx
+	Execute a binary NOT operation on each bit of register Rx
         Rx = ~Rx
 
 0101-0001 : inc  Rx
-	flags : ZENC
+	flags : ZENCO
 	code : cccc 0101 0001 xxxx
+	Increment the Rx register value
+	Rx = Rx + 1
 
 0101-0010 : dec  Rx
-        flags : ZENC
+        flags : ZENCO
 	code : cccc 0101 0010 xxxx
+	Decrement the Rx register value
+	Rx = Rx - 1
 
 0101-0011 : slh Rx
         flags : ZENC
 	code : cccc 0101 0011 xxxx
+	Swap most significant byte with less significant byte values of register Rx
+	Rx = ((Rx & 0x00FF) << 8) | ((Rx & 0xFF00) >> 8)
 
 0101-0100 : shl  Rx
         flags : ZENC
 	code : cccc 0101 0100 xxxx
+	Shift 1 bit left the Rx register value
+	Flag C = Rx bit 7
+	Rx = Rx << 1
 
 0101-0101 : shr  Rx
         flags : ZENC
         code : cccc 0101 0101 xxxx
+	Shift 1 bit right the Rx register value
+	Flag C = Rx bit 0
+	Rx = Rx >> 1	
 
 0101-0110 : sar  Rx
         flags : ZENC
         code : cccc 0101 0110 xxxx
+	Arithmetic shift of 1 bit to the Rx register value
+	Flag C = Rx bit 0
+	Rx = Rx >> 1
+	Rx bit 7 = Rx bit 6
 
 0101-0111 : rol  Rx
         flags : ZENC
 	code : cccc 0101 0111 xxxx
+	Roll 1 bit left the Rx register value
+	flag C = Rx bit 7
+	Rx = Rx << 1
+	Rx bit 0 = flag C	
 
 0101-1000 : ror  Rx
         flags : ZENC
 	code : cccc 0101 1000 xxxx
+	Roll 1 bit right the Rx register value
+	flag C = Rx bit 0
+	Rx = Rx >> 1
+	Rx bit 7 = flag C
 
-0101-1001 : mov Rx, [ R11:R10 ]
-        no flag modified
+0101-1001 : rcl  Rx
+        flags : ZENC
 	code : cccc 0101 1001 xxxx
-        aux is the address by [ R10 + R11 << 8 ]
+	Roll 1 bit left with C flag insertion of the Rx register value
+	T = flag C
+	flag C = Rx bit 7
+	Rx = Rx << 1
+	Rx bit 0 = T	
 
-0101-1010 : mov [ R11:R10 ], Rx
-        no flag modified
+0101-1010 : rcr  Rx
+        flags : ZENC
 	code : cccc 0101 1010 xxxx
-        aux is the address by [ R10 + R11 << 8 ]
+	Roll 1 bit right with C flag insertion of the Rx register value
+	T = flag C
+	flag C = Rx bit 0
+	Rx = Rx >> 1
+	Rx bit 7 = T	
 
-0101-1011 : xsg  Rx
-	no flag modified
+0101-1011 : mov Rx, [ R11:R10 ]
+        no flag modified
 	code : cccc 0101 1011 xxxx
-	extend sign (from byte to word)
+	Transfer value in memory address R11:R10 (or SS:SA) into register Rx
+        Rx = [ R10 + R11 << 8 ]
+
+0101-1100 : mov [ R11:R10 ], Rx
+        no flag modified
+	code : cccc 0101 1100 xxxx
+	Transfer Rx register value into memeory address R11:R10 (or SS:DA)
+        [ R10 + R11 << 8 ] = Rx
+
+0101-1101 : xsg  Rx
+	no flag modified
+	code : cccc 0101 1101 xxxx
+	Extend sign (from byte to word)
 	Rx bit 8 to 15 = Rx bit 7
 
-0101-1100 : neg Rx
+0101-1110 : neg Rx
 	flags : ZEN
-	code : cccc 0101 1100 xxxx
+	code : cccc 0101 1110 xxxx
+	Negate the Rx register value
+	Rx = -Rx
 
 0110 : bs   Rx, imm4
         no flag modified
 	code : cccc 0110 iiii xxxx
-        set bit number imm4 of Rx
+        Set bit number imm4 of Rx register value
+	Rx bit imm4 = 1
 
 0111 : bc   Rx, imm4
         no flag modified
 	code : cccc 0111 iiii xxxx
-        clear bit number imm4 of Rx
+        Clear bit number imm4 of Rx register value
+	Rx bit imm4 = 0
 
 1000 : and  Rx, Ry
 	flags : ZEN
         code : cccc 1000 yyyy xxxx
+	Binary AND every bit of Rx with every respective bit of Ry, set the result in the respective bit of Rx
 	Rx = Rx & Ry
 
 1001 : or   Rx, Ry
 	flags : ZEN
         code : cccc 0111 yyyy xxxx
+	Binary OR every bit of Rx with every respective bit of Ry, set the result in the respective bit of Rx
         Rx = Rx | Ry
 
 1010 : jmp Rx:Ry
         no flag modified
         code : cccc 1010 yyyy xxxx
+	Absolute jump by register Rx for segment and Ry for address.
         R14 = Ry
 	R15 = Rx
 
 1011 : jps simm8
         no flag modified
         code : cccc 1011 siii iiii
-	short relative jmp
+	Short relative jmp by 8 bit signed integer
 	R14 += simm8 (signed value -128 to + 127)
 
 1100 : add  Rx, Ry
         flags: ZENCO
 	code : cccc 1100 yyyy xxxx
+	Addition Rx with Ry then set the result in Rx
+	Rx = Rx + Ry
 
 1101 : sub  Rx, Ry
         flags: ZENCO
         code : cccc 1101 yyyy xxxx
+	Substract Rx with Ry and set the result in Rx
+	Rx = Rx - Ry
 
 1110 : mul  Rx, Ry
         flags: ZENC
         code : cccc 1110 yyyy xxxx
-        Rx = low16(Rx * Ry)
-	carries in R9 (high16(Rx * Ry))
+	Multiply Rx and Ry , set the result in Rx, and the carries in R9
+	R9 = high16(Rx * Ry)
         C=1 if R9 != 0
+        Rx = low16(Rx * Ry)
 
 1111 : div Rx, Ry
         flags: ZENCO
 	code : cccc 1111 yyyy xxxx
-	Rx = Rx / Ry (Rx unchanged if Ry == 0)
-	R9 contains the remainder (modulo)
-	O=1 if Ry==0
+	Divide Rx by Ry, set the result in Rx and the remain in R9. division by zero is notified by Flag O
+	if Ry==0 then 
+	  O=1
+	else
+	  O=0
+	  Rx = Rx / Ry
+	  R9 = Rx % Ry
+	  C=1 if R9 is not zero, C=0 otherwise
 
 extended assembler instruction (ccc is condition)
 	Below when there is a micro program that start by
