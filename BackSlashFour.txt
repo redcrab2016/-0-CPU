@@ -1,27 +1,27 @@
 16 registers 16 bits (word)
 16 conditional execution 
-64 Ki word address per paragraph
-64 Ki paragraph
-absolute address = address + paragraph << 8 ( 256 * 65536 = 16 MiW = 32 MiB content)
+64 Ki word address per segment
+64 Ki segment
+absolute address = address + segment << 8 ( 256 * 65536 = 16 MiW = 32 MiB content)
 16 bits per instruction
 
 registers: - R0 to R15 (designated by 4 bits)
 R0  : 0000 : versatile (used in extended assembler) , dedicated for "move R0, imm" instruction
 R1  : 0001 : versatile (used in extended assembler)
-R2  : 0010 : versatile (used in extended assembler)
-R3  : 0011 : versatile (used in extended assembler)
+R2  : 0010 : general
+R3  : 0011 : general
 R4  : 0100 : general
 R5  : 0101 : general
 R6  : 0110 : general
 R7  : 0111 : general
-R8  : 1000 : Data access paragraph, dedicated for "mov Rx, [ Ry ]" and "mov [ Rx ], Ry"
+R8  : 1000 : Data segment, dedicated for "mov Rx, [ Ry ]" and "mov [ Rx ], Ry"
 R9  : 1001 : multiplication carries, dedicated for "mul Rx, Ry" result MSW / remainer (modulo) of division
-R10 : 1010 : Auxiliary Data in paragraph address
-R11 : 1011 : Auxiliary Data address paragraph
+R10 : 1010 : Auxiliary Data address
+R11 : 1011 : Auxiliary Data segment
 R12 : 1100 : always Zero (write does nothing, read gives only zero)
 R13 : 1101 : flags)  H------ N---OZCE
-R14 : 1110 : PC in paragraph address
-R15 : 1111 : PC paragraph
+R14 : 1110 : PC in segment address
+R15 : 1111 : PC segment
 
 Instructions:
 cond  operation param1 [,param2]
@@ -68,12 +68,12 @@ operations with parameters:
         code : cccc 0010 iiii iiii
         R0 = (R0 & 0x00FF ) | (imm8 << 8)
 
-0011 : mov  Rx, [ Ry ]
+0011 : mov  Rx, [ R8:Ry ]
         no flag modified
         code : cccc 0011 yyyy xxxx
         Rx = [ Ry + R8 << 8 ]
 
-0100 : mov  [ Rx ],  Ry  
+0100 : mov  [ R8:Rx ],  Ry  
         no flag modified
         code : cccc 0100 yyyy xxxx
         [ Rx + R8 << 8 ] =  Ry
@@ -142,7 +142,7 @@ operations with parameters:
 
 0111 : bc   Rx, imm4
         no flag modified
-	code : cccc 1001 iiii xxxx
+	code : cccc 0111 iiii xxxx
         clear bit number imm4 of Rx
 
 1000 : and  Rx, Ry
@@ -222,23 +222,61 @@ extended assembler instruction (ccc is condition)
 		ccc mov Rx, Ry
 		ccc mov Ry, R0
 
-	ccc mov [ Rx ], [ Ry ]
-		ccc mov R0, [ Ry ]
-		ccc mov [ Rx ], R0
+	ccc mov [ R8:Rx ], [ R8:Ry ]
+		ccc mov R0, [ R8:Ry ]
+		ccc mov [ R8:Rx ], R0
 
-	ccc mov Rx, [ Ry + Rz ]
+	ccc mov Rx, [ R8:(Ry + Rz) ]
 		ccc jps 1
                 al  jps 3
 		al  mov R0, Ry
 		al  add R0, Rz
-		al  mov Rx, [ R0 ]
+		al  mov Rx, [ R8:R0 ]
 
-	ccc mov  [ Rx +  Ry ], Rz 
+	ccc mov  [ R8:(Rx + Ry) ], Rz 
 		ccc jps 1
 		al  jps 3
 		al  mov R0, Rx
 		al  add R0, Ry
-		al  mov [ R0 ], Rz
+		al  mov [ R8:R0 ], Rz
+
+	ccc mov Rx, [R11:Ry]
+		ccc jps 1
+		al  jps 4
+		al  mov R0, R10
+		al  mov R10, Ry
+		al  mov Rx, [R11:R10]
+		al  mov R10, R0
+
+	ccc mov [R11:Rx], Ry
+		ccc jps 1
+		al  jps 4
+		al  mov R0, R10
+		al  mov R10, Rx
+		al  mov [R11:R10], Ry
+		al  mov R10, R0
+
+	ccc mov Rx, [Ry:Rz]
+		ccc jps 1
+		al  jps 7
+		al  mov R0, R10
+		al  mov R1, R11
+		al  mov R10, Rz
+		al  mov R11, Ry
+		al  mov Rx, [R11:R10]
+		al  mov R10, R0
+		al  mov R11, R1
+	
+	ccc mov [Rx:Ry], Rz
+		ccc jps 1
+		al  jps 7
+		al  mov R0, R10
+		al  mov R1, R11
+		al  mov R10, Ry
+		al  mov R11, Rx
+		al  mov [R11:R10], Rz
+		al  mov R10, R0
+		al  mov R11, R1
 
 	ccc mov R0, imm16
 		ccc mov low R0, L8(imm16)
@@ -253,6 +291,37 @@ extended assembler instruction (ccc is condition)
 	ccc set imm16
 		ccc mov low R0, L8(imm16)
 		ccc mov high R0, H8(imm16)
+
+	ccc psh Rx
+		ccc jps 1
+		al  jps 2
+		al  inc R10
+		al  mov [R11:R10], Rx
+
+	ccc psh imm16
+		ccc jps 1
+		al  jps 4
+		al  mov low R0, L8(imm16)
+		al  mov high R0, H8(imm16)
+		al  inc R10
+		al  mov [R11:R10], R0
+
+	ccc pop Rx
+		ccc mov [R11:R10], Rx
+		ccc dec R10
+
+	ccc drp 
+		ccc dec R10
+
+	ccc dup
+		ccc jps 1
+		al  jps 3
+		al  mov R0, [R11:R10]
+		al  inc R10
+		al  mov [R11:R10], R0
+
+	ccc top Rx
+		ccc mov Rx, [R11:R10]
 
 	ccc jpas Rx
 		ccc jps 1
