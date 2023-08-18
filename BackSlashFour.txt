@@ -29,12 +29,12 @@ cond  operation param1 [,param2]
 
 conditions: cccc
 0000	al (or omitted)	Always executed.					No flag tested.
-0001	eq		Equal.							Z==1
-0010	ne		Not equal.						Z==0
+0001	eq or zs	Equal.							Z==1
+0010	ne or zc	Not equal.						Z==0
 0011	cs or hs	Unsigned higher or same (or carry set).			C==1
 0100	cc or lo	Unsigned lower (or carry clear).			C==0
-0101	mi		Negative. The mnemonic stands for "minus".		N==1
-0110	pl		Positive or zero. The mnemonic stands for "plus".	N==0
+0101	mi or ns	Negative. The mnemonic stands for "minus".		N==1
+0110	pl or nc	Positive or zero. The mnemonic stands for "plus".	N==0
 0111	os		Signed overflow. The mnemonic stands for "O set".	O==1
 1000	oc		No signed overflow. The mnemonic stands for "O clear".	O==0
 1001	hi		Unsigned higher.					(C==1) && (Z==0)
@@ -126,11 +126,11 @@ operations with parameters:
 0101-1011 : xsg  Rx
 	no flag modified
 	code : cccc 0101 1011 xxxx
-	extend sign
+	extend sign (from byte to word)
 	Rx bit 8 to 15 = Rx bit 7
 
 0101-1100 : neg Rx
-	flags : ZN
+	flags : ZEN
 	code : cccc 0101 1100 xxxx
 
 0110 : bs   Rx, imm4
@@ -188,6 +188,11 @@ operations with parameters:
 	O=1 if Ry==0
 
 extended assembler instruction (ccc is condition)
+	Below when there is a micro program that start by
+		ccc jps 1
+		al  jps x
+	then these two above instructions exist in final code only if ccc != al
+
 	ccc nop   (ccc="no" preferably)
 		ccc mov R12, R0
 
