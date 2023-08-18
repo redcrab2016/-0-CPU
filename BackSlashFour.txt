@@ -6,27 +6,26 @@ absolute address = address + segment << 8 ( 256 * 65536 = 16 MiW = 32 MiB conten
 16 bits per instruction
 
 registers: - R0 to R15 (designated by 4 bits)
-R0  : 0000 : versatile (used in extended assembler) , dedicated for "move R0, imm" instruction
-R1  : 0001 : versatile (used in extended assembler)
-R2  : 0010 : general
-R3  : 0011 : general
-R4  : 0100 : general
-R5  : 0101 : general
-R6  : 0110 : general
-R7  : 0111 : general
-R8  : 1000 : Data segment, dedicated for "mov Rx, [ Ry ]" and "mov [ Rx ], Ry"
-R9  : 1001 : multiplication carries, dedicated for "mul Rx, Ry" result MSW / remainer (modulo) of division
-R10 : 1010 : Auxiliary Data address
-R11 : 1011 : Auxiliary Data segment
-R12 : 1100 : always Zero (write does nothing, read gives only zero)
-R13 : 1101 : flags)  H------ N---OZCE
-R14 : 1110 : PC in segment address
-R15 : 1111 : PC segment
+R0  : 0000 :A0: versatile (used in extended assembler) , dedicated for "move R0, imm" instruction
+R1  : 0001 :A1: versatile (used in extended assembler)
+R2  : 0010 :V0: general
+R3  : 0011 :V1: general
+R4  : 0100 :V2: general
+R5  : 0101 :V3: general
+R6  : 0110 :V4: general
+R7  : 0111 :V5: general
+R8  : 1000 :DS: Data segment, dedicated for "mov Rx, [ Ry ]" and "mov [ Rx ], Ry"
+R9  : 1001 :CR: multiplication carries, dedicated for "mul Rx, Ry" result MSW / remainer (modulo) of division
+R10 : 1010 :SA: Second Data address
+R11 : 1011 :SS: Second Data segment
+R12 : 1100 :ZR: always Zero (write does nothing, read gives only zero)
+R13 : 1101 :FL: flags)  H------ N---OZCE
+R14 : 1110 :PC: Program address
+R15 : 1111 :PS: Program segment
 
 Instructions:
 cond  operation param1 [,param2]
  param can be Rx, [ Rx ], imm
-
 
 conditions: cccc
 0000	al (or omitted)	Always executed.					No flag tested.
@@ -46,10 +45,9 @@ conditions: cccc
 1110	le		Signed less than or equal.				(Z==1) || (N!=O)
 1111	no		never executed (NOP)					No flag tested
 
-
 operations:
 raw mnemonic:
-	mov, not, and, or, jump, shl, shr, rol, ror, bs, bc, neg, inc, dec, xsg, add, mul, div
+	mov, not, and, or, jmp, shl, shr, rol, ror, bs, bc, neg, inc, dec, xsg, add, mul, div
 
 operations with parameters:
 0000 : mov  Rx, Ry
@@ -155,20 +153,16 @@ operations with parameters:
         code : cccc 0111 yyyy xxxx
         Rx = Rx | Ry
 
-1010 : jump Rx, Ry
+1010 : jmp Rx:Ry
         no flag modified
         code : cccc 1010 yyyy xxxx
-	T1=R14
-	T2=R15
         R14 = Ry
 	R15 = Rx
-	Ry=T1
-	Rx=T2
 
 1011 : jps simm8
         no flag modified
         code : cccc 1011 siii iiii
-	short relative jump
+	short relative jmp
 	R14 += simm8 (signed value -128 to + 127)
 
 1100 : add  Rx, Ry
@@ -279,18 +273,18 @@ extended assembler instruction (ccc is condition)
 		al  mov R11, R1
 
 	ccc mov R0, imm16
-		ccc mov low R0, L8(imm16)
-		ccc mov high R0, H8(imm16)
+		ccc mov low R0, low(imm16)
+		ccc mov high R0, high(imm16)
 
-	ccc setl imm8
+	ccc sel imm8
 		ccc mov low R0, imm8
 
-	ccc seth imm8
+	ccc seh imm8
 		ccc mov high R0, imm8
 
 	ccc set imm16
-		ccc mov low R0, L8(imm16)
-		ccc mov high R0, H8(imm16)
+		ccc mov low R0, low(imm16)
+		ccc mov high R0, high(imm16)
 
 	ccc psh Rx
 		ccc jps 1
@@ -298,17 +292,40 @@ extended assembler instruction (ccc is condition)
 		al  inc R10
 		al  mov [R11:R10], Rx
 
+	ccc psh [Rx]
+		ccc jps 1
+		al  jps 3
+		al  inc R10
+		al  mov R0, [Rx]
+		al  mov [R11:R10], R0
+
 	ccc psh imm16
 		ccc jps 1
 		al  jps 4
-		al  mov low R0, L8(imm16)
-		al  mov high R0, H8(imm16)
+		al  mov low R0, low(imm16)
+		al  mov high R0, high(imm16)
+		al  inc R10
+		al  mov [R11:R10], R0
+
+	ccc psh [imm16]
+		ccc jps 1
+		al  jps 5
+		al  mov low R0, low(imm16)
+		al  mov high R0, high(imm16)
+		al  mov R0, [R0]
 		al  inc R10
 		al  mov [R11:R10], R0
 
 	ccc pop Rx
-		ccc mov [R11:R10], Rx
+		ccc mov Rx, [R11:R10]
 		ccc dec R10
+
+	ccc pop [Rx]
+		ccc jps 1
+		al  jps 3
+		al  mov R0, [R11:R10]
+		al  mov [Rx], R0
+		al  dec R10
 
 	ccc drp 
 		ccc dec R10
@@ -323,28 +340,123 @@ extended assembler instruction (ccc is condition)
 	ccc top Rx
 		ccc mov Rx, [R11:R10]
 
-	ccc jpas Rx
+	ccc srs Rx
 		ccc jps 1
-		al  jps 3
-		al  mov R0, 1
+		al  jps 6
+		al  mov low R0, 3
+		al  mov high R0, 0
 		al  add R0, R14
+		al  inc R10
+		al  mov [R11:R10], R0
 		al  mov R14, Rx
 
-	ccc jpal Rx
+	ccc srs imm16
 		ccc jps 1
-		al  jps 5
-		al  mov R1, R15
-		al  mov R0, R12
-		al  inc R0
+		al  jps 9
+		al  mov low R0, low(imm16)
+		al  mov high R0, high(imm16)
+		al  mov R1, R0
+		al  mov low R0, 3
+		al  mov high R0, 0
 		al  add R0, R14
+		al  inc R10
+		al  mov [R11:R10], R0
+		al  mov R14, R1
+
+	ccc srl Rx:0
+		ccc jps 1
+		al  jps 8
+		al  inc R10
+		al  mov [R11:R10], R15
+		al  mov low R0, 3
+		al  mov high R0, 0
+		al  add R0, R14
+		al  inc R10
+		al  mov [R11:R10], R0
 		al  mov R15, Rx
 
-	ccc jpas imm16
-		ccc mov low R0, L8(imm16)
-		ccc mov high R0, H8(imm16)
+	ccc srl Rx:Ry
+		ccc jps 1
+		al  jps 8
+		al  inc R10
+		al  mov [R11:R10], R15
+		al  mov low R0, 3
+		al  mov high R0, 0
+		al  add R0, R14
+		al  inc R10
+		al  mov [R11:R10], R0
+		al  jmp Rx:Ry
+
+
+	ccc srl Imm16:0
+		ccc jps 1
+		al  jps 11
+		al  mov low R0, low(imm16)
+		al  mov high R0, high(imm16)
+		al  mov R1, R0
+		al  inc R10
+		al  mov [R11:R10], R15
+		al  mov low R0, 3
+		al  mov high R0, 0
+		al  add R0, R14
+		al  inc R10
+		al  mov [R11:R10], R0
+		al  mov R15, R1
+
+	ccc srl Aimm16:Bimm16
+		ccc jps 1
+		al  jps 13
+		al  mov low R0, low(Aimm16)
+		al  mov high R0, high(Aimm16)
+		al  mov R1, R0
+		al  inc R10
+		al  mov [R11:R10], R15
+		al  mov low R0, 5
+		al  mov high R0, 0
+		al  add R0, R14
+		al  inc R10
+		al  mov [R11:R10], R0
+		al  mov low R0, low(Bimm16)
+		al  mov high R0, high(Bimm16)
+		al  jmp R1:R0
+
+	ccc rts
+		ccc jps 1
+		al  jps 3
+		al  mov R0, [R11:R10]
+		al  dec R10
+		al  mov R14, R0
+
+	ccc rtl
+		ccc jps 1
+		al  jps 3
+		al  mov R0, [R11:R10]
+		al  dec R10
+		al  mov R1, [R11:R10]
+		al  jmp R1:R0
+
+	ccc jps Rx
+		ccc mov R14, Rx
+
+	ccc jpl Rx:0
+		ccc mov R15, Rx
+
+	ccc jps imm16
+		ccc mov low R0, low(imm16)
+		ccc mov high R0, high(imm16)
 		ccc mov R14, R0
 
-	ccc jpal imm16
-		ccc mov low R0, L8(imm16)
-		ccc mov high R0, H8(imm16)
+	ccc jpl imm16:0
+		ccc mov low R0, low(imm16)
+		ccc mov high R0, high(imm16)
 		ccc mov R15, R0
+
+	ccc jpl Aimm16:Bimm16
+		ccc jsp 1
+		al  jps 6
+		al  mov low R0, low(Bimm16)
+		al  mov high R0, high(Bimm16)
+		al  mov R1,R0
+		al  mov low R0, low(Aimm16)
+		al  mov high R0, high(Aimm16)
+		al  jmp R1:R0
