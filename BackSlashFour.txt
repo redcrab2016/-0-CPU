@@ -2,11 +2,11 @@
 16 conditional execution 
 64 Ki word address per segment
 64 Ki segment
-absolute address = address + segment << 8 ( 256 * 65536 = 16 MiW = 32 MiB content)
+absolute address(24 bits) = address + segment << 8 ( 256 * 65536 = 16 MiW = 32 MiB content)
 16 bits per instruction ( one word per instruction)
 
 registers: - R0 to R15 (designated by 4 bits)
-R0  : 0000 :A0: versatile (used in extended assembler) , dedicated for "move R0, imm" instruction
+R0  : 0000 :A0: versatile (used in extended assembler) , dedicated for "mov low/high R0, imm" instruction
 R1  : 0001 :A1: versatile (used in extended assembler)
 R2  : 0010 :V0: general
 R3  : 0011 :V1: general
@@ -59,7 +59,7 @@ conditions: cccc
 
 operations:
 raw mnemonic:
-	mov, not, and, or, jmp, shl, shr, rol, ror, bs, bc, neg, inc, dec, xsg, add, mul, div
+	mov, not, and, or, jmp, shl, shr, rol, ror, rcl, rcr, bs, bc, neg, inc, dec, xsg, add, mul, div
 
 operations with parameters:
 0000 : mov  Rx, Ry
@@ -295,7 +295,7 @@ extended assembler instruction (ccc is condition)
 		al  sub Rx, Ry
 		al  bs  R13, 2
 
-	ccc swp Rx, Ry
+	ccc swp Rx, Ry  (with Rx is not R0 and Ry is not R0)
 		ccc mov R0, Rx
 		ccc mov Rx, Ry
 		ccc mov Ry, R0
@@ -304,21 +304,21 @@ extended assembler instruction (ccc is condition)
 		ccc mov R0, [ R8:Ry ]
 		ccc mov [ R8:Rx ], R0
 
-	ccc mov Rx, [ R8:(Ry + Rz) ]
+	ccc mov Rx, [ R8:(Ry + Rz) ] ( Rz is not R0)
 		ccc jps 1
                 al  jps 3
-		al  mov R0, Ry
+		al  mov R0, Ry (this instruction if Ry != R0)
 		al  add R0, Rz
 		al  mov Rx, [ R8:R0 ]
 
-	ccc mov  [ R8:(Rx + Ry) ], Rz 
+	ccc mov  [ R8:(Rx + Ry) ], Rz  (with Ry is not R0 and Rz is not R0)
 		ccc jps 1
 		al  jps 3
-		al  mov R0, Rx
+		al  mov R0, Rx ( this instruction if Rx is not R0)
 		al  add R0, Ry
 		al  mov [ R8:R0 ], Rz
 
-	ccc mov Rx, [R11:Ry]
+	ccc mov Rx, [R11:Ry]  (this micro program only if Ry is not R10)
 		ccc jps 1
 		al  jps 4
 		al  mov R0, R10
@@ -326,7 +326,7 @@ extended assembler instruction (ccc is condition)
 		al  mov Rx, [R11:R10]
 		al  mov R10, R0
 
-	ccc mov [R11:Rx], Ry
+	ccc mov [R11:Rx], Ry (this micro program only if Rx is not R10, Ry cannot be R10)
 		ccc jps 1
 		al  jps 4
 		al  mov R0, R10
@@ -379,8 +379,8 @@ extended assembler instruction (ccc is condition)
 	ccc psh [Rx]
 		ccc jps 1
 		al  jps 3
-		al  inc R10
 		al  mov R0, [Rx]
+		al  inc R10
 		al  mov [R11:R10], R0
 
 	ccc psh imm16
