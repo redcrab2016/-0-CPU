@@ -1,0 +1,140 @@
+16 registers 16 bits (word)
+8 conditional execution 
+64 Ki word address
+16 bits per instruction ( one word per instruction)
+
+registers: - R0 to R15 (designated by 4 bits)
+R0  : 0000 : general
+R1  : 0001 : general
+R2  : 0010 : general
+R3  : 0011 : general
+R4  : 0100 : general
+R5  : 0101 : general
+R6  : 0110 : general
+R7  : 0111 : general
+R8  : 1000 : general
+R9  : 1001 : general
+R10 : 1010 : general
+R11 : 1011 : general
+R12 : 1100 : general
+R13 : 1101 : general
+R14 : 1110 :FL: 16 bits flags  FEDCBA98 765432ZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
+R15 : 1111 :PC: Program address
+
+ccc f oooo yyyy xxxx  2 registers parameters
+ccc f oooo iiii iiii  1 unisgned byte parameter
+ccc f oooo siii iiii  1 signed byte parameter
+ccc f oooo iiii xxxx  1 register and 1 quartet parameter
+ccc f oooo oooo xxxx  1 register
+ccc f oooo oooo iiii  1 quartet
+
+flag modified : f
+if 0 then no flag modified by operation, 1 flag(s) modified by operation
+
+conditions: ccc
+000	al (or omitted)	Always executed.					No flag tested.
+001	eq or zs	Equal.							Z==1
+010	ne or zc	Not equal.						Z==0
+011	cs or hs	Unsigned higher or same (or carry set).			C==1
+100	cc or lo	Unsigned lower (or carry clear).			C==0
+101     ?
+110     ?
+111	no		never executed (NOP)					No flag tested
+
+operations
+raw mnemonic: (8)
+	mov, add, sub, and, or, not, shl, shr
+
+	mov (Z flag  , mov X, Y after transfer if X == 0 then Z == 1 , Z==0 otherwise)
+		mov Rx, 0
+		mov low Rx, 0
+		mov high Rx, 0
+		mov Rx, Ry
+		mov Rx, [Ry]
+		mov [Rx], Ry
+		mov low R0, imm8
+		mov high R0, imm8
+		mov low R0, low Rx
+		mov high R0, low Rx
+		mov low R0, high Rx
+		mov high R0, high Rx
+		mov C, Rx:imm4
+		mov Rx:imm4, C
+		mov Rx:imm4, 0
+		mov Rx:imm4, 1
+
+	add ( Z, C flags)
+		add Rx, Ry
+		add Rx, [Ry]
+		add R15, simm8
+		add R0, imm4
+		add Rx, 1
+	
+	sub ( Z, C flags)
+		sub Rx, Ry
+		sub Rx, [Ry]
+		sub R0, imm4
+		sub Rx, 1
+	
+	and (Z flag)
+		and R0, Rx
+
+	or (Z flag)
+		or R0, Rx
+	
+	not (Z flag)
+		not Rx:imm4
+		not Rx
+
+	shl ( Z, C flags)
+		shl R0, imm4
+
+	shr ( Z, C flags)
+		shr R0, imm4
+
+Operation by code
+
+=== Byte parameter (max 15 instr)
+2 registers parameters
+	mov Rx, [Ry]
+	mov [Rx], Ry
+	mov Rx, Ry
+	add Rx, Ry
+	sub Rx, Ry
+	add Rx, [Ry]
+	sub Rx, [Ry]
+
+1 unsigned/signed byte parameter
+	mov low R0, imm8
+	mov high R0, imm8
+	add R15, simm8
+
+1 register and 1 quartet parameter
+	mov C, Rx:imm4
+	mov Rx:imm4, C
+	mov Rx:imm4, 0
+	mov Rx:imm4, 1
+	not Rx:imm4
+
+
+=== Quartet parameter (max 16 instr)
+1 quartet
+	add R0, imm4
+	sub R0, imm4
+	shl R0, imm4
+	shr R0, imm4
+
+1 register
+	add Rx, 1
+	sub Rx, 1
+	mov low R0, low Rx
+	mov low R0, high Rx
+	mov high R0, low Rx
+	mov high R0, high Rx
+	mov low Rx, 0
+	mov high Rx, 0
+	mov Rx, 0
+	not Rx
+	and R0, Rx
+	or  R0, Rx
+
