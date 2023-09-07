@@ -18,7 +18,7 @@ R10 : 1010 : general
 R11 : 1011 : general
 R12 : 1100 : general
 R13 : 1101 : general
-R14 : 1110 :FL: 16 bits flags  FEDCBA98 765432ZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
+R14 : 1110 :FL: 16 bits flags  FEDCBA98 76543XZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
 R15 : 1111 :PC: Program address
 
 ccc f oooo yyyy xxxx  2 registers parameters
@@ -37,8 +37,8 @@ conditions: ccc
 010	ne or zc	Not equal.						Z==0
 011	cs or hs	Unsigned higher or same (or carry set).			C==1
 100	cc or lo	Unsigned lower (or carry clear).			C==0
-101     ?
-110     ?
+101     xs		custom bit set                                          X==1
+110     xc              custom bit clear                                        X==0
 111	no		never executed (NOP)					No flag tested
 
 operations
@@ -97,13 +97,13 @@ Operation by code
 === Byte parameter (max 15 instr)
 2 registers parameters 
 ccc f 0000 yyyy xxxx
-	mov Rx, [Ry] 
+	mov Rx, Ry
 
 ccc f 0001 yyyy xxxx
 	mov [Rx], Ry
 
 ccc f 0010 yyyy xxxx
-	mov Rx, Ry
+	mov Rx, [Ry] 
 
 ccc f 0011 yyyy xxxx
 	add Rx, Ry
