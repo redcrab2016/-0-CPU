@@ -95,46 +95,99 @@ raw mnemonic: (8)
 Operation by code
 
 === Byte parameter (max 15 instr)
-2 registers parameters
-	mov Rx, [Ry]
+2 registers parameters 
+ccc f 0000 yyyy xxxx
+	mov Rx, [Ry] 
+
+ccc f 0001 yyyy xxxx
 	mov [Rx], Ry
+
+ccc f 0010 yyyy xxxx
 	mov Rx, Ry
+
+ccc f 0011 yyyy xxxx
 	add Rx, Ry
+
+ccc f 0100 yyyy xxxx
 	sub Rx, Ry
+
+ccc f 0101 yyyy xxxx
 	add Rx, [Ry]
+
+ccc f 0110 yyyy xxxx
 	sub Rx, [Ry]
 
-1 unsigned/signed byte parameter
+1 unsigned/signed byte parameter 
+ccc f 0111 iiii iiii
 	mov low R0, imm8
+ccc f 1000 iiii iiii
 	mov high R0, imm8
+ccc f 1001 siii iiii
 	add R15, simm8
 
 1 register and 1 quartet parameter
+ccc f 1010 iiii xxxx
 	mov C, Rx:imm4
-	mov Rx:imm4, C
-	mov Rx:imm4, 0
-	mov Rx:imm4, 1
-	not Rx:imm4
 
+ccc f 1011 iiii xxxx
+	mov Rx:imm4, C
+
+ccc f 1100 iiii xxxx
+	mov Rx:imm4, 0
+
+ccc f 1101 iiii xxxx
+	mov Rx:imm4, 1
+
+ccc f 1110 iiii xxxx
+	not Rx:imm4
 
 === Quartet parameter (max 16 instr)
 1 quartet
+ccc f 1111 0000 iiii
 	add R0, imm4
+
+ccc f 1111 0001 iiii
 	sub R0, imm4
+
+ccc f 1111 0010 iiii
 	shl R0, imm4
+
+ccc f 1111 0011 iiii
 	shr R0, imm4
 
 1 register
+ccc f 1111 0100 xxxx
 	add Rx, 1
-	sub Rx, 1
-	mov low R0, low Rx
-	mov low R0, high Rx
-	mov high R0, low Rx
-	mov high R0, high Rx
-	mov low Rx, 0
-	mov high Rx, 0
-	mov Rx, 0
-	not Rx
-	and R0, Rx
-	or  R0, Rx
 
+ccc f 1111 0101 xxxx
+	sub Rx, 1
+
+ccc f 1111 0110 xxxx
+	mov low R0, low Rx
+
+ccc f 1111 0111 xxxx
+	mov low R0, high Rx
+
+ccc f 1111 1000 xxxx
+	mov high R0, low Rx
+
+ccc f 1111 1001 xxxx
+	mov high R0, high Rx
+
+ccc f 1111 1010 xxxx
+	mov low Rx, 0
+
+ccc f 1111 1011 xxxx
+	mov high Rx, 0
+
+ccc f 1111 1100 xxxx
+	mov Rx, 0
+
+ccc f 1111 1101 xxxx
+	not Rx
+
+ccc f 1111 1110 xxxx
+	and R0, Rx
+
+ccc f 1111 1111 xxxx
+	or  R0, Rx
