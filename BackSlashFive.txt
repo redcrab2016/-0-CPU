@@ -243,3 +243,100 @@ ccc f 1111 1110 xxxx
 
 ccc f 1111 1111 xxxx
 	or  R0, Rx
+
+Assembly micro program for missing register versatility (Rx with x != 0)
+Example of missing versatility :
+	  mov low R0, imm8 ; doable 
+	  mov low R1, imm8 ; not doable by a single instruction
+
+The two first lines of each micro progam below
+	ccc nf add R15, 1 
+	al  nf add R15, 3 
+does exist only if ccc != al.
+
+each micro program below do modify register R0 ( at end of each micro program R0 == Rx )
+
+ccc f mov low Rx, imm8 
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov low R0, imm8
+	al  nf mov Rx, R0
+
+ccc f  mov high Rx, imm8
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov high R0, imm8
+	al  nf mov Rx, R0
+
+ccc f add Rx, imm4
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  add R0, imm4
+	al  nf mov Rx, R0
+
+ccc f sub Rx, imm4
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  sub R0, imm4
+	al  nf mov Rx, R0
+
+
+ccc f shl Rx, imm4
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  shl R0, imm4
+	al  nf mov Rx, R0
+
+ccc f shr Rx, imm4
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  shr R0, imm4
+	al  nf mov Rx, R0
+
+ccc f mov low Rx, low Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov low R0, low Ry
+	al  nf mov Rx, R0
+
+ccc f mov low Rx, high Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov low R0, high Ry
+	al  nf mov Rx, R0
+
+ccc f mov high Rx, low Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov high R0, low Ry
+	al  nf mov Rx, R0
+
+ccc f mov high Rx, high Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov high R0, high Ry
+	al  nf mov Rx, R0
+
+ccc f and Rx, Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  and R0, Ry
+	al  nf mov Rx, R0
+
+ccc f or  Rx, Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  or R0, Ry
+	al  nf mov Rx, R0
