@@ -1,10 +1,12 @@
+Functional processor (not a system processor : no interruption/signal handling, no processor internal control instruction )
 16 registers 16 bits (word)
-8 conditional execution 
-64 Ki word address
+8 execution conditions
+64 Ki word addresses
 16 bits per instruction ( one word per instruction)
+Same address space for program, data and I/O
 
 registers: - R0 to R15 (designated by 4 bits)
-R0  : 0000 : general
+R0  : 0000 : general most versatile (every instruction can use R0)
 R1  : 0001 : general
 R2  : 0010 : general
 R3  : 0011 : general
@@ -18,21 +20,63 @@ R10 : 1010 : general
 R11 : 1011 : general
 R12 : 1100 : general
 R13 : 1101 : general
-R14 : 1110 :FL: 16 bits flags  FEDCBA98 76543XZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
+R14 : 1110 :FL: 16 bits flags  -------- -----XZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
 R15 : 1111 :PC: Program address
 
+flags R14:FL
+   bit 0
+   C : =1 if 
+	addition has a carry
+	substaction has a borrow
+	last evacuated bit by shift left/right is 1
+	=0 otherwise
+   bit 1
+     Z : After instruction execution if modified register/bit is equal to zero then Z=1, 0 otherwise
+   bit 2
+     X : custom flag to set/clear usable for conditional execution
+   bit 3 to 15
+     - : other general flags for program usage
+
+Program counter R15:PC
+   represent the address of the next natural instuction, not the address of current instruction in execution
+   branching is done by a "mov R15, ..." , "add R15, ..."  or "sub R15 , ..." instruction
+   branching with "not R15..." instruction is allowed
+   if PC get overlapped (from FFFF to 0000) then the processor halt, then halting may be done by
+	al nf mov R14, 0
+	al nf sub R14, 1
+	al nf mov R15, R14
+	( keep general registers untouched, and at the end R14=FFFF and R15=0000)
+   or
+	al nf mov low  R0, 255
+	al nf mov high R0, 255
+	al nf mov R15, R0
+
+   Therefore instruction at address FFFF can't be executed. (at instruction fetch, PC increment, set a carry causing a processor halt)
+   so address FFFF can only be an address for data or I/O
+   At processor reset time PC is set to 0 ( same for all other registers)
+   It is possible to block (get stuck) the processor by the following instruction
+	al nf sub R15, 1   ; the instruction is repeated endlessly
+
+Instruction structure: 16 bits (65536 possible instruction execution: Each value get a valid meaning )
 ccc f oooo yyyy xxxx  2 registers parameters
 ccc f oooo iiii iiii  1 unisgned byte parameter
 ccc f oooo siii iiii  1 signed byte parameter
-ccc f oooo iiii xxxx  1 register and 1 quartet parameter
-ccc f oooo oooo xxxx  1 register
-ccc f oooo oooo iiii  1 quartet
+ccc f oooo iiii xxxx  1 register and 1 quartet parameters
+ccc f oooo oooo xxxx  1 register parameter
+ccc f oooo oooo iiii  1 quartet parameter
 
-flag modified : f
-if 0 then no flag modified by operation, 1 flag(s) modified by operation
+ccc       is the 3 bits of instruction execution condition
+f         is the bit of conditional flag modification by instruction execution
+oooo      is the 4 bits instruction code
+oooo oooo is the 8 bits instruction code
+xxxx      is the 4 bits register index (Rx)
+yyyy      is the 4 bits register index (Ry)
+iiii      is the 4 bits of an immediate unsigned integer
+iiii iiii is the 8 bits of an immediate unsigned integer
+siii iiii is the 8 bits of an immediate signed integer
 
 conditions: ccc
-000	al (or omitted)	Always executed.					No flag tested.
+000	al      	Always executed.					No flag tested.
 001	eq or zs	Equal.							Z==1
 010	ne or zc	Not equal.						Z==0
 011	cs or hs	Unsigned higher or same (or carry set).			C==1
@@ -41,11 +85,17 @@ conditions: ccc
 110     xc              custom bit clear                                        X==0
 111	no		never executed (NOP)					No flag tested
 
-operations
-raw mnemonic: (8)
+flag modified : f
+if 0 then no flag is modified by the instruction, 1 flag(s) modified by the instruction
+0	nf
+1	fl
+
+instruction: oooo / oooo oooo
+raw mnemonic: 8 mnemonics
 	mov, add, sub, and, or, not, shl, shr
 
-	mov (Z flag  , mov X, Y after transfer if X == 0 then Z == 1 , Z==0 otherwise)
+instruction per mnemonic : 31 instructions
+	mov (Z flag )
 		mov Rx, 0
 		mov low Rx, 0
 		mov high Rx, 0
@@ -66,15 +116,21 @@ raw mnemonic: (8)
 	add ( Z, C flags)
 		add Rx, Ry
 		add Rx, [Ry]
-		add R15, simm8
 		add R0, imm4
 		add Rx, 1
+		add R15, simm8
 	
 	sub ( Z, C flags)
 		sub Rx, Ry
 		sub Rx, [Ry]
 		sub R0, imm4
 		sub Rx, 1
+
+	shl ( Z, C flags)
+		shl R0, imm4
+
+	shr ( Z, C flags)
+		shr R0, imm4
 	
 	and (Z flag)
 		and R0, Rx
@@ -86,13 +142,9 @@ raw mnemonic: (8)
 		not Rx:imm4
 		not Rx
 
-	shl ( Z, C flags)
-		shl R0, imm4
 
-	shr ( Z, C flags)
-		shr R0, imm4
 
-Operation by code
+Instruction encoding
 
 === Byte parameter (max 15 instr)
 2 registers parameters 
