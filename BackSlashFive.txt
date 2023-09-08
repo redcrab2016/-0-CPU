@@ -3,7 +3,8 @@ Functional processor (not a system processor : no interruption/signal handling, 
 8 execution conditions
 64 Ki word addresses
 16 bits per instruction ( one word per instruction)
-Same address space for program, data and I/O
+Can be implemented for same address space for program, data and I/O
+or for seperated program and data, I/O address space (no mix betwen data and program, not possible to have self modified program)
 
 registers: - R0 to R15 (designated by 4 bits)
 R0  : 0000 : general most versatile (every instruction can use R0)
@@ -340,3 +341,46 @@ ccc f or  Rx, Ry
 	al  nf mov R0, Rx
 	al  f  or R0, Ry
 	al  nf mov Rx, R0
+
+Example programs
+  Example #1
+  Compute length of a null terminated string
+  input : R1 address of the null terminated character string
+  output: R2 length of the string  (R0 = 0, R3 = address of null terminated character)
+  modified : R0, R3
+
+	al nf mov R2, 0		; init found length R2 to 0
+	al nf mov R3, R1        ; init start address R3 to R1
+	al fl mov R0, [R3]      ; Z = [R3] == 0 ?
+	zs nf add R15, 3	; if Z then end program
+	al nf add R2, 1		; if not Z then increment found length (R2=R2+1)
+	al nf add R3, 1		; if not Z then go to next character string address
+	al nf sub R15, 5	; loop 
+
+  Example #2
+  Multiply 
+  input : R1 , R2  (for R1 x R2)
+  output: R3 , R4  (  R3 = low16( R1 x R2), R4 = high16( R1 x R2) )
+  modified: R1, R2, R3, R4, R5
+	
+	al nf mov R3, 0
+	al nf mov R4, 0  ; R3 = R4 = R5 = 0, R4:R3 32 bits result
+	al nf mov R5, 0  ; R5 used for high 16 of R1 left shift R5:R1
+;beginloop
+	al fl mov, R2, R2
+	zc nf add R15, 9  ; if R2 == 0 then go endmultiply
+
+	al fl shr R2, 1
+	cc nf add R15, 3  ; R2 >>= 1, if !C then go shift R1R5
+
+	al fl add R3, R1 ; R3:R4 += R5:R1
+	cs nf add R4, 1
+	al nf add R4, R5
+
+; shift R1R5
+	al nf shl R5, 1
+	al fl shl R1, 1  ; R5:R1 <<= 1
+	cs nf add R5, 1
+
+	al nf sub R15, 11  ; loop to beginloop
+;endmultiply
