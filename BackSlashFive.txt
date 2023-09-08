@@ -373,14 +373,14 @@ Example programs
 	al fl shr R2, 1
 	cc nf add R15, 3  ; R2 >>= 1, if !C then go shift R1R5
 
-	al fl add R3, R1 ; R3:R4 += R5:R1
+	al fl add R3, R1 
 	cs nf add R4, 1
-	al nf add R4, R5
+	al nf add R4, R5 ; R4:R3 += R5:R1
 
 ; shift R1R5
 	al nf shl R5, 1
-	al fl shl R1, 1  ; R5:R1 <<= 1
-	cs nf add R5, 1
+	al fl shl R1, 1  
+	cs nf add R5, 1 ; R5:R1 <<= 1
 
 	al nf sub R15, 11  ; loop to beginloop
 ;endmultiply
