@@ -343,7 +343,33 @@ ccc f or  Rx, Ry
 	al  nf mov Rx, R0
 
 Example programs
+
   Example #1
+  Negate a register
+  input : R0
+  output : R0, Z flag
+  modified : R0, Z flag
+
+	al nf not R0
+	al nf add R0, 1
+	al fl mov R0, R0
+
+  Example #2
+  Extend register byte value sign (R0 bit 8 to 15 = R0 bit 7)
+  input : R0
+  output : R0, Z
+  modified: R0,R1 Z,C flags
+
+	al nf mov C, R0:7
+	al nf mov high R0, 0
+        cc nf add R15, 4
+	al nf mov R1, 0
+	al nf not R1
+	al nf mov low R1, 0
+	al nf or  R0, R1
+	al fl mov R0,R0
+
+  Example #3
   Compute length of a null terminated string
   input : R1 address of the null terminated character string
   output: R2 length of the string  (R0 = 0, R3 = address of null terminated character)
@@ -357,15 +383,17 @@ Example programs
 	al nf add R3, 1		; if not Z then go to next character string address
 	al nf sub R15, 5	; loop 
 
-  Example #2
+  Example #4
   Multiply 
   input : R1 , R2  (for R1 x R2)
   output: R3 , R4  (  R3 = low16( R1 x R2), R4 = high16( R1 x R2) )
-  modified: R1, R2, R3, R4, R5
+  modified: R1, R2, R3, R4, R5 C,Z flags
 	
 	al nf mov R3, 0
 	al nf mov R4, 0  ; R3 = R4 = R5 = 0, R4:R3 32 bits result
 	al nf mov R5, 0  ; R5 used for high 16 of R1 left shift R5:R1
+	al fl mov, R1, R1
+	zc nf add R15, 11  ; if R1 == 0 then go endmultiply
 ;beginloop
 	al fl mov, R2, R2
 	zc nf add R15, 9  ; if R2 == 0 then go endmultiply
@@ -384,3 +412,50 @@ Example programs
 
 	al nf sub R15, 11  ; loop to beginloop
 ;endmultiply
+
+Examples macro (code template with parameter)
+	; macros for stack when R13 is stack pointer, R12 as base pointer
+	ccc f push Rx
+		ccc nf sub R13, 1
+		ccc f  mov [R13], Rx
+
+	ccc f pop Rx
+		ccc f  mov Rx, [R13]
+		ccc nf add R13, 1
+
+	ccc f drop imm4		
+		ccc nf add R13, imm4
+
+	ccc f dup
+		ccc nf sub R13, 2
+		ccc nf [R13], R0
+		ccc nf add R13, 2
+		ccc f mov R0, [R13]
+		ccc nf sub R13, 1
+		ccc nf mov [R13], R0
+		ccc nf sub R13, 1
+		ccc nf mov R0, [R13]
+		ccc nf add R13, 1
+		
+	ccc f head Rx, imm4
+		ccc nf mov R0, R13
+		ccc nf add R0, imm4
+		ccc f mov Rx, [R0]
+
+	ccc f base Rx, imm4
+		ccc nf mov R0, R12
+		ccc nf add R0, imm4
+		ccc f mov Rx, [R0]
+
+	ccc f setbase 
+		ccc f mov R12, R13
+
+	ccc f call Rx
+		ccc nf mov R0, R15
+		ccc nf add R0, 3
+		ccc nf push R0
+		ccc nf mov R15, Rx
+		
+	ccc f ret
+		ccc nf pop R0
+		ccc nf mov R15, R0
