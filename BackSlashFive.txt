@@ -149,26 +149,28 @@ Instruction encoding
 
 === Byte parameter (max 15 instr)
 2 registers parameters 
-ccc f 0000 yyyy xxxx
-	mov Rx, Ry
 
-ccc f 0001 yyyy xxxx
+ccc f 0000 yyyy xxxx
 	mov [Rx], Ry
 
-ccc f 0010 yyyy xxxx
+ccc f 0001 yyyy xxxx
 	mov Rx, [Ry] 
 
-ccc f 0011 yyyy xxxx
-	add Rx, Ry
-
-ccc f 0100 yyyy xxxx
-	sub Rx, Ry
-
-ccc f 0101 yyyy xxxx
+ccc f 0010 yyyy xxxx
 	add Rx, [Ry]
 
-ccc f 0110 yyyy xxxx
+ccc f 0011 yyyy xxxx
 	sub Rx, [Ry]
+
+ccc f 0100 yyyy xxxx
+	mov Rx, Ry
+
+ccc f 0101 yyyy xxxx
+	add Rx, Ry
+
+ccc f 0110 yyyy xxxx
+	sub Rx, Ry
+
 
 1 unsigned/signed byte parameter 
 ccc f 0111 iiii iiii
