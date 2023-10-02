@@ -412,7 +412,7 @@ Example programs
 	al fl shl R1, 1  
 	cs nf add R5, 1 ; R5:R1 <<= 1
 
-	al nf sub R15, 11  ; loop to beginloop
+	al nf add R15, -11  ; loop to beginloop
 ;endmultiply
 
 Examples macro (code template with parameter)
@@ -430,7 +430,7 @@ Examples macro (code template with parameter)
 
 	ccc f dup
 		ccc nf sub R13, 2
-		ccc nf [R13], R0
+		ccc nf mov [R13], R0
 		ccc nf add R13, 2
 		ccc f mov R0, [R13]
 		ccc nf sub R13, 1
