@@ -57,7 +57,7 @@ flags R14:FL
 
 Program counter R15:PC
    represent the address of the next natural instuction, not the address of current instruction in execution
-   branching is done by a "mov R15, ..." , "add R15, ..."  instruction
+   branching is typically done by a "mov R15, ..." , "add R15, ..."  instruction
    branching with "not R15..." instruction is allowed
    if PC get overlapped (from FFFF to 0000) then the processor halt, then halting may be done by
 	al nf mov R0, 0
@@ -434,27 +434,57 @@ Example programs
 
 
   Example #5
-  bootstrap for normal and interrupt execution (with branching if interrupt due to external signal or program)
+  bootstrap (template) for normal and interrupt execution (with branching if interrupt due to external signal or program)
  	org 0 ; start for normal and interrupt. at reset time
-	al nf mov C, R14:15
-	cc nf add R15, byte offset normalexecution ; if not an interruption then continue as normal
-; interupt execution
-interrupt:
-	al nf mov C, R14:14	
-	cs nf add R15, byte offset externalinterrupt ; if interrupt due to external signal
+	al nf mov C, R14:15  ; C flag <= K flag
+	cs nf add R15, byte offset interrupt; if we'are in interrupt context go to interrupt handling
+	; from here we're not in interrupt context, then long jump to start of normal code
+	al nf mov low R0, low offset normalexecution
+	al nf mov high R0, high offset normalexecution
+	al nf mov R15, R0 ; long jump to the normal execution
 
-; program interrupt
-	... code for program interrupt
-	al nf mov R14:15, 0 ; end of interrupt
-        al nf add R15, byte offset interrupt ; small jump to interrupt start
+; interupt codes : branching if it is external or program interrupt
+; code below until "normalexecution" label in run under interrupt context only
+interrupt:
+	al nf mov C, R14:14	; C flag <= I flag
+	cc nf add R15, byte offset programinterrupt ; if interrupt due to program
+	al nf mov low R0, low addr externalinterrupt
+	al nf mov high R0, high addr externalinterrupt
+	al nf mov R15, R0 ; long jump to the external interrupt code
+
+programinterrupt: ; program interrupt
+	... 
+	... ; place here code for program interrupt
+	... ; typically use shared memory addresses for
+	... ; communication between interrupt code and normal code
+	... 
+	; end of program interrupt
+	al nf mov R14:15, 0 ; end of interrupt (switch to normal context)
+	; from here the code is executed when returning in interrupt context
+	; long jump to "interrupt" label
+	al nf mov low R0, low addr interrupt
+	al nf mov high R0, high addr interrupt
+	al nf mov R15, R0 ; long jump to the interrupt start
 
 externalinterrupt: ; interrupt due to external signal
-	... code for external signal interrupt
-	al nf mov R14:15, 0; end of interrupt
-	al nf add R15, byte offset interrupt ; small jum to interrupt start
+	... 
+	... ; place here code for external signal interrupt
+        ... ; typically get interrupt id from interrupt controller device
+        ... ; then do the code depending of the interrupt id.
+	... 
+	; end of external interrupt
+	al nf mov R14:15, 0; end of interrupt (switch to normal context)
+	; from here the code is executed when returning in interrupt context
+	; long jump to "interrupt" label
+	al nf mov low R0, low addr interrupt
+	al nf mov high R0, high addr interrupt
+	al nf mov R15, R0 ; long jump to the interrupt start
 
+; code below is run under normal context only
 normalexecution:
-	... ; normal excution code
+	... 
+	... ; place here normal excution code
+	...
 
 
 Examples macro (code template with parameter)
