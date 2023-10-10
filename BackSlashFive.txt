@@ -1,4 +1,4 @@
-Functional processor (not a system processor : no interruption/signal handling, no processor internal control instruction )
+Light processor
 16 registers 16 bits (word)
 8 execution conditions
 64 Ki word addresses
@@ -21,8 +21,20 @@ R10 : 1010 : general
 R11 : 1011 : general
 R12 : 1100 : general
 R13 : 1101 : general
-R14 : 1110 :FL: 16 bits flags  -------- -----XZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
+R14 : 1110 :FL: 16 bits flags  KI------ -----XZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
 R15 : 1111 :PC: Program address
+There is two set of R0 to R15 registers: one when flag K=1 (interrupt handling), 	another one when K=0 (normal execution)
+K=1 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
+when going from K=0 to K=1 all registers are switch to the interrupt handling register set: register R14 (flags) is modified with K=1, I=0 if switch occurs due to 
+external context switching, I=1 if the switch occurs due to the program. 
+In context when K=1, I flag a no effect (is like I is always = 0), no re-entrant interrupt possible. 
+when going from K=1 to K=0 all registers are switch to the normal register set: register R14 (flags) is modified with K=0
+when a switch occurs, this will cause a jump (from one R15 register to another)
+As it is not possible to modify one register context from another context and both context R15 register is 0 at reset time, your code has to manage the interrupt
+and non interrupt context from address 0,
+From address 0 you can detect the context by testing the flag K.
+In interrupt context handling (K=1) if I==1 that means the context switch due to a external interrupt signal, otherwise due to program.
+When switching to context, the program continue where the last context switch occured.
 
 flags R14:FL
    bit 0
@@ -35,18 +47,23 @@ flags R14:FL
      Z : After instruction execution if modified register/bit is equal to zero then Z=1, 0 otherwise
    bit 2
      X : custom flag to set/clear usable for conditional execution
-   bit 3 to 15
+   bit 3 to 13
      - : other general flags for program usage
+   bit 14
+     I : =1 Interrupt input signal enabled , =0 Interrupt input signal disabled(default value at reset time)
+   bit 15
+     K : =1 Interrupt context registers, =0 normal context registers(default value at reset time)
+         
 
 Program counter R15:PC
    represent the address of the next natural instuction, not the address of current instruction in execution
-   branching is done by a "mov R15, ..." , "add R15, ..."  or "sub R15 , ..." instruction
+   branching is done by a "mov R15, ..." , "add R15, ..."  instruction
    branching with "not R15..." instruction is allowed
    if PC get overlapped (from FFFF to 0000) then the processor halt, then halting may be done by
-	al nf mov R14, 0
-	al nf sub R14, 1
-	al nf mov R15, R14
-	( keep general registers untouched, and at the end R14=FFFF and R15=0000)
+	al nf mov R0, 0
+	al nf sub R0, 1
+	al nf mov R15, R10
+	( keep general registers untouched, and at the end R0=FFFF and R15=0000)
    or
 	al nf mov low  R0, 255
 	al nf mov high R0, 255
@@ -414,6 +431,31 @@ Example programs
 
 	al nf add R15, -11  ; loop to beginloop
 ;endmultiply
+
+
+  Example #5
+  bootstrap for normal and interrupt execution (with branching if interrupt due to external signal or program)
+ 	org 0 ; start for normal and interrupt. at reset time
+	al nf mov C, R14:15
+	cc nf add R15, byte offset normalexecution ; if not an interruption then continue as normal
+; interupt execution
+interrupt:
+	al nf mov C, R14:14	
+	cs nf add R15, byte offset externalinterrupt ; if interrupt due to external signal
+
+; program interrupt
+	... code for program interrupt
+	al nf mov R14:15, 0 ; end of interrupt
+        al nf add R15, byte offset interrupt ; small jump to interrupt start
+
+externalinterrupt: ; interrupt due to external signal
+	... code for external signal interrupt
+	al nf mov R14:15, 0; end of interrupt
+	al nf add R15, byte offset interrupt ; small jum to interrupt start
+
+normalexecution:
+	... ; normal excution code
+
 
 Examples macro (code template with parameter)
 	; macros for stack when R13 is stack pointer, R12 as base pointer
