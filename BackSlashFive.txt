@@ -21,7 +21,7 @@ R10 : 1010 : general
 R11 : 1011 : general
 R12 : 1100 : general
 R13 : 1101 : general
-R14 : 1110 :FL: 16 bits flags  KI------ -----XZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
+R14 : 1110 :FL: 16 bits flags  KIH----- -----XZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
 R15 : 1111 :PC: Program address
 There is two set of R0 to R15 registers: one when flag K=1 (interrupt handling), 	another one when K=0 (normal execution)
 K=1 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
@@ -47,8 +47,10 @@ flags R14:FL
      Z : After instruction execution if modified register/bit is equal to zero then Z=1, 0 otherwise
    bit 2
      X : custom flag to set/clear usable for conditional execution
-   bit 3 to 13
+   bit 3 to 12
      - : other general flags for program usage
+   bit 14:
+     H : =1 to halt processor, =0 by default for running (once halted , no way to continue unless reset)
    bit 14
      I : =1 Interrupt input signal enabled , =0 Interrupt input signal disabled(default value at reset time)
    bit 15
@@ -59,18 +61,6 @@ Program counter R15:PC
    represent the address of the next natural instuction, not the address of current instruction in execution
    branching is typically done by a "mov R15, ..." , "add R15, ..."  instruction
    branching with "not R15..." instruction is allowed
-   if PC get overlapped (from FFFF to 0000) then the processor halt, then halting may be done by
-	al nf mov R0, 0
-	al nf sub R0, 1
-	al nf mov R15, R10
-	( keep general registers untouched, and at the end R0=FFFF and R15=0000)
-   or
-	al nf mov low  R0, 255
-	al nf mov high R0, 255
-	al nf mov R15, R0
-
-   Therefore instruction at address FFFF can't be executed. (at instruction fetch, PC increment, set a carry causing a processor halt)
-   so address FFFF can only be an address for data or I/O
    At processor reset time PC is set to 0 ( same for all other registers)
    It is possible to block (get stuck) the processor by the following instruction
 	al nf sub R15, 1   ; the instruction is repeated endlessly
