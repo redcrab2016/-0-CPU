@@ -21,7 +21,7 @@ R10 : 1010 : general
 R11 : 1011 : general
 R12 : 1100 : general
 R13 : 1101 : general
-R14 : 1110 :FL: 16 bits flags  KIH----- -----XZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
+R14 : 1110 :FL: 16 bits flags  KIHR---- -----XZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
 R15 : 1111 :PC: Program address
 There is two set of R0 to R15 registers: one when flag K=1 (interrupt handling), 	another one when K=0 (normal execution)
 K=1 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
@@ -47,8 +47,10 @@ flags R14:FL
      Z : After instruction execution if modified register/bit is equal to zero then Z=1, 0 otherwise
    bit 2
      X : custom flag to set/clear usable for conditional execution
-   bit 3 to 12
+   bit 3 to 11
      - : other general flags for program usage
+   bit 12
+     R : =1 request a soft cpu reset, =0 default running
    bit 13:
      H : =1 to halt processor, =0 by default for running (once halted , no way to continue unless reset)
    bit 14
