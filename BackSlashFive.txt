@@ -49,7 +49,7 @@ flags R14:FL
      X : custom flag to set/clear usable for conditional execution
    bit 3 to 12
      - : other general flags for program usage
-   bit 14:
+   bit 13:
      H : =1 to halt processor, =0 by default for running (once halted , no way to continue unless reset)
    bit 14
      I : =1 Interrupt input signal enabled , =0 Interrupt input signal disabled(default value at reset time)
