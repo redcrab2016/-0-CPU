@@ -51,8 +51,10 @@ flags R14:FL
      - : other general flags for program usage
    bit 12
      R : =1 request a soft cpu reset, =0 default running
+         CPU react only if  using  instruction "mov R14:12, x" : x=C and C==1, or x=1 
    bit 13:
      H : =1 to halt processor, =0 by default for running (once halted , no way to continue unless reset)
+         CPU react only if  using  instruction "mov R14:13, x" : x=C and C==1, or x=1 
    bit 14
      I : =1 Interrupt input signal enabled , =0 Interrupt input signal disabled(default value at reset time)
    bit 15
