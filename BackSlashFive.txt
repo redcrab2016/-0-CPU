@@ -56,7 +56,10 @@ flags R14:FL
      H : =1 to halt processor, =0 by default for running (once halted , no way to continue unless reset)
          CPU react only if  using  instruction "mov R14:13, x" : x=C and C==1, or x=1 
    bit 14
-     I : =1 Interrupt input signal enabled , =0 Interrupt input signal disabled(default value at reset time)
+        if K == 0 (normal context)
+           I : =1 Interrupt input signal enabled , =0 Interrupt input signal disabled(default value at reset time)
+        if K == 1 (just entering into interrupt context)
+           I : =0  interrupt by program, =1 interrupt by signal
    bit 15
      K : =1 Interrupt context registers, =0 normal context registers(default value at reset time)
          
