@@ -48,7 +48,7 @@ flags R14:FL
    bit 2
      X : custom flag to set/clear usable for conditional execution
    bit 3 to 11
-     - : other general flags for program usage
+     - : other general flags for program usage (bit general registers)
    bit 12
      R : =1 request a soft cpu reset, =0 default running
          CPU react only if  using  instruction "mov R14:12, x" : x=C and C==1, or x=1 
