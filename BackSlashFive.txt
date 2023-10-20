@@ -69,8 +69,12 @@ Program counter R15:PC
    branching is typically done by a "mov R15, ..." , "add R15, ..."  instruction
    branching with "not R15..." instruction is allowed
    At processor reset time PC is set to 0 ( same for all other registers)
-   It is possible to block (get stuck) the processor by the following instruction
+   
+   In normal context( flag K=0), it is possible to block (get stuck) the processor by the following instruction
 	al nf sub R15, 1   ; the instruction is repeated endlessly
+   Interrupt signal still handled if flag I=1.
+   Same instruction in interrupt context (flag K=1) get stuck forever the cpu by repeating endlessly the instruction.
+
 
 Instruction structure: 16 bits (65536 possible instruction execution: Each value get a valid meaning )
 ccc f oooo yyyy xxxx  2 registers parameters
