@@ -1,5 +1,5 @@
 Light processor
-16 registers 16 bits (word)
+16 registers 16 bits ( word )
 8 execution conditions
 64 Ki word addresses
 16 bits per instruction ( one word per instruction)

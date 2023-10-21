@@ -271,7 +271,7 @@ targetvar
    | regWord                                       { $aType = $regWord.aType;}
    | regByte                                       { $aType = $regByte.aType;}
    ;
-
+ 
 sourcevar
    returns [ BS3tinycType aType ]
    : (ope='&' | ope='*' ('(' tr=type ')')? ) ? 
