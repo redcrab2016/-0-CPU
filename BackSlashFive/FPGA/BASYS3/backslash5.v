@@ -128,7 +128,7 @@ module backslash5(clk, vgaRed, vgaGreen, vgaBlue, Hsync, Vsync, led);
                           .o_vga_green(vgaGreen), 
                           .o_vga_blue(vgaBlue)); 
 
-  clk_wiz_1 bs5clocks
+  clk_wiz_1 bs5clocks // IP clock wizard, input board clock clk 100MHz, output bus_clock 100Mhz, vga_clock 40 Mhz 
    (
     // Clock out ports
     .clk_out1(bus_clock),     // 100Mhz Digilent Basys 3
