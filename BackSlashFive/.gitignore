@@ -1,0 +1,5 @@
+!*.asm
+!*.inc
+bs3meta/tinyc/target
+bs5_asm/src/main/java/backslash/bs5/asm/generated/*
+!*.g4
