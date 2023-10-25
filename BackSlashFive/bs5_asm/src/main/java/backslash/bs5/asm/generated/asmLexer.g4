@@ -9,7 +9,7 @@ COMMA:                    ',';
 
 Bs5_org:  'org';
 Bs5_dw:   'dw';
-Bs5_equ:  'equ';
+//Bs5_equ:  'equ';
 
 Bs5_mov:  'mov';
 Bs5_add:  'add';
@@ -37,23 +37,34 @@ Bs5_label_lptr: 'lptr';
 Bs5_label_hptr: 'hptr';
 Bs5_label_loffset: 'loffset';
 
-Bs5_reg
-    : [rR]('0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'11'|'12'|'13'|'14'|'15');
+Bs5_reg0 : [rR] '0';
+Bs5_reg15: [rR] '15';
 
-Bs5_num_hexa_word
-    : '#0x'[0123456789ABCDEFabcdef]{3,4}; // sign by setting a complementary of two
+Bs5_reg_1_14
+    : [rR]('1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'11'|'12'|'13'|'14');
 
-Bs5_num_hexa_byte
-    : '#0x'[0123456789ABCDEFabcdef]{2}; // sign by setting a complementary of two
+Bs5_num_hexa_word // if signed, then encode as complementary of two
+    : '#0x'[1-9A-Fa-f][0-9A-Fa-f]{2,3}
+    | '#0x0'[1-9A-Fa-f][0-9A-Fa-f]{2};
+
+Bs5_num_hexa_byte // if signed, then encode as complementary of two
+    : '#0x'[0]{0,2}[1-9A-Fa-f][0-9A-Fa-f];
 
 Bs5_num_hexa_quad
-    : '#0x'[0123456789ABCDEFabcdef]{1};
+    : '#0x'[0]{0,3}[2-9A-Fa-f];
+
+Bs5_num_hexa_bit
+    : '#0x'[0]{0,3}[01];
 
 Bs5_num_decimal_signed
     : ('#'('+'|'-')[0-9]{1,5}) | ('+'|'-')[0-9]{1,5}; // TODO : missing check value from -32768 to 32767
 
 Bs5_num_decimal_unsigned
-    : ('#'[0-9]{1,5}) | [0-9]{1,5}; // TODO : missing check value below or equal to 65535
+    :'#'?([1-9][0-9]{0,3}|[1-5][0-9]{4}|'6'[0-4][0-9]{3}|'65'[0-4][0-9]{2}|'655'[0-2][0-9]|'6553'[0-5]);
+
+
+Bs5_num_decimal_bit
+    : '#'?'0'{0,4}[01];
 
 Bs5_num_char
     : '#\''[^\r\n]'\'';
@@ -66,9 +77,8 @@ Bs5nl
    ;
 
 Bs5comment
-   : ';' (~[\r\n]+)? ~[\r\n}] | ';' (~[\r\n}]*)
+   : ';' [^\r\n]*
    ;
 
 Bs5WS
-   : [ \t]+
-   ;
+   : [ \t]+ -> skip;
