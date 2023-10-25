@@ -8,7 +8,6 @@
     },
     "makefile.launchConfigurations": [
         {
-<<<<<<< Updated upstream
             "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
             "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/dist/examples/sk/sk",
             "binaryArgs": []
@@ -32,26 +31,6 @@
             "cwd": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree",
             "binaryPath": "/ec/prod/app/time-series/promethe/bs3/github/BackSlash-CPU/BackSlashThree/bs3asm",
             "binaryArgs": ["-D","dist/examples/sk/sk.asm"]
-=======
-            "cwd": "/home/famille/projects/github/BackSlash-CPU/BackSlashThree",
-            "binaryPath": "/home/famille/projects/github/BackSlash-CPU/BackSlashThree/bs3asm",
-            "binaryArgs": ["test.asm"]
-        },
-        {
-            "cwd": "/home/famille/projects/github/BackSlash-CPU/BackSlashThree",
-            "binaryPath": "/home/famille/projects/github/BackSlash-CPU/BackSlashThree/bs3asm",
-            "binaryArgs": ["-D","dist/examples/sk/sk.asm"]
-        },
-        {
-            "cwd": "/home/famille/projects/github/BackSlash-CPU/BackSlashThree",
-            "binaryPath": "/home/famille/projects/github/BackSlash-CPU/BackSlashThree/bs3asm",
-            "binaryArgs": ["-KD","dist/examples/ansigfx/helloansigfx.asm"]
-        },
-        {
-            "cwd": "/home/famille/projects/github/BackSlash-CPU/BackSlashThree",
-            "binaryPath": "/home/famille/projects/github/BackSlash-CPU/BackSlashThree/bs3asm",
-            "binaryArgs": ["-KD","dist/examples/gfx/hellogfx.asm"]
->>>>>>> Stashed changes
         }
     ],
     "C_Cpp.dimInactiveRegions": false,
