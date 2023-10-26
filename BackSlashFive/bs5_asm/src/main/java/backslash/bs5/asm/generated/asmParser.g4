@@ -13,7 +13,7 @@ statement:
     label? instruction? comment? endofline ;
 
 endofline:
-    Bs5nl endofline*;
+    Bs5nl endofline?;
 
 label:
     Bs5_identifier COLON;

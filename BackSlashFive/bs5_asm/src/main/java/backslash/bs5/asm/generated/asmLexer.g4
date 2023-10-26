@@ -141,10 +141,10 @@ Bs5_num_decimal_unsigned_quad
     | '#'?'1'[0-5];             // 10 - 15
 
 Bs5_num_decimal_unsigned_one
-    : '#'?'1';                  // 0 - 1
+    : '#'?'1';                  // 1
 
 Bs5_num_decimal_unsigned_zero
-    : '#'?'0';
+    : '#'?'0';                  // 0
 
 Bs5_num_char
     : '#\''~[\r\n]'\'';
