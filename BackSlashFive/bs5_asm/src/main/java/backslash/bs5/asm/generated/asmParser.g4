@@ -10,21 +10,15 @@ import backslash.bs5.asm.*;
 program: statement+ EOF;
 
 statement: 
-    label? instruction? comment? endofline ;
-
-endofline:
-    Bs5nl endofline?;
+    label? instruction? Bs5comment? Bs5nl ;
 
 label:
     Bs5_identifier COLON;
 
-comment: 
-    Bs5comment;
-
 instruction
     : directive
-    | bs5_basic_instruction
-    | bs5_extend_instruction;
+    | bs5_core_instruction
+    | bs5_corex_instruction;
 
 directive
     : origin
@@ -43,7 +37,7 @@ string
     : DBLQUOTE STRDATA DBLQUOTEEND;
 
 // 31 CPU core instructions
-bs5_basic_instruction 
+bs5_core_instruction 
     // ccc f mov Rx, 0
     : bs5_cond? bs5_flag? Bs5_mov bs5_reg COMMA numberZero 
     // ccc f mov low Rx, 0
@@ -112,7 +106,7 @@ bs5_basic_instruction
     ;
 
 // 12 CPU micro programs for register versatility (R0 is modified and can't be used as operand)
-bs5_extend_instruction 
+bs5_corex_instruction 
     // ccc f mov low Rx, imm8 
     : bs5_cond? bs5_flag? Bs5_mov Bs5_low bs5_reg_1_15 COMMA numberUnsignedByte
     // ccc f  mov high Rx, imm8
