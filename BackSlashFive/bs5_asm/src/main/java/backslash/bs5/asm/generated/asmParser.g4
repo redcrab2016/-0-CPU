@@ -18,7 +18,8 @@ label:
 instruction
     : directive
     | bs5_core_instruction
-    | bs5_corex_instruction;
+    | bs5_corex_instruction
+    | bs5_imm16_instruction;
 
 directive
     : origin
@@ -132,7 +133,7 @@ bs5_corex_instruction
     // ccc f or  Rx, Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? Bs5_or bs5_reg_1_15 COMMA bs5_reg_1_15
 ;
-// 6 CPU micro programs for immediate 16 bits value 
+// 12 CPU micro programs for immediate 16 bits value 
 // ( R0 is modified and can't be used as operand, except for "mov R0, imm16" and "mov Rx, [imm16]" )
 bs5_imm16_instruction
     // ccc f mov Rx, imm16 (Rx != R0 and imm16 != 0)
@@ -145,8 +146,20 @@ bs5_imm16_instruction
     | bs5_cond? bs5_flag? Bs5_sub bs5_reg_1_15 COMMA number16bitsNotQuad
     // ccc f mov Rx, [imm16] 
     | bs5_cond? bs5_flag? Bs5_sub bs5_reg COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
-    // ccc f mov [imm16], Rx ( Rx != R0)
-    | bs5_cond? bs5_flag? Bs5_sub OPEN_BRACKET number16bits CLOSE_BRACKET COMMA bs5_reg_1_15 ;
+    // ccc f mov [imm16], Rx ( Rx != R0 )
+    | bs5_cond? bs5_flag? Bs5_sub OPEN_BRACKET number16bits CLOSE_BRACKET COMMA bs5_reg_1_15 
+    // ccc f add Rx, [imm16] ( Rx != R0 )
+    | bs5_cond? bs5_flag? Bs5_add bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+    // ccc f sub Rx, [imm16] ( Rx != R0 )
+    | bs5_cond? bs5_flag? Bs5_sub bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+    // ccc f and Rx, imm16 (Rx != R0)
+    | bs5_cond? bs5_flag? Bs5_and bs5_reg_1_15 COMMA number16bits
+    // ccc f or Rx, imm16 (Rx != R0)
+    | bs5_cond? bs5_flag? Bs5_or bs5_reg_1_15 COMMA number16bits
+    // ccc f and Rx, [imm16] (Rx != R0)
+    | bs5_cond? bs5_flag? Bs5_and bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+    // ccc f or Rx, [imm16] (Rx != R0)
+    | bs5_cond? bs5_flag? Bs5_or bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET;
 
 // any register reference
 bs5_reg

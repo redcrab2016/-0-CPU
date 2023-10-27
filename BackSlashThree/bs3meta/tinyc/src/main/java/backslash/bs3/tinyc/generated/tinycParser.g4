@@ -3,7 +3,8 @@ parser grammar tinycParser;
 options {tokenVocab=tinycLexer; contextSuperClass=org.antlr.v4.runtime.RuleContextWithAltNum;}
 
 @header {
-import java.util.*;
+package backslash.bs3.tinyc.generated;   
+//import java.util.*;
 import backslash.bs3.tinyc.*;
 }
 

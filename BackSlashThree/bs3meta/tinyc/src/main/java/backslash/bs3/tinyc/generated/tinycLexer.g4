@@ -1,4 +1,7 @@
 lexer grammar tinycLexer;
+@header {
+package backslash.bs3.tinyc.generated;   
+}
 
 OPEN_BRACE:               '{';
 CLOSE_BRACE:              '}';
@@ -204,7 +207,7 @@ Bs3macroend
    ;
 
 Bs3macroline
-   : (Bs3macrosubst* ~[\r\n]*)* [\r\n]+
+   : (Bs3macrosubst+ ~[\r\n]*)* [\r\n]+
    ;
 
 
