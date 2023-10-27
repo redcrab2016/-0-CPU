@@ -147,7 +147,7 @@ Bs5_num_decimal_unsigned_zero
     : '#'?'0';                  // 0
 
 Bs5_num_char
-    : '#\''~[\r\n]'\'';
+    : '#\''~[\u0000-\u001f\u0100-\uffff\u007F]'\'';
 
 Bs5_identifier
     : (('.'[a-zA-Z_0-9]+)|([a-zA-Z_][a-zA-Z_0-9]*))('.'[a-zA-Z_0-9]+)*;    

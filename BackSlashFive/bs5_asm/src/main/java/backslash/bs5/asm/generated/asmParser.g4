@@ -111,27 +111,42 @@ bs5_corex_instruction
     : bs5_cond? bs5_flag? Bs5_mov Bs5_low bs5_reg_1_15 COMMA numberUnsignedByte
     // ccc f  mov high Rx, imm8
     | bs5_cond? bs5_flag? Bs5_mov Bs5_high bs5_reg_1_15 COMMA numberUnsignedByte
-    // ccc f add Rx, imm4
-    | bs5_cond? bs5_flag? Bs5_add bs5_reg_1_15 COMMA numberUnsignedQuad
-    // ccc f sub Rx, imm4
-    | bs5_cond? bs5_flag? Bs5_sub bs5_reg_1_15 COMMA numberUnsignedQuad
-    // ccc f shl Rx, imm4
+    // ccc f add Rx, imm4 (Rx != R0)
+    | bs5_cond? bs5_flag? Bs5_add bs5_reg_1_15 COMMA numberUnsignedQuadNotOne
+    // ccc f sub Rx, imm4 (Rx != R0)
+    | bs5_cond? bs5_flag? Bs5_sub bs5_reg_1_15 COMMA numberUnsignedQuadNotOne
+    // ccc f shl Rx, imm4 (Rx != R0)
     | bs5_cond? bs5_flag? Bs5_shl bs5_reg_1_15 COMMA numberUnsignedQuad
-    // ccc f shr Rx, imm4
+    // ccc f shr Rx, imm4 (Rx != R0)
     | bs5_cond? bs5_flag? Bs5_shr bs5_reg_1_15 COMMA numberUnsignedQuad
-    // ccc f mov low Rx, low Ry
+    // ccc f mov low Rx, low Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? Bs5_mov Bs5_low bs5_reg_1_15 COMMA Bs5_low bs5_reg_1_15
-    // ccc f mov low Rx, high Ry
+    // ccc f mov low Rx, high Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? Bs5_mov Bs5_low bs5_reg_1_15 COMMA Bs5_high bs5_reg_1_15
-    // ccc f mov high Rx, low Ry
+    // ccc f mov high Rx, low Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? Bs5_mov Bs5_high bs5_reg_1_15 COMMA Bs5_low bs5_reg_1_15
-    // ccc f mov high Rx, high Ry
+    // ccc f mov high Rx, high Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? Bs5_mov Bs5_high bs5_reg_1_15 COMMA Bs5_high bs5_reg_1_15
-    // ccc f and Rx, Ry
+    // ccc f and Rx, Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? Bs5_and bs5_reg_1_15 COMMA bs5_reg_1_15
-    // ccc f or  Rx, Ry
+    // ccc f or  Rx, Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? Bs5_or bs5_reg_1_15 COMMA bs5_reg_1_15
 ;
+// 6 CPU micro programs for immediate 16 bits value 
+// ( R0 is modified and can't be used as operand, except for "mov R0, imm16" and "mov Rx, [imm16]" )
+bs5_imm16_instruction
+    // ccc f mov Rx, imm16 (Rx != R0 and imm16 != 0)
+    : bs5_cond? bs5_flag? Bs5_mov bs5_reg_1_15 COMMA number16bitsNotZero
+    // ccc f mov R0, imm16 ( imm16 != 0 )
+    | bs5_cond? bs5_flag? Bs5_mov Bs5_reg0 COMMA number16bitsNotZero
+    // ccc f add Rx, imm16 (Rx != R0 and imm16 > 15)
+    | bs5_cond? bs5_flag? Bs5_add bs5_reg_1_15 COMMA number16bitsNotQuad
+    // ccc f sub Rx, imm16 (Rx != R0 and imm16 > 15)
+    | bs5_cond? bs5_flag? Bs5_sub bs5_reg_1_15 COMMA number16bitsNotQuad
+    // ccc f mov Rx, [imm16] 
+    | bs5_cond? bs5_flag? Bs5_sub bs5_reg COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+    // ccc f mov [imm16], Rx ( Rx != R0)
+    | bs5_cond? bs5_flag? Bs5_sub OPEN_BRACKET number16bits CLOSE_BRACKET COMMA bs5_reg_1_15 ;
 
 // any register reference
 bs5_reg
@@ -176,7 +191,36 @@ number16bits
     |  Bs5_num_char
     |  Bs5_label_ptr Bs5_identifier
     |  Bs5_low Bs5_label_ptr Bs5_identifier
+    |  Bs5_high Bs5_label_ptr Bs5_identifier;
+
+number16bitsNotQuad
+    :  Bs5_num_hexa_word
+    |  Bs5_num_hexa_byte
+    |  Bs5_num_decimal_unsigned_word
+    |  Bs5_num_decimal_unsigned_byte
+    |  Bs5_num_decimal_signed_word
+    |  Bs5_num_decimal_signed_byte
+    |  Bs5_num_char
+    |  Bs5_label_ptr Bs5_identifier
+    |  Bs5_low Bs5_label_ptr Bs5_identifier
     |  Bs5_high Bs5_label_ptr Bs5_identifier;      
+
+number16bitsNotZero
+    :  Bs5_num_hexa_word
+    |  Bs5_num_hexa_byte
+    |  Bs5_num_hexa_quad
+    |  Bs5_num_hexa_one
+    |  Bs5_num_decimal_unsigned_word
+    |  Bs5_num_decimal_unsigned_byte
+    |  Bs5_num_decimal_unsigned_quad
+    |  Bs5_num_decimal_unsigned_one
+    |  Bs5_num_decimal_signed_word
+    |  Bs5_num_decimal_signed_byte
+    |  Bs5_num_decimal_signed_one
+    |  Bs5_num_char
+    |  Bs5_label_ptr Bs5_identifier
+    |  Bs5_low Bs5_label_ptr Bs5_identifier
+    |  Bs5_high Bs5_label_ptr Bs5_identifier;
 
 numberZero
     :  Bs5_num_hexa_zero
@@ -220,4 +264,10 @@ numberUnsignedQuad
     |  Bs5_num_hexa_zero
     |  Bs5_num_decimal_unsigned_quad
     |  Bs5_num_decimal_unsigned_one
+    |  Bs5_num_decimal_unsigned_zero;
+
+numberUnsignedQuadNotOne
+    :  Bs5_num_hexa_quad
+    |  Bs5_num_hexa_zero
+    |  Bs5_num_decimal_unsigned_quad
     |  Bs5_num_decimal_unsigned_zero;
