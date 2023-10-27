@@ -26,7 +26,7 @@ directive
     | dataword;   
 
 origin
-    : Bs5_org number16bits;
+    : Bs5_org number16bitsNumeral;
 
 dataword
     : Bs5_dw wordlist;
@@ -205,6 +205,23 @@ number16bits
     |  Bs5_label_ptr Bs5_identifier
     |  Bs5_low Bs5_label_ptr Bs5_identifier
     |  Bs5_high Bs5_label_ptr Bs5_identifier;
+
+number16bitsNumeral
+    :  Bs5_num_hexa_word
+    |  Bs5_num_hexa_byte
+    |  Bs5_num_hexa_quad
+    |  Bs5_num_hexa_one
+    |  Bs5_num_hexa_zero
+    |  Bs5_num_decimal_unsigned_word
+    |  Bs5_num_decimal_unsigned_byte
+    |  Bs5_num_decimal_unsigned_quad
+    |  Bs5_num_decimal_unsigned_one
+    |  Bs5_num_decimal_unsigned_zero
+    |  Bs5_num_decimal_signed_word
+    |  Bs5_num_decimal_signed_byte
+    |  Bs5_num_decimal_signed_one
+    |  Bs5_num_decimal_signed_zero;
+
 
 number16bitsNotQuad
     :  Bs5_num_hexa_word
