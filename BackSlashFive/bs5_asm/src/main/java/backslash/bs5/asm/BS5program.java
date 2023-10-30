@@ -75,14 +75,14 @@ public class BS5program {
 // Base 16 bits value added into memory map
     public BS5program addWord(String word) throws BS5Exception {
         if (isMemoryMapped(PC)) throw new BS5Exception("Memory address " + String.format("0x%04x", PC) + " is already encoded with a value.");
-        bs5memoryMap.put(PC, new BS5MemoryCell(this,word));
+        bs5memoryMap.put(PC, new BS5MemoryCell(this,PC,linenum,word));
         PC++;
         return this;
     }
 
 // Directive "org"
     public BS5program org(String addr) throws BS5Exception {
-        PC = BS5MemoryCell.get16bitsNumeral(addr);
+        PC = BS5MemoryCell.get16bitsNumeral(this,PC,linenum,addr);
         return this;
     }
 
@@ -91,5 +91,5 @@ public class BS5program {
         for (String dw: dw_list) addWord(dw);
         return this;
     }
-
+    
 }
