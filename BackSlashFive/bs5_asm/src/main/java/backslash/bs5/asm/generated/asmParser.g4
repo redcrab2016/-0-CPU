@@ -78,8 +78,8 @@ bs5_core_instruction
     | bs5_cond? bs5_flag? Bs5_add bs5_reg COMMA OPEN_BRACKET bs5_reg CLOSE_BRACKET
     // ccc f add R0, imm4
     | bs5_cond? bs5_flag? Bs5_add Bs5_reg0 COMMA numberUnsignedQuad
-    // ccc f add Rx, 1
-    | bs5_cond? bs5_flag? Bs5_add bs5_reg COMMA numberOne
+    // ccc f add Rx, 1  (Rx != R0 preferably)
+    | bs5_cond? bs5_flag? Bs5_add bs5_reg_1_15 COMMA numberOne
     // ccc f add R15, simm8
     | bs5_cond? bs5_flag? Bs5_add Bs5_reg15 COMMA numberSignedByte
 
@@ -89,8 +89,8 @@ bs5_core_instruction
     | bs5_cond? bs5_flag? Bs5_sub bs5_reg COMMA OPEN_BRACKET bs5_reg CLOSE_BRACKET
     // ccc f sub R0, imm4
     | bs5_cond? bs5_flag? Bs5_sub Bs5_reg0 COMMA numberUnsignedQuad
-    // ccc f sub Rx, 1
-    | bs5_cond? bs5_flag? Bs5_sub bs5_reg COMMA numberOne
+    // ccc f sub Rx, 1  (Rx != R0 preferably)
+    | bs5_cond? bs5_flag? Bs5_sub bs5_reg_1_15 COMMA numberOne
 
     // ccc f shl R0, imm4
     | bs5_cond? bs5_flag? Bs5_shl Bs5_reg0 COMMA numberUnsignedQuad

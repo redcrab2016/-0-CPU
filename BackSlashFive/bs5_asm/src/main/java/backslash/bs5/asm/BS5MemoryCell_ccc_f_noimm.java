@@ -1,10 +1,10 @@
 package backslash.bs5.asm;
 
-public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
+public class BS5MemoryCell_ccc_f_noimm extends BS5MemoryCell {
     private String ccc;
     private String f;
     private int oooo_oooo_oooo;
-    protected BS5MemoryCell_ccc_f(BS5program prg, int addr, 
+    protected BS5MemoryCell_ccc_f_noimm(BS5program prg, int addr, 
                                               int linenum,String ccc, String f) throws BS5Exception {
         super(prg, addr,linenum);
         this.ccc = ccc;
@@ -13,7 +13,7 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
         this.isEvaluated = false;
     }
     
-    public BS5MemoryCell_ccc_f setValue(int oooo_oooo_oooo) throws BS5Exception {
+    public BS5MemoryCell_ccc_f_noimm setValue(int oooo_oooo_oooo) throws BS5Exception {
         this.oooo_oooo_oooo = oooo_oooo_oooo;
         super.setValue(getvalue_ccc(ccc) | getvalue_f(f) | (this.oooo_oooo_oooo & 0x0fff));
         return this;
