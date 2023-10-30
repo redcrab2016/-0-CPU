@@ -50,11 +50,11 @@ public class BS5MemoryCell {
         return this;
     }
 
-    public boolean isEvaluated(){
+    public boolean isEvaluated() throws BS5Exception{
         return isEvaluated;
     }
 
-    public int getValue() {
+    public int getValue() throws BS5Exception {
         if (isEvaluated) return value16bits;
         setValue(sourceValue);
         return value16bits; 

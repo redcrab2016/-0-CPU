@@ -1,21 +1,55 @@
 package backslash.bs5.asm;
 
-public class BS5MemoryCell_ccc_f_noimm extends BS5MemoryCell {
+public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
     private String ccc;
     private String f;
     private int oooo_oooo_oooo;
-    protected BS5MemoryCell_ccc_f_noimm(BS5program prg, int addr, 
+    protected BS5MemoryCell immediat;
+    protected int immediat_mask;
+    protected int immediat_shift;
+    protected BS5MemoryCell_ccc_f(BS5program prg, int addr, 
                                               int linenum,String ccc, String f) throws BS5Exception {
         super(prg, addr,linenum);
         this.ccc = ccc;
         this.f = f;
         this.oooo_oooo_oooo = 0;
         this.isEvaluated = false;
+        immediat = null;
     }
     
-    public BS5MemoryCell_ccc_f_noimm setValue(int oooo_oooo_oooo) throws BS5Exception {
+    public BS5MemoryCell_ccc_f setValue(int oooo_oooo_oooo) throws BS5Exception {
         this.oooo_oooo_oooo = oooo_oooo_oooo;
-        super.setValue(getvalue_ccc(ccc) | getvalue_f(f) | (this.oooo_oooo_oooo & 0x0fff));
+        if (immediat == null)
+        {
+            super.setValue(getvalue_ccc(ccc) | getvalue_f(f) | (this.oooo_oooo_oooo & 0x0fff));
+        } else {
+            isEvaluated = immediat.isEvaluated();
+            if (isEvaluated) {
+               super.setValue(  getvalue_ccc(ccc) | 
+                                getvalue_f(f) | 
+                                (this.oooo_oooo_oooo & 0x0fff) | 
+                                ((immediat.getValue() & immediat_mask) << immediat_shift)); 
+            }
+        }
+        return this;
+    }
+
+    public boolean isEvaluated() throws BS5Exception{
+        if (immediat == null) return super.isEvaluated();
+        if (!isEvaluated && immediat.isEvaluated()) setValue(oooo_oooo_oooo);
+        return isEvaluated;
+    }
+
+    public int getValue() throws BS5Exception {
+        if (immediat == null) return super.getValue();
+        if (isEvaluated()) return super.getValue();
+        setValue(oooo_oooo_oooo);
+        return super.getValue(); 
+    }
+    protected BS5MemoryCell_ccc_f setImmediat(String imm, int mask, int shift) {
+        immediat = new BS5MemoryCell(prg, this.addr, this.linenum, imm);
+        immediat_mask = mask;
+        immediat_shift = shift;
         return this;
     }
 

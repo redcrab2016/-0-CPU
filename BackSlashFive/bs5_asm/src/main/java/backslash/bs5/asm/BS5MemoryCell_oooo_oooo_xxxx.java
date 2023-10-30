@@ -1,6 +1,6 @@
 package backslash.bs5.asm;
 
-public class BS5MemoryCell_oooo_oooo_xxxx extends BS5MemoryCell_ccc_f_noimm {
+public class BS5MemoryCell_oooo_oooo_xxxx extends BS5MemoryCell_ccc_f {
     public BS5MemoryCell_oooo_oooo_xxxx (BS5program prg, int addr, int linenum, String ccc, String f, 
     String mnemonic,  String rx) throws BS5Exception {
        super(prg,addr,linenum,ccc,f);
