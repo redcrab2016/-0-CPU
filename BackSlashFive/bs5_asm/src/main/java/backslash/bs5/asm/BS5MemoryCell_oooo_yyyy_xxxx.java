@@ -1,8 +1,8 @@
 package backslash.bs5.asm;
 
-public class BS5MemoryCell_ccc_f_oooo_yyyy_xxxx extends BS5MemoryCell_ccc_f_oooo_oooo_oooo {
-    public BS5MemoryCell_ccc_f_oooo_yyyy_xxxx(BS5program prg, int addr, int linenum,
-         String ccc, String f, String mnemonic, String ry, String rx) throws BS5Exception {
+public class BS5MemoryCell_oooo_yyyy_xxxx extends BS5MemoryCell_ccc_f {
+    public BS5MemoryCell_oooo_yyyy_xxxx(BS5program prg, int addr, int linenum, String ccc, String f, 
+         String mnemonic, String ry, String rx) throws BS5Exception {
             super(prg,addr,linenum,ccc,f);
             this.setValue(getvalue_instruction(mnemonic,linenum) | (getvalue_reg(ry)<<4) | getvalue_reg(rx));
          }
