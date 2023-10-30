@@ -8,7 +8,7 @@ public class BS5MemoryCell {
     protected int linenum;
     protected int addr;
 
-    public BS5MemoryCell(BS5program prg, int addr, int linenum) {
+    public BS5MemoryCell(BS5program prg, int addr, int linenum) throws BS5Exception {
         this.addr = addr;
         this.prg = prg;
         this.linenum = linenum;
@@ -23,20 +23,21 @@ public class BS5MemoryCell {
         setValue(sourceValue);
     }
 
-    public BS5MemoryCell(BS5program prg, int addr, int linenum, int sourceValue) {
+    public BS5MemoryCell(BS5program prg, int addr, int linenum, int sourceValue) throws BS5Exception {
         this.addr = addr;
         this.prg = prg;
         this.linenum = linenum;
         setValue(sourceValue);
     }
 
-    public void setValue(int sourceValue) {
+    public BS5MemoryCell setValue(int sourceValue) throws BS5Exception {
         this.sourceValue = String.valueOf(sourceValue);
         value16bits = sourceValue;
         isEvaluated = true;
+        return this;
     }
 
-    public void setValue(String sourceValue) {
+    public BS5MemoryCell setValue(String sourceValue) {
         this.sourceValue = sourceValue;
         try {
             value16bits = get16bitsNumeral(prg,addr,linenum,sourceValue);
@@ -46,6 +47,7 @@ public class BS5MemoryCell {
             value16bits = 0;
             isEvaluated = false;
         }
+        return this;
     }
 
     public boolean isEvaluated(){
