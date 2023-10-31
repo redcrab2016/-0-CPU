@@ -22,9 +22,6 @@ public class BS5MemoryCell_oooo_yyyy_xxxx extends BS5MemoryCell_ccc_f {
         return result;
     }
 
-    private int getvalue_reg(String reg) {
-        return (Integer.parseInt(reg.substring(1))) & 0x0f;        
-    }
 }
 /*2 registers parameters 
 

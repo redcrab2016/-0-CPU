@@ -53,6 +53,10 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
         return this;
     }
 
+    protected int getvalue_reg(String reg) {
+        return (Integer.parseInt(reg.substring(1))) & 0x0f;        
+    }
+    
     private int getvalue_ccc(String ccc) throws BS5Exception {
         int result = -1;
         switch (ccc.toLowerCase()) {
@@ -64,7 +68,7 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
             case "xs": result = 0b101_0_0000_0000_0000; break;
             case "xc": result = 0b110_0_0000_0000_0000; break;
             case "ne": result = 0b111_0_0000_0000_0000; break;
-            default: throw new BS5Exception("Incorrect conditionnal execution code '"+ccc+"' at line " + linenum);
+            default: throw new BS5Exception("Incorrect conditionnal execution code '" + ccc + "' at line " + linenum);
         }
         return result;
     }
@@ -74,7 +78,7 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
         switch (f.toLowerCase()) {
             case "nf": result = 0b000_0_0000_0000_0000; break;
             case "fl": result = 0b000_1_0000_0000_0000; break; 
-            default: throw new BS5Exception("Incorrect flag code '"+f+"' at line " + linenum);
+            default: throw new BS5Exception("Incorrect flag code '" + f + "' at line " + linenum);
         }
         return result;
     }

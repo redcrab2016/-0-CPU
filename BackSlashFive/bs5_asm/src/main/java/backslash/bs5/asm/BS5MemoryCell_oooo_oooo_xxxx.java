@@ -27,10 +27,8 @@ public class BS5MemoryCell_oooo_oooo_xxxx extends BS5MemoryCell_ccc_f {
     return result;
     }
 
-    private int getvalue_reg(String reg) {
-    return (Integer.parseInt(reg.substring(1))) & 0x0f;        
-    }
 }
+
 /*
 ccc f 1111 0100 xxxx
 	add Rx, 1
