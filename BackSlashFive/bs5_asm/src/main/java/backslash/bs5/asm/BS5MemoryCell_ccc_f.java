@@ -10,7 +10,7 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
     protected BS5MemoryCell_ccc_f(BS5program prg, int addr, 
                                               int linenum,String ccc, String f) throws BS5Exception {
         super(prg, addr,linenum);
-        this.ccc = ccc;
+        this.ccc = ccc==null?"al":ccc;
         this.f = f;
         this.oooo_oooo_oooo = 0;
         this.isEvaluated = false;
@@ -56,7 +56,7 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
     protected int getvalue_reg(String reg) {
         return (Integer.parseInt(reg.substring(1))) & 0x0f;        
     }
-    
+
     private int getvalue_ccc(String ccc) throws BS5Exception {
         int result = -1;
         switch (ccc.toLowerCase()) {
