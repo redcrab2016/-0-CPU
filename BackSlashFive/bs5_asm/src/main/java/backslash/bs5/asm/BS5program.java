@@ -126,14 +126,14 @@ public class BS5program {
 ccc f 0000 yyyy xxxx
 	mov [Rx], Ry
 */
-    public BS5program asm_mov_atRx_Ry(String ccc, String f, String ry, String rx) throws BS5Exception {
+    public BS5program asm_mov_atRx_Ry(String ccc, String f, String rx, String ry) throws BS5Exception {
         return add_oooo_yyyy_xxxx(ccc, f==null?"nf":f, "mov [Rx], Ry", ry, rx);
     }
 /*
 ccc f 0001 yyyy xxxx
 	mov Rx, [Ry] 
 */
-    public BS5program asm_mov_Rx_atRy(String ccc, String f, String ry, String rx) throws BS5Exception {
+    public BS5program asm_mov_Rx_atRy(String ccc, String f, String rx, String ry) throws BS5Exception {
         return add_oooo_yyyy_xxxx(ccc, f==null?"nf":f, "mov Rx, [Ry]", ry, rx);
     }
 
@@ -141,7 +141,7 @@ ccc f 0001 yyyy xxxx
 ccc f 0010 yyyy xxxx
 	add Rx, [Ry]
 */
-    public BS5program asm_add_Rx_atRy(String ccc, String f, String ry, String rx) throws BS5Exception {
+    public BS5program asm_add_Rx_atRy(String ccc, String f, String rx, String ry) throws BS5Exception {
         return add_oooo_yyyy_xxxx(ccc, f==null?"fl":f, "add Rx, [Ry]", ry, rx);
     }
 
@@ -149,7 +149,7 @@ ccc f 0010 yyyy xxxx
 ccc f 0011 yyyy xxxx
 	sub Rx, [Ry]
 */
-    public BS5program asm_sub_Rx_atRy(String ccc, String f, String ry, String rx) throws BS5Exception {
+    public BS5program asm_sub_Rx_atRy(String ccc, String f, String rx, String ry) throws BS5Exception {
         return add_oooo_yyyy_xxxx(ccc, f==null?"fl":f, "sub Rx, [Ry]", ry, rx);
     }
 
@@ -157,7 +157,7 @@ ccc f 0011 yyyy xxxx
 ccc f 0100 yyyy xxxx
 	mov Rx, Ry
 */
-    public BS5program asm_mov_Rx_Ry(String ccc, String f, String ry, String rx) throws BS5Exception {
+    public BS5program asm_mov_Rx_Ry(String ccc, String f, String rx, String ry) throws BS5Exception {
         return add_oooo_yyyy_xxxx(ccc, f==null?"nf":f, "mov Rx, Ry", ry, rx);
     }
 
@@ -165,7 +165,7 @@ ccc f 0100 yyyy xxxx
 ccc f 0101 yyyy xxxx
 	add Rx, Ry
 */
-    public BS5program asm_add_Rx_Ry(String ccc, String f, String ry, String rx) throws BS5Exception {
+    public BS5program asm_add_Rx_Ry(String ccc, String f, String rx, String ry) throws BS5Exception {
         return add_oooo_yyyy_xxxx(ccc, f==null?"fl":f, "add Rx, Ry", ry, rx);
     }
 
@@ -173,7 +173,7 @@ ccc f 0101 yyyy xxxx
 ccc f 0110 yyyy xxxx
 	sub Rx, Ry
 */
-    public BS5program asm_sub_Rx_Ry(String ccc, String f, String ry, String rx) throws BS5Exception {
+    public BS5program asm_sub_Rx_Ry(String ccc, String f, String rx, String ry) throws BS5Exception {
         return add_oooo_yyyy_xxxx(ccc, f==null?"fl":f, "sub Rx, Ry", ry, rx);
     }
 /*
@@ -363,5 +363,137 @@ ccc f 1111 1111 xxxx
     public BS5program asm_or_R0_Rx(String ccc, String f, String rx) throws BS5Exception {
         return add_oooo_oooo_xxxx(ccc, f==null?"fl":f,"or R0, Rx", rx);
     }
+
+// Versatility microprogram 
+
+    // Versatility microprogram prolog
+    //	ccc nf add R15, 1  ; if ccc != al
+	//  al  nf add R15, 3  ; if ccc != al
+    private BS5program asm_prologVersatility(String ccc, String f) throws BS5Exception {
+        if (ccc == null || ccc.toLowerCase().equals("al")) return this;
+        return  asm_add_R15_simm8(ccc, "nf", "+1").
+                asm_add_R15_simm8("al", "nf", "+3");
+    }
+
+/*
+ccc f mov low Rx, imm8 
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov low R0, imm8
+	al  nf mov Rx, R0
+*/
+    public BS5program asm_mov_low_Rx_imm8(String ccc, String f, String rx, String  imm8) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al","nf","R0",rx).
+                asm_mov_low_R0_imm8("al", f, imm8).
+                asm_mov_Rx_Ry("al","nf",rx, "R0");
+    }
+
+/*
+ccc f  mov high Rx, imm8
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov high R0, imm8
+	al  nf mov Rx, R0
+*/
+    public BS5program asm_mov_high_Rx_imm8(String ccc, String f, String rx, String  imm8) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al","nf","R0",rx).
+                asm_mov_high_R0_imm8("al", f, imm8).
+                asm_mov_Rx_Ry("al","nf",rx,"R0");
+    }
+
+/*
+ccc f add Rx, imm4
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  add R0, imm4
+	al  nf mov Rx, R0
+*/
+
+/*
+ccc f sub Rx, imm4
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  sub R0, imm4
+	al  nf mov Rx, R0
+*/
+
+
+/*
+ccc f shl Rx, imm4
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  shl R0, imm4
+	al  nf mov Rx, R0
+*/
+
+/*
+ccc f shr Rx, imm4
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  shr R0, imm4
+	al  nf mov Rx, R0
+*/
+
+/*
+ccc f mov low Rx, low Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov low R0, low Ry
+	al  nf mov Rx, R0
+*/
+
+/*
+ccc f mov low Rx, high Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov low R0, high Ry
+	al  nf mov Rx, R0
+*/
+
+/*
+ccc f mov high Rx, low Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov high R0, low Ry
+	al  nf mov Rx, R0
+*/
+
+/*
+ccc f mov high Rx, high Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  mov high R0, high Ry
+	al  nf mov Rx, R0
+*/
+
+/*
+ccc f and Rx, Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  and R0, Ry
+	al  nf mov Rx, R0
+*/
+
+/*
+ccc f or  Rx, Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  f  or R0, Ry
+	al  nf mov Rx, R0
+*/
 
 }
