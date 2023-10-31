@@ -413,7 +413,12 @@ ccc f add Rx, imm4
 	al  f  add R0, imm4
 	al  nf mov Rx, R0
 */
-
+    public BS5program asm_add_Rx_imm4(String ccc, String f, String rx, String imm4) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al", "nf", "R0", rx).
+                asm_add_R0_imm4("al", f, imm4).
+                asm_mov_Rx_Ry("al", "nf", rx, "R0");
+    }
 /*
 ccc f sub Rx, imm4
 	ccc nf add R15, 1  ; if ccc != al
@@ -422,6 +427,12 @@ ccc f sub Rx, imm4
 	al  f  sub R0, imm4
 	al  nf mov Rx, R0
 */
+    public BS5program asm_sub_Rx_imm4(String ccc, String f, String rx, String imm4) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al", "nf", "R0", rx).
+                asm_sub_R0_imm4("al", f, imm4).
+                asm_mov_Rx_Ry("al", "nf", rx, "R0");
+    }
 
 
 /*
@@ -432,6 +443,13 @@ ccc f shl Rx, imm4
 	al  f  shl R0, imm4
 	al  nf mov Rx, R0
 */
+    public BS5program asm_shl_Rx_imm4(String ccc, String f, String rx, String imm4) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al", "nf", "R0", rx).
+                asm_shl_R0_imm4("al", f, imm4).
+                asm_mov_Rx_Ry("al", "nf", rx, "R0");
+    }
+
 
 /*
 ccc f shr Rx, imm4
@@ -441,6 +459,12 @@ ccc f shr Rx, imm4
 	al  f  shr R0, imm4
 	al  nf mov Rx, R0
 */
+    public BS5program asm_shr_Rx_imm4(String ccc, String f, String rx, String imm4) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al", "nf", "R0", rx).
+                asm_shr_R0_imm4("al", f, imm4).
+                asm_mov_Rx_Ry("al", "nf", rx, "R0");
+    }
 
 /*
 ccc f mov low Rx, low Ry
@@ -450,6 +474,12 @@ ccc f mov low Rx, low Ry
 	al  f  mov low R0, low Ry
 	al  nf mov Rx, R0
 */
+    public BS5program asm_mov_low_Rx_low_Ry(String ccc, String f, String rx, String ry) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al", "nf", "R0", rx).
+                asm_mov_low_R0_low_Rx("al", f, ry).
+                asm_mov_Rx_Ry("al", "nf", rx, "R0");
+    }
 
 /*
 ccc f mov low Rx, high Ry
@@ -459,8 +489,14 @@ ccc f mov low Rx, high Ry
 	al  f  mov low R0, high Ry
 	al  nf mov Rx, R0
 */
+    public BS5program asm_mov_low_Rx_high_Ry(String ccc, String f, String rx, String ry) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al", "nf", "R0", rx).
+                asm_mov_low_R0_high_Rx("al", f, ry).
+                asm_mov_Rx_Ry("al", "nf", rx, "R0");
+    }
 
-/*
+    /*
 ccc f mov high Rx, low Ry
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
@@ -468,6 +504,12 @@ ccc f mov high Rx, low Ry
 	al  f  mov high R0, low Ry
 	al  nf mov Rx, R0
 */
+    public BS5program asm_mov_high_Rx_low_Ry(String ccc, String f, String rx, String ry) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al", "nf", "R0", rx).
+                asm_mov_high_R0_low_Rx("al", f, ry).
+                asm_mov_Rx_Ry("al", "nf", rx, "R0");
+    }
 
 /*
 ccc f mov high Rx, high Ry
@@ -477,6 +519,12 @@ ccc f mov high Rx, high Ry
 	al  f  mov high R0, high Ry
 	al  nf mov Rx, R0
 */
+    public BS5program asm_mov_high_Rx_high_Ry(String ccc, String f, String rx, String ry) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al", "nf", "R0", rx).
+                asm_mov_high_R0_high_Rx("al", f, ry).
+                asm_mov_Rx_Ry("al", "nf", rx, "R0");
+    }
 
 /*
 ccc f and Rx, Ry
@@ -486,6 +534,12 @@ ccc f and Rx, Ry
 	al  f  and R0, Ry
 	al  nf mov Rx, R0
 */
+    public BS5program asm_and_Rx_Ry(String ccc, String f, String rx, String ry) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al", "nf", "R0", rx).
+                asm_and_R0_Rx("al", f, ry).
+                asm_mov_Rx_Ry("al", "nf", rx, "R0");
+    }
 
 /*
 ccc f or  Rx, Ry
@@ -495,5 +549,10 @@ ccc f or  Rx, Ry
 	al  f  or R0, Ry
 	al  nf mov Rx, R0
 */
-
+    public BS5program asm_or_Rx_Ry(String ccc, String f, String rx, String ry) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_Rx_Ry("al", "nf", "R0", rx).
+                asm_or_R0_Rx("al", f, ry).
+                asm_mov_Rx_Ry("al", "nf", rx, "R0");
+    }
 }
