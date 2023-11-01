@@ -555,4 +555,123 @@ ccc f or  Rx, Ry
                 asm_or_R0_Rx("al", f, ry).
                 asm_mov_Rx_Ry("al", "nf", rx, "R0");
     }
+
+
+/*
+ccc f mov Rx, imm16   ; (Rx != R0 and imm16 > 15)
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov low R0, low imm6
+	al  nf mov high R0, high imm16
+	al  f  mov Rx, R0
+*/
+
+/*
+ccc f mov R0, imm16   ; ( imm16 != 0 )
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  mov R0,R0 ;   if f=fl otherwise no instruction
+*/
+
+/*
+ccc f add Rx, imm16   ; (Rx != R0 and imm16 > 15)
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  add Rx, R0
+*/
+
+/*
+ccc f sub Rx, imm16   ; (Rx != R0 and imm16 > 15)
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  sub Rx, R0
+*/
+
+/*
+ccc f mov Rx, [imm16] ; ( Rx can be R0 )
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov low R0, low imm6
+	al  nf mov high R0, high imm16
+	al  f  mov Rx, [R0]
+*/
+
+/*
+ccc f mov [imm16], Rx ; ( Rx != R0 )
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov low R0, low imm6
+	al  nf mov high R0, high imm16
+	al  f  mov [R0], Rx
+*/
+
+/*
+ccc f add Rx, [imm16] ; ( Rx != R0 )
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov low R0, low imm6
+	al  nf mov high R0, high imm16
+	al  f  add Rx, [R0]
+*/
+
+/*
+ccc f sub Rx, [imm16] ; ( Rx != R0 )
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov low R0, low imm6
+	al  nf mov high R0, high imm16
+	al  f  sub Rx, [R0]
+*/
+
+/*
+ccc f and Rx, imm16   ; (Rx != R0)
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov low R0, low imm6
+	al  nf mov high R0, high imm16
+	al  f  and R0, Rx
+	al  nf mov Rx, R0
+*/
+
+   
+/*
+ccc f or Rx, imm16    ; (Rx != R0)
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov low R0, low imm6
+	al  nf mov high R0, high imm16
+	al  f  or R0, Rx
+	al  nf mov Rx, R0
+*/
+
+/*
+ccc f and Rx, [imm16] ; (Rx != R0)
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 5  ; if ccc != al
+	al  nf mov low R0, low imm6
+	al  nf mov high R0, high imm16
+	al  nf mov R0, [R0]
+	al  f  and R0, Rx
+	al  nf mov Rx, R0
+*/
+
+/*
+ccc f or Rx, [imm16]  ; (Rx != R0)
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 5  ; if ccc != al
+	al  nf mov low R0, low imm6
+	al  nf mov high R0, high imm16
+	al  nf mov R0, [R0]
+	al  f  or R0, Rx
+	al  nf mov Rx, R
+*/
+
+
 }
+
