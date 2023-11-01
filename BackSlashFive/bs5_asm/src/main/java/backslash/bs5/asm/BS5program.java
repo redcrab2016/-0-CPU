@@ -556,7 +556,6 @@ ccc f or  Rx, Ry
                 asm_mov_Rx_Ry("al", "nf", rx, "R0");
     }
 
-
 /*
 ccc f mov Rx, imm16   ; (Rx != R0 and imm16 > 15)
 	ccc nf add R15, 1  ; if ccc != al
@@ -565,6 +564,13 @@ ccc f mov Rx, imm16   ; (Rx != R0 and imm16 > 15)
 	al  nf mov high R0, high imm16
 	al  f  mov Rx, R0
 */
+    public BS5program asm_mov_Rx_imm16(String ccc, String f, String rx, String imm16) throws BS5Exception {
+        return  asm_prologVersatility(ccc, f).
+                asm_mov_low_R0_imm8("al", "nf", "L8:" + imm16).
+                asm_mov_high_R0_imm8("al", "nf", "H8:" + imm16).
+                asm_mov_Rx_Ry("al", f, rx, "R0");
+    }
+
 
 /*
 ccc f mov R0, imm16   ; ( imm16 != 0 )
