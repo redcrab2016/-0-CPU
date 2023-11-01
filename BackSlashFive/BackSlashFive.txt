@@ -364,7 +364,7 @@ ccc f or  Rx, Ry
 
 Microprogram to handle 16 bits immediate
 
-ccc f mov Rx, imm16   ; (Rx != R0 and imm16 != 0)
+ccc f mov Rx, imm16   ; (Rx != R0 and imm16 > 15)
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
 	al  nf mov low R0, low imm6
@@ -378,14 +378,14 @@ ccc f mov R0, imm16   ; ( imm16 != 0 )
 	al  nf mov high R0, high imm16
 	al  f  mov R0,R0 ;   if f=fl otherwise no instruction
 
-ccc f add Rx, imm16   ; (Rx != R0 and imm16 != 1)
+ccc f add Rx, imm16   ; (Rx != R0 and imm16 > 15)
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
 	al  nf mov low R0, low imm16
 	al  nf mov high R0, high imm16
 	al  f  add Rx, R0
 
-ccc f sub Rx, imm16   ; (Rx != R0 and imm16 != 1)
+ccc f sub Rx, imm16   ; (Rx != R0 and imm16 > 15)
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
 	al  nf mov low R0, low imm16
