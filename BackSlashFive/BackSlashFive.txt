@@ -362,6 +362,22 @@ ccc f or  Rx, Ry
 	al  f  or R0, Ry
 	al  nf mov Rx, R0
 
+Microprogram to handle 16 bits immediate
+
+ccc f mov Rx, imm16 (Rx != R0 and imm16 != 0)
+ccc f mov R0, imm16 ( imm16 != 0 )
+ccc f add Rx, imm16 (Rx != R0 and imm16 > 15)
+ccc f sub Rx, imm16 (Rx != R0 and imm16 > 15)
+ccc f mov Rx, [imm16] 
+ccc f mov [imm16], Rx ( Rx != R0 )
+ccc f add Rx, [imm16] ( Rx != R0 )
+ccc f sub Rx, [imm16] ( Rx != R0 )
+ccc f and Rx, imm16 (Rx != R0)
+ccc f or Rx, imm16 (Rx != R0)
+ccc f and Rx, [imm16] (Rx != R0)
+ccc f or Rx, [imm16] (Rx != R0)
+
+
 Example programs
 
   Example #1
