@@ -30,14 +30,14 @@ public class BS5MemoryCell {
         setValue(sourceValue);
     }
 
-    public BS5MemoryCell setValue(int sourceValue) throws BS5Exception {
+    protected BS5MemoryCell setValue(int sourceValue) throws BS5Exception {
         this.sourceValue = String.valueOf(sourceValue);
         value16bits = sourceValue;
         isEvaluated = true;
         return this;
     }
 
-    public BS5MemoryCell setValue(String sourceValue) {
+    protected BS5MemoryCell setValue(String sourceValue) {
         this.sourceValue = sourceValue;
         try {
             value16bits = get16bitsNumeral(prg,addr,linenum,sourceValue);
@@ -51,6 +51,8 @@ public class BS5MemoryCell {
     }
 
     public boolean isEvaluated() throws BS5Exception{
+        if (isEvaluated) return true;
+        setValue(sourceValue);
         return isEvaluated;
     }
 
@@ -60,7 +62,7 @@ public class BS5MemoryCell {
         return value16bits; 
     }
 
-    public String getSourceValue() {
+    protected String getSourceValue() {
         return sourceValue;
     }
 

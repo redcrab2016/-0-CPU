@@ -364,9 +364,9 @@ ccc f 1111 1111 xxxx
         return add_oooo_oooo_xxxx(ccc, f==null?"fl":f,"or R0, Rx", rx);
     }
 
-// Versatility microprogram 
+// Microprograms 
 
-    // Versatility microprogram prolog
+    // Microprogram prolog
     //	ccc nf add R15, 1  ; if ccc != al
 	//  al  nf add R15, size  ; if ccc != al
     private BS5program asm_prologMicroprogram(String ccc, String f, int microprogramsize) throws BS5Exception {
@@ -375,6 +375,7 @@ ccc f 1111 1111 xxxx
                 asm_add_R15_simm8("al", "nf", "+"+microprogramsize);
     }
 
+/* Microprogram for versatility */
 /*
 ccc f mov low Rx, imm8 
 	ccc nf add R15, 1  ; if ccc != al
@@ -450,7 +451,6 @@ ccc f shl Rx, imm4
                 asm_mov_Rx_Ry("al", "nf", rx, "R0");
     }
 
-
 /*
 ccc f shr Rx, imm4
 	ccc nf add R15, 1  ; if ccc != al
@@ -496,7 +496,7 @@ ccc f mov low Rx, high Ry
                 asm_mov_Rx_Ry("al", "nf", rx, "R0");
     }
 
-    /*
+/*
 ccc f mov high Rx, low Ry
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
@@ -555,6 +555,8 @@ ccc f or  Rx, Ry
                 asm_or_R0_Rx("al", f, ry).
                 asm_mov_Rx_Ry("al", "nf", rx, "R0");
     }
+
+/* Microprogram for 16 bits immediate */
 
 /*
 ccc f mov Rx, imm16   ; (Rx != R0 and imm16 > 15)

@@ -17,7 +17,7 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
         immediat = null;
     }
     
-    public BS5MemoryCell_ccc_f setValue(int oooo_oooo_oooo) throws BS5Exception {
+    protected BS5MemoryCell_ccc_f setValue(int oooo_oooo_oooo) throws BS5Exception {
         this.oooo_oooo_oooo = oooo_oooo_oooo;
         if (immediat == null)
         {
@@ -46,6 +46,7 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
         setValue(oooo_oooo_oooo);
         return super.getValue(); 
     }
+    
     protected BS5MemoryCell_ccc_f setImmediat(String imm, int mask, int shift) {
         immediat = new BS5MemoryCell(prg, this.addr, this.linenum, imm);
         immediat_mask = mask;
