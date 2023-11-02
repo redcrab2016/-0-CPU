@@ -59,16 +59,16 @@ string
 bs5_core_instruction 
     // ccc f mov Rx, 0
     : bs5_cond? bs5_flag? 
-      Bs5_mov bs5_reg COMMA numberZero 
+      Bs5_mov bs5_reg COMMA numberZero                                              { prg.asm_mov_Rx_0($bs5_cond.text, $bs5_flag.text, $bs5_reg.text); } 
     // ccc f mov low Rx, 0
     | bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_low bs5_reg COMMA numberZero 
+      Bs5_mov Bs5_low bs5_reg COMMA numberZero                                      { prg.asm_mov_low_Rx_0($bs5_cond.text, $bs5_flag.text, $bs5_reg.text); } 
     // ccc f mov high Rx, 0
     | bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_high bs5_reg COMMA numberZero 
+      Bs5_mov Bs5_high bs5_reg COMMA numberZero                                     { prg.asm_mov_high_Rx_0($bs5_cond.text, $bs5_flag.text, $bs5_reg.text); }  
     // ccc f mov Rx, Ry
     | bs5_cond? bs5_flag? 
-      Bs5_mov bs5_reg COMMA bs5_reg 
+      Bs5_mov rx=bs5_reg COMMA ry=bs5_reg                                           { prg.asm_mov_Rx_Ry($bs5_cond.text, $bs5_flag.text, $rx.text, $ry.text); }
     // ccc f mov Rx, [Ry]
     | bs5_cond? bs5_flag? 
       Bs5_mov bs5_reg COMMA OPEN_BRACKET bs5_reg CLOSE_BRACKET  
