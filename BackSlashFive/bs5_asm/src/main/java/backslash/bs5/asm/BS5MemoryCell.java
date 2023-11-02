@@ -66,7 +66,8 @@ public class BS5MemoryCell {
         return sourceValue;
     }
 
-    public int getAddr() { return this.addr; }
+    // simple accessors
+    public int getAddr()    { return this.addr; }
     public int getLinenum() { return this.linenum;}
 
     public static int get16bitsNumeral(BS5program prg,int addr,int linenum,String numeral) throws BS5Exception {
@@ -74,7 +75,7 @@ public class BS5MemoryCell {
         String toEvaluate="";
         int idx = numeral.lastIndexOf(":");
         int result = 0;
-        // by default
+        // by default assuming that idx == -1 (no modifier found)
         modifier ="";
         toEvaluate = numeral;
         // does a modifier exist
@@ -101,12 +102,16 @@ public class BS5MemoryCell {
         for (int i = mods.length-1; i >=0 ; i--) {
             String mod = mods[i];
             switch (mod) {
-                case "L8": result = result & 0x00FF;break; // low 8 bits of 16 bits value
-                case "H8": result = (result & 0x0FF00) >> 8; break; // high 8 bits of 16 bits value
+                case "L8": result =  result & 0x00FF        ; break; // low  8 bits of 16 bits value
+                case "H8": result = (result & 0x0FF00) >> 8 ; break; // high 8 bits of 16 bits value
                 case "O8": 
-                    result = result - addr -1 ;
+                    // offset address to place in current instruction:
+                    //  target address minus next instruction address 
+                    //  target - next == target - (current + 1) 
+                    //                == target - current -1
+                    result = result - addr -1 ; 
                     if (result > 127 || result < -128) throw new BS5Exception("Too far address to compute 8 bits(-128 to +127) signed offset addr '"  + toEvaluate +  "' - "+addr +"-1 = " + result + " at line "+ linenum);
-                    result = result & 0x00FF;
+                    result = result & 0x00FF; // useless but just to be sure that "08" modifier provide only a byte (signed or unsigned, whatever)
                     break;
             }
         }

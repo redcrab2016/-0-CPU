@@ -15,7 +15,7 @@ public class BS5MemoryCell_oooo_oooo_iiii extends BS5MemoryCell_ccc_f {
             case "sub R0, imm4":    result = 0b1111_0001_0000; break;
             case "shl R0, imm4":    result = 0b1111_0010_0000; break;
             case "shr R0, imm4":    result = 0b1111_0011_0000; break;
-            default: throw new BS5Exception("Incorrect instruction '" + mnemonic + "' at line " + linenum);
+            default: throw new BS5Exception("Incorrect instruction '" + mnemonic + "' at line " + linenum);// Doh! Must never occur.
         }
         return result;
         }

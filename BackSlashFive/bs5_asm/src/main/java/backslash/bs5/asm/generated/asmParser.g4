@@ -187,117 +187,137 @@ bs5_flag
     | Bs5_flag_unchanged;
 
 number16bits
-    :  Bs5_num_hexa_word
-    |  Bs5_num_hexa_byte
-    |  Bs5_num_hexa_quad
-    |  Bs5_num_hexa_one
-    |  Bs5_num_hexa_zero
-    |  Bs5_num_decimal_unsigned_word
-    |  Bs5_num_decimal_unsigned_byte
-    |  Bs5_num_decimal_unsigned_quad
-    |  Bs5_num_decimal_unsigned_one
-    |  Bs5_num_decimal_unsigned_zero
-    |  Bs5_num_decimal_signed_word
-    |  Bs5_num_decimal_signed_byte
-    |  Bs5_num_decimal_signed_one
-    |  Bs5_num_decimal_signed_zero
-    |  Bs5_num_char
-    |  Bs5_label_ptr Bs5_identifier
-    |  Bs5_low Bs5_label_ptr Bs5_identifier
-    |  Bs5_high Bs5_label_ptr Bs5_identifier;
+    locals [ String immediat ]
+    :  Bs5_num_hexa_word                        { $immediat = $text; }
+    |  Bs5_num_hexa_byte                        { $immediat = $text; }
+    |  Bs5_num_hexa_quad                        { $immediat = $text; }
+    |  Bs5_num_hexa_one                         { $immediat = $text; }
+    |  Bs5_num_hexa_zero                        { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_word            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_byte            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_quad            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_one             { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_zero            { $immediat = $text; }
+    |  Bs5_num_decimal_signed_word              { $immediat = $text; }
+    |  Bs5_num_decimal_signed_byte              { $immediat = $text; }
+    |  Bs5_num_decimal_signed_one               { $immediat = $text; }
+    |  Bs5_num_decimal_signed_zero              { $immediat = $text; }
+    |  Bs5_num_char                             { $immediat = $text; }
+    |  Bs5_label_ptr Bs5_identifier             { $immediat = $Bs5_identifier.text; }
+    |  Bs5_low Bs5_label_ptr Bs5_identifier     { $immediat = "L8:" + $Bs5_identifier.text; }
+    |  Bs5_high Bs5_label_ptr Bs5_identifier    { $immediat = "H8:" + $Bs5_identifier.text; }
+    ;
 
 number16bitsNumeral
-    :  Bs5_num_hexa_word
-    |  Bs5_num_hexa_byte
-    |  Bs5_num_hexa_quad
-    |  Bs5_num_hexa_one
-    |  Bs5_num_hexa_zero
-    |  Bs5_num_decimal_unsigned_word
-    |  Bs5_num_decimal_unsigned_byte
-    |  Bs5_num_decimal_unsigned_quad
-    |  Bs5_num_decimal_unsigned_one
-    |  Bs5_num_decimal_unsigned_zero
-    |  Bs5_num_decimal_signed_word
-    |  Bs5_num_decimal_signed_byte
-    |  Bs5_num_decimal_signed_one
-    |  Bs5_num_decimal_signed_zero;
+    locals [ String immediat ]
+    :  Bs5_num_hexa_word                        { $immediat = $text; }
+    |  Bs5_num_hexa_byte                        { $immediat = $text; }
+    |  Bs5_num_hexa_quad                        { $immediat = $text; }
+    |  Bs5_num_hexa_one                         { $immediat = $text; }
+    |  Bs5_num_hexa_zero                        { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_word            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_byte            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_quad            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_one             { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_zero            { $immediat = $text; }
+    |  Bs5_num_decimal_signed_word              { $immediat = $text; }
+    |  Bs5_num_decimal_signed_byte              { $immediat = $text; }
+    |  Bs5_num_decimal_signed_one               { $immediat = $text; }
+    |  Bs5_num_decimal_signed_zero              { $immediat = $text; }
+    ;
 
 
 number16bitsNotQuad
-    :  Bs5_num_hexa_word
-    |  Bs5_num_hexa_byte
-    |  Bs5_num_decimal_unsigned_word
-    |  Bs5_num_decimal_unsigned_byte
-    |  Bs5_num_decimal_signed_word
-    |  Bs5_num_decimal_signed_byte
-    |  Bs5_num_char
-    |  Bs5_label_ptr Bs5_identifier
-    |  Bs5_low Bs5_label_ptr Bs5_identifier
-    |  Bs5_high Bs5_label_ptr Bs5_identifier;      
+    locals [ String immediat ]
+    :  Bs5_num_hexa_word                        { $immediat = $text; }
+    |  Bs5_num_hexa_byte                        { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_word            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_byte            { $immediat = $text; }
+    |  Bs5_num_decimal_signed_word              { $immediat = $text; }
+    |  Bs5_num_decimal_signed_byte              { $immediat = $text; }
+    |  Bs5_num_char                             { $immediat = $text; }
+    |  Bs5_label_ptr Bs5_identifier             { $immediat = $Bs5_identifier.text; }
+    |  Bs5_low Bs5_label_ptr Bs5_identifier     { $immediat = "L8:" + $Bs5_identifier.text; }
+    |  Bs5_high Bs5_label_ptr Bs5_identifier    { $immediat = "H8:" + $Bs5_identifier.text; }
+    ;
 
 number16bitsNotZero
-    :  Bs5_num_hexa_word
-    |  Bs5_num_hexa_byte
-    |  Bs5_num_hexa_quad
-    |  Bs5_num_hexa_one
-    |  Bs5_num_decimal_unsigned_word
-    |  Bs5_num_decimal_unsigned_byte
-    |  Bs5_num_decimal_unsigned_quad
-    |  Bs5_num_decimal_unsigned_one
-    |  Bs5_num_decimal_signed_word
-    |  Bs5_num_decimal_signed_byte
-    |  Bs5_num_decimal_signed_one
-    |  Bs5_num_char
-    |  Bs5_label_ptr Bs5_identifier
-    |  Bs5_low Bs5_label_ptr Bs5_identifier
-    |  Bs5_high Bs5_label_ptr Bs5_identifier;
+    locals [ String immediat ]
+    :  Bs5_num_hexa_word                        { $immediat = $text; }
+    |  Bs5_num_hexa_byte                        { $immediat = $text; }
+    |  Bs5_num_hexa_quad                        { $immediat = $text; }
+    |  Bs5_num_hexa_one                         { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_word            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_byte            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_quad            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_one             { $immediat = $text; }
+    |  Bs5_num_decimal_signed_word              { $immediat = $text; }
+    |  Bs5_num_decimal_signed_byte              { $immediat = $text; }
+    |  Bs5_num_decimal_signed_one               { $immediat = $text; }
+    |  Bs5_num_char                             { $immediat = $text; }
+    |  Bs5_label_ptr Bs5_identifier             { $immediat = $Bs5_identifier.text; }
+    |  Bs5_low Bs5_label_ptr Bs5_identifier     { $immediat = "L8:" + $Bs5_identifier.text; }
+    |  Bs5_high Bs5_label_ptr Bs5_identifier    { $immediat = "H8:" + $Bs5_identifier.text; }
+    ;
 
 numberZero
-    :  Bs5_num_hexa_zero
-    |  Bs5_num_decimal_unsigned_zero
-    |  Bs5_num_decimal_signed_zero; 
+    locals [ String immediat ]
+    :  Bs5_num_hexa_zero                        { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_zero            { $immediat = $text; }
+    |  Bs5_num_decimal_signed_zero              { $immediat = $text; }
+    ;
 
 numberOne
-    :  Bs5_num_hexa_one
-    |  Bs5_num_decimal_unsigned_one
-    |  Bs5_num_decimal_signed_one;
+    locals [ String immediat ]
+    :  Bs5_num_hexa_one                         { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_one             { $immediat = $text; }
+    |  Bs5_num_decimal_signed_one               { $immediat = $text; }
+    ;
 
 numberUnsignedByte
-    :  Bs5_num_hexa_byte
-    |  Bs5_num_hexa_quad
-    |  Bs5_num_hexa_one
-    |  Bs5_num_hexa_zero
-    |  Bs5_num_decimal_unsigned_byte
-    |  Bs5_num_decimal_unsigned_quad
-    |  Bs5_num_decimal_unsigned_one
-    |  Bs5_num_decimal_unsigned_zero
-    |  Bs5_num_char
-    |  Bs5_low Bs5_label_ptr Bs5_identifier
-    |  Bs5_high Bs5_label_ptr Bs5_identifier;
+    locals [ String immediat ]
+    :  Bs5_num_hexa_byte                        { $immediat = $text; }
+    |  Bs5_num_hexa_quad                        { $immediat = $text; }
+    |  Bs5_num_hexa_one                         { $immediat = $text; }
+    |  Bs5_num_hexa_zero                        { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_byte            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_quad            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_one             { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_zero            { $immediat = $text; }
+    |  Bs5_num_char                             { $immediat = $text; }
+    |  Bs5_low Bs5_label_ptr Bs5_identifier     { $immediat = "L8:" + $Bs5_identifier.text; }
+    |  Bs5_high Bs5_label_ptr Bs5_identifier    { $immediat = "H8:" + $Bs5_identifier.text; }
+    ;
 
 numberSignedByte
-    :  Bs5_num_hexa_byte
-    |  Bs5_num_hexa_quad
-    |  Bs5_num_hexa_one
-    |  Bs5_num_hexa_zero
-    |  Bs5_num_decimal_signed_byte
-    |  Bs5_num_decimal_unsigned_quad
-    |  Bs5_num_decimal_unsigned_one
-    |  Bs5_num_decimal_unsigned_zero
-    |  Bs5_num_decimal_signed_one
-    |  Bs5_num_decimal_signed_zero
-    |  Bs5_label_loffset Bs5_identifier;
+    locals [ String immediat ]
+    :  Bs5_num_hexa_byte                        { $immediat = $text; }
+    |  Bs5_num_hexa_quad                        { $immediat = $text; }
+    |  Bs5_num_hexa_one                         { $immediat = $text; }
+    |  Bs5_num_hexa_zero                        { $immediat = $text; }
+    |  Bs5_num_decimal_signed_byte              { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_quad            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_one             { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_zero            { $immediat = $text; }
+    |  Bs5_num_decimal_signed_one               { $immediat = $text; }
+    |  Bs5_num_decimal_signed_zero              { $immediat = $text; }
+    |  Bs5_label_loffset Bs5_identifier         { $immediat = "O8:" + $Bs5_identifier.text; }
+    ;
 
 numberUnsignedQuad
-    :  Bs5_num_hexa_quad
-    |  Bs5_num_hexa_one
-    |  Bs5_num_hexa_zero
-    |  Bs5_num_decimal_unsigned_quad
-    |  Bs5_num_decimal_unsigned_one
-    |  Bs5_num_decimal_unsigned_zero;
+locals [ String immediat ]
+    :  Bs5_num_hexa_quad                        { $immediat = $text; }
+    |  Bs5_num_hexa_one                         { $immediat = $text; }
+    |  Bs5_num_hexa_zero                        { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_quad            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_one             { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_zero            { $immediat = $text; }
+    ;
 
 numberUnsignedQuadNotOne
-    :  Bs5_num_hexa_quad
-    |  Bs5_num_hexa_zero
-    |  Bs5_num_decimal_unsigned_quad
-    |  Bs5_num_decimal_unsigned_zero;
+locals [ String immediat ]
+    :  Bs5_num_hexa_quad                        { $immediat = $text; }
+    |  Bs5_num_hexa_zero                        { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_quad            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_zero            { $immediat = $text; }
+    ;
