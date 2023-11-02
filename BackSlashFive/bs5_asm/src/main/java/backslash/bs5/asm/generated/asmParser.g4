@@ -7,13 +7,21 @@ import java.util.*;
 import backslash.bs5.asm.*;
 }
 
+@parser::members {
+public BS5program prg = new BS5program();
+}
+
+
+
 program: statement+ EOF;
 
 statement: 
-    label? instruction? Bs5comment? Bs5nl ;
+    label? instruction? Bs5comment? Bs5nl                                           { prg.incrementLine(); }
+    ;
 
 label:
-    Bs5_identifier COLON;
+    Bs5_identifier COLON                                                            { prg.addLabel($Bs5_identifier.text); }
+    ;
 
 instruction
     : directive
@@ -26,140 +34,205 @@ directive
     | dataword;   
 
 origin
-    : Bs5_org number16bitsNumeral;
+    : Bs5_org number16bitsNumeral                                                   { prg.org($number16bitsNumeral.text);}
+    ;
 
 dataword
-    : Bs5_dw wordlist;
+    : Bs5_dw wordlist                                                               { prg.dw($wordlist.lstWord); }
+    ;
 
 wordlist
-    : (number16bits|string) (COMMA wordlist)?;
+    returns [ List<String> lstWord ]
+    : (number16bits|string) (COMMA wordlist)?                                       { $lstWord = new ArrayList<String>(); 
+                                                                                      if ($string.text !=  null)  $lstWord.addAll($string.lstWord);
+                                                                                      else $lstWord.add($number16bits.text); 
+                                                                                      if ($wordlist.text != null) $lstWord.addAll($wordlist.lstWord);
+                                                                                    }
+    ;
 
 string
-    : DBLQUOTE STRDATA DBLQUOTEEND;
+    returns [ List<String> lstWord ]
+    : DBLQUOTE STRDATA DBLQUOTEEND                                                  { $lstWord = new ArrayList<String>(); for (char i: $STRDATA.text.toCharArray()) $lstWord.add(""+i);}
+    ;
 
 // 31 CPU core instructions
 bs5_core_instruction 
     // ccc f mov Rx, 0
-    : bs5_cond? bs5_flag? Bs5_mov bs5_reg COMMA numberZero 
+    : bs5_cond? bs5_flag? 
+      Bs5_mov bs5_reg COMMA numberZero 
     // ccc f mov low Rx, 0
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_low bs5_reg COMMA numberZero 
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_low bs5_reg COMMA numberZero 
     // ccc f mov high Rx, 0
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_high bs5_reg COMMA numberZero 
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_high bs5_reg COMMA numberZero 
     // ccc f mov Rx, Ry
-    | bs5_cond? bs5_flag? Bs5_mov bs5_reg COMMA bs5_reg 
+    | bs5_cond? bs5_flag? 
+      Bs5_mov bs5_reg COMMA bs5_reg 
     // ccc f mov Rx, [Ry]
-    | bs5_cond? bs5_flag? Bs5_mov bs5_reg COMMA OPEN_BRACKET bs5_reg CLOSE_BRACKET
+    | bs5_cond? bs5_flag? 
+      Bs5_mov bs5_reg COMMA OPEN_BRACKET bs5_reg CLOSE_BRACKET  
     // ccc f mov [Rx], Ry
-    | bs5_cond? bs5_flag? Bs5_mov OPEN_BRACKET bs5_reg CLOSE_BRACKET COMMA bs5_reg 
+    | bs5_cond? bs5_flag? 
+      Bs5_mov OPEN_BRACKET bs5_reg CLOSE_BRACKET COMMA bs5_reg 
     // ccc f mov low R0, imm8
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_low Bs5_reg0 COMMA numberUnsignedByte
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_low Bs5_reg0 COMMA numberUnsignedByte
     // ccc f mov high R0, imm8
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_high Bs5_reg0 COMMA numberUnsignedByte
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_high Bs5_reg0 COMMA numberUnsignedByte
     // ccc f mov low R0, low Rx
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_low Bs5_reg0 COMMA Bs5_low bs5_reg
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_low Bs5_reg0 COMMA Bs5_low bs5_reg
     // ccc f mov high R0, low Rx
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_high Bs5_reg0 COMMA Bs5_low bs5_reg
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_high Bs5_reg0 COMMA Bs5_low bs5_reg
     // ccc f mov low R0, high Rx
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_low Bs5_reg0 COMMA Bs5_high bs5_reg
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_low Bs5_reg0 COMMA Bs5_high bs5_reg
     // ccc f mov high R0, high Rx
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_high Bs5_reg0 COMMA Bs5_high bs5_reg
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_high Bs5_reg0 COMMA Bs5_high bs5_reg
     // ccc f mov C, Rx:imm4
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_flag_c COMMA bs5_reg COLON numberUnsignedQuad
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_flag_c COMMA bs5_reg COLON numberUnsignedQuad
     // ccc f mov Rx:imm4, C
-    | bs5_cond? bs5_flag? Bs5_mov bs5_reg COLON numberUnsignedQuad COMMA Bs5_flag_c
+    | bs5_cond? bs5_flag? 
+      Bs5_mov bs5_reg COLON numberUnsignedQuad COMMA Bs5_flag_c
     // ccc f mov Rx:imm4, 0
-    | bs5_cond? bs5_flag? Bs5_mov bs5_reg COLON numberUnsignedQuad COMMA numberZero
+    | bs5_cond? bs5_flag? 
+      Bs5_mov bs5_reg COLON numberUnsignedQuad COMMA numberZero
     // ccc f mov Rx:imm4, 1    
-    | bs5_cond? bs5_flag? Bs5_mov bs5_reg COLON numberUnsignedQuad COMMA numberOne
+    | bs5_cond? bs5_flag? 
+      Bs5_mov bs5_reg COLON numberUnsignedQuad COMMA numberOne
 
     // ccc f add Rx, Ry
-    | bs5_cond? bs5_flag? Bs5_add bs5_reg COMMA bs5_reg
+    | bs5_cond? bs5_flag? 
+      Bs5_add bs5_reg COMMA bs5_reg
     // ccc f add Rx, [Ry]
-    | bs5_cond? bs5_flag? Bs5_add bs5_reg COMMA OPEN_BRACKET bs5_reg CLOSE_BRACKET
+    | bs5_cond? bs5_flag? 
+      Bs5_add bs5_reg COMMA OPEN_BRACKET bs5_reg CLOSE_BRACKET
     // ccc f add R0, imm4
-    | bs5_cond? bs5_flag? Bs5_add Bs5_reg0 COMMA numberUnsignedQuad
+    | bs5_cond? bs5_flag? 
+      Bs5_add Bs5_reg0 COMMA numberUnsignedQuad
     // ccc f add Rx, 1  (Rx != R0 preferably)
-    | bs5_cond? bs5_flag? Bs5_add bs5_reg_1_15 COMMA numberOne
+    | bs5_cond? bs5_flag? 
+      Bs5_add bs5_reg_1_15 COMMA numberOne
     // ccc f add R15, simm8
-    | bs5_cond? bs5_flag? Bs5_add Bs5_reg15 COMMA numberSignedByte
+    | bs5_cond? bs5_flag? 
+      Bs5_add Bs5_reg15 COMMA numberSignedByte
 
     // ccc f sub Rx, Ry
-    | bs5_cond? bs5_flag? Bs5_sub bs5_reg COMMA bs5_reg
+    | bs5_cond? bs5_flag? 
+      Bs5_sub bs5_reg COMMA bs5_reg
     // ccc f sub Rx, [Ry]
-    | bs5_cond? bs5_flag? Bs5_sub bs5_reg COMMA OPEN_BRACKET bs5_reg CLOSE_BRACKET
+    | bs5_cond? bs5_flag? 
+      Bs5_sub bs5_reg COMMA OPEN_BRACKET bs5_reg CLOSE_BRACKET
     // ccc f sub R0, imm4
-    | bs5_cond? bs5_flag? Bs5_sub Bs5_reg0 COMMA numberUnsignedQuad
+    | bs5_cond? bs5_flag? 
+      Bs5_sub Bs5_reg0 COMMA numberUnsignedQuad
     // ccc f sub Rx, 1  (Rx != R0 preferably)
-    | bs5_cond? bs5_flag? Bs5_sub bs5_reg_1_15 COMMA numberOne
+    | bs5_cond? bs5_flag? 
+      Bs5_sub bs5_reg_1_15 COMMA numberOne
 
     // ccc f shl R0, imm4
-    | bs5_cond? bs5_flag? Bs5_shl Bs5_reg0 COMMA numberUnsignedQuad
+    | bs5_cond? bs5_flag? 
+      Bs5_shl Bs5_reg0 COMMA numberUnsignedQuad
     // ccc f shr R0, imm4
-    | bs5_cond? bs5_flag? Bs5_shr Bs5_reg0 COMMA numberUnsignedQuad
+    | bs5_cond? bs5_flag? 
+      Bs5_shr Bs5_reg0 COMMA numberUnsignedQuad
     // ccc f and R0, Rx
-    | bs5_cond? bs5_flag? Bs5_and Bs5_reg0 COMMA bs5_reg
+    | bs5_cond? bs5_flag? 
+      Bs5_and Bs5_reg0 COMMA bs5_reg
     // ccc f or R0, Rx
-    | bs5_cond? bs5_flag? Bs5_or Bs5_reg0 COMMA bs5_reg
+    | bs5_cond? bs5_flag? 
+      Bs5_or Bs5_reg0 COMMA bs5_reg
     // ccc f not Rx:imm4
-    | bs5_cond? bs5_flag? Bs5_not bs5_reg COLON numberUnsignedQuad
+    | bs5_cond? bs5_flag? 
+      Bs5_not bs5_reg COLON numberUnsignedQuad
     // ccc f not Rx    
-    | bs5_cond? bs5_flag? Bs5_not bs5_reg
+    | bs5_cond? bs5_flag? 
+      Bs5_not bs5_reg
     ;
 
 // 12 CPU micro programs for register versatility (R0 is modified and can't be used as operand)
 bs5_corex_instruction 
     // ccc f mov low Rx, imm8 
-    : bs5_cond? bs5_flag? Bs5_mov Bs5_low bs5_reg_1_15 COMMA numberUnsignedByte
+    : bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_low bs5_reg_1_15 COMMA numberUnsignedByte
     // ccc f  mov high Rx, imm8
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_high bs5_reg_1_15 COMMA numberUnsignedByte
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_high bs5_reg_1_15 COMMA numberUnsignedByte
     // ccc f add Rx, imm4 (Rx != R0)
-    | bs5_cond? bs5_flag? Bs5_add bs5_reg_1_15 COMMA numberUnsignedQuadNotOne
+    | bs5_cond? bs5_flag? 
+      Bs5_add bs5_reg_1_15 COMMA numberUnsignedQuadNotOne
     // ccc f sub Rx, imm4 (Rx != R0)
-    | bs5_cond? bs5_flag? Bs5_sub bs5_reg_1_15 COMMA numberUnsignedQuadNotOne
+    | bs5_cond? bs5_flag? 
+      Bs5_sub bs5_reg_1_15 COMMA numberUnsignedQuadNotOne
     // ccc f shl Rx, imm4 (Rx != R0)
-    | bs5_cond? bs5_flag? Bs5_shl bs5_reg_1_15 COMMA numberUnsignedQuad
+    | bs5_cond? bs5_flag? 
+      Bs5_shl bs5_reg_1_15 COMMA numberUnsignedQuad
     // ccc f shr Rx, imm4 (Rx != R0)
-    | bs5_cond? bs5_flag? Bs5_shr bs5_reg_1_15 COMMA numberUnsignedQuad
+    | bs5_cond? bs5_flag? 
+      Bs5_shr bs5_reg_1_15 COMMA numberUnsignedQuad
     // ccc f mov low Rx, low Ry (Rx != R0 and Ry != R0)
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_low bs5_reg_1_15 COMMA Bs5_low bs5_reg_1_15
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_low bs5_reg_1_15 COMMA Bs5_low bs5_reg_1_15
     // ccc f mov low Rx, high Ry (Rx != R0 and Ry != R0)
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_low bs5_reg_1_15 COMMA Bs5_high bs5_reg_1_15
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_low bs5_reg_1_15 COMMA Bs5_high bs5_reg_1_15
     // ccc f mov high Rx, low Ry (Rx != R0 and Ry != R0)
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_high bs5_reg_1_15 COMMA Bs5_low bs5_reg_1_15
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_high bs5_reg_1_15 COMMA Bs5_low bs5_reg_1_15
     // ccc f mov high Rx, high Ry (Rx != R0 and Ry != R0)
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_high bs5_reg_1_15 COMMA Bs5_high bs5_reg_1_15
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_high bs5_reg_1_15 COMMA Bs5_high bs5_reg_1_15
     // ccc f and Rx, Ry (Rx != R0 and Ry != R0)
-    | bs5_cond? bs5_flag? Bs5_and bs5_reg_1_15 COMMA bs5_reg_1_15
+    | bs5_cond? bs5_flag? 
+      Bs5_and bs5_reg_1_15 COMMA bs5_reg_1_15
     // ccc f or  Rx, Ry (Rx != R0 and Ry != R0)
-    | bs5_cond? bs5_flag? Bs5_or bs5_reg_1_15 COMMA bs5_reg_1_15
+    | bs5_cond? bs5_flag? 
+      Bs5_or bs5_reg_1_15 COMMA bs5_reg_1_15
 ;
 // 12 CPU micro programs for immediate 16 bits value 
 // ( R0 is modified and can't be used as operand, except for "mov R0, imm16" and "mov Rx, [imm16]" )
 bs5_imm16_instruction
     // ccc f mov Rx, imm16 (Rx != R0 and imm16 != 0)
-    : bs5_cond? bs5_flag? Bs5_mov bs5_reg_1_15 COMMA number16bitsNotZero
+    : bs5_cond? bs5_flag? 
+      Bs5_mov bs5_reg_1_15 COMMA number16bitsNotZero
     // ccc f mov R0, imm16 ( imm16 != 0 )
-    | bs5_cond? bs5_flag? Bs5_mov Bs5_reg0 COMMA number16bitsNotZero
+    | bs5_cond? bs5_flag? 
+      Bs5_mov Bs5_reg0 COMMA number16bitsNotZero
     // ccc f add Rx, imm16 (Rx != R0 and imm16 > 15)
-    | bs5_cond? bs5_flag? Bs5_add bs5_reg_1_15 COMMA number16bitsNotQuad
+    | bs5_cond? bs5_flag? 
+      Bs5_add bs5_reg_1_15 COMMA number16bitsNotQuad
     // ccc f sub Rx, imm16 (Rx != R0 and imm16 > 15)
-    | bs5_cond? bs5_flag? Bs5_sub bs5_reg_1_15 COMMA number16bitsNotQuad
+    | bs5_cond? bs5_flag? 
+      Bs5_sub bs5_reg_1_15 COMMA number16bitsNotQuad
     // ccc f mov Rx, [imm16] 
-    | bs5_cond? bs5_flag? Bs5_sub bs5_reg COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+    | bs5_cond? bs5_flag? 
+      Bs5_sub bs5_reg COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
     // ccc f mov [imm16], Rx ( Rx != R0 )
-    | bs5_cond? bs5_flag? Bs5_sub OPEN_BRACKET number16bits CLOSE_BRACKET COMMA bs5_reg_1_15 
+    | bs5_cond? bs5_flag? 
+      Bs5_sub OPEN_BRACKET number16bits CLOSE_BRACKET COMMA bs5_reg_1_15 
     // ccc f add Rx, [imm16] ( Rx != R0 )
-    | bs5_cond? bs5_flag? Bs5_add bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+    | bs5_cond? bs5_flag? 
+      Bs5_add bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
     // ccc f sub Rx, [imm16] ( Rx != R0 )
-    | bs5_cond? bs5_flag? Bs5_sub bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+    | bs5_cond? bs5_flag? 
+      Bs5_sub bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
     // ccc f and Rx, imm16 (Rx != R0)
-    | bs5_cond? bs5_flag? Bs5_and bs5_reg_1_15 COMMA number16bits
+    | bs5_cond? bs5_flag? 
+      Bs5_and bs5_reg_1_15 COMMA number16bits
     // ccc f or Rx, imm16 (Rx != R0)
-    | bs5_cond? bs5_flag? Bs5_or bs5_reg_1_15 COMMA number16bits
+    | bs5_cond? bs5_flag? 
+      Bs5_or bs5_reg_1_15 COMMA number16bits
     // ccc f and Rx, [imm16] (Rx != R0)
-    | bs5_cond? bs5_flag? Bs5_and bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+    | bs5_cond? bs5_flag? 
+      Bs5_and bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
     // ccc f or Rx, [imm16] (Rx != R0)
-    | bs5_cond? bs5_flag? Bs5_or bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET;
+    | bs5_cond? bs5_flag? 
+      Bs5_or bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET;
 
 // any register reference
 bs5_reg
