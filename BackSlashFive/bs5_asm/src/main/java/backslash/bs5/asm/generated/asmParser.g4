@@ -34,7 +34,7 @@ directive
     | dataword;   
 
 origin
-    : Bs5_org number16bitsNumeral                                                   { prg.org($number16bitsNumeral.text);}
+    : Bs5_org number16bitsNumeral                                                   { prg.org($number16bitsNumeral.immediat);}
     ;
 
 dataword
@@ -159,80 +159,81 @@ bs5_core_instruction
 bs5_corex_instruction 
     // ccc f mov low Rx, imm8 
     : bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_low bs5_reg_1_15 COMMA numberUnsignedByte
+      Bs5_mov Bs5_low bs5_reg_1_15 COMMA numberUnsignedByte                         { prg.asm_mov_low_Rx_imm8($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedByte.immediat);}
     // ccc f  mov high Rx, imm8
     | bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_high bs5_reg_1_15 COMMA numberUnsignedByte
+      Bs5_mov Bs5_high bs5_reg_1_15 COMMA numberUnsignedByte                        { prg.asm_mov_high_Rx_imm8($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedByte.immediat);}
     // ccc f add Rx, imm4 (Rx != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_add bs5_reg_1_15 COMMA numberUnsignedQuadNotOne
+      Bs5_add bs5_reg_1_15 COMMA numberUnsignedQuadNotOne                           { prg.asm_add_Rx_imm4($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedQuadNotOne.immediat ); }
     // ccc f sub Rx, imm4 (Rx != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_sub bs5_reg_1_15 COMMA numberUnsignedQuadNotOne
+      Bs5_sub bs5_reg_1_15 COMMA numberUnsignedQuadNotOne                           { prg.asm_sub_Rx_imm4($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedQuadNotOne.immediat ); }
     // ccc f shl Rx, imm4 (Rx != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_shl bs5_reg_1_15 COMMA numberUnsignedQuad
+      Bs5_shl bs5_reg_1_15 COMMA numberUnsignedQuad                                 { prg.asm_shl_Rx_imm4($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedQuad.immediat ); }
     // ccc f shr Rx, imm4 (Rx != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_shr bs5_reg_1_15 COMMA numberUnsignedQuad
+      Bs5_shr bs5_reg_1_15 COMMA numberUnsignedQuad                                 { prg.asm_shr_Rx_imm4($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedQuad.immediat ); }
     // ccc f mov low Rx, low Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_low bs5_reg_1_15 COMMA Bs5_low bs5_reg_1_15
+      Bs5_mov Bs5_low rx=bs5_reg_1_15 COMMA Bs5_low ry=bs5_reg_1_15                 { prg.asm_mov_low_Rx_low_Ry($bs5_cond.text, $bs5_flag.text, $rx.text, $ry.text ); }
     // ccc f mov low Rx, high Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_low bs5_reg_1_15 COMMA Bs5_high bs5_reg_1_15
+      Bs5_mov Bs5_low rx=bs5_reg_1_15 COMMA Bs5_high ry=bs5_reg_1_15                { prg.asm_mov_low_Rx_high_Ry($bs5_cond.text, $bs5_flag.text, $rx.text, $ry.text ); }
     // ccc f mov high Rx, low Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_high bs5_reg_1_15 COMMA Bs5_low bs5_reg_1_15
+      Bs5_mov Bs5_high rx=bs5_reg_1_15 COMMA Bs5_low ry=bs5_reg_1_15                { prg.asm_mov_high_Rx_low_Ry($bs5_cond.text, $bs5_flag.text, $rx.text, $ry.text ); }
     // ccc f mov high Rx, high Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_high bs5_reg_1_15 COMMA Bs5_high bs5_reg_1_15
+      Bs5_mov Bs5_high rx=bs5_reg_1_15 COMMA Bs5_high ry=bs5_reg_1_15               { prg.asm_mov_high_Rx_high_Ry($bs5_cond.text, $bs5_flag.text, $rx.text, $ry.text ); }
     // ccc f and Rx, Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_and bs5_reg_1_15 COMMA bs5_reg_1_15
+      Bs5_and rx=bs5_reg_1_15 COMMA ry=bs5_reg_1_15                                 { prg.asm_and_Rx_Ry($bs5_cond.text, $bs5_flag.text, $rx.text, $ry.text ); }
     // ccc f or  Rx, Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_or bs5_reg_1_15 COMMA bs5_reg_1_15
+      Bs5_or rx=bs5_reg_1_15 COMMA ry=bs5_reg_1_15                                  { prg.asm_or_Rx_Ry($bs5_cond.text, $bs5_flag.text, $rx.text, $ry.text ); }
 ;
 // 12 CPU micro programs for immediate 16 bits value 
 // ( R0 is modified and can't be used as operand, except for "mov R0, imm16" and "mov Rx, [imm16]" )
 bs5_imm16_instruction
     // ccc f mov Rx, imm16 (Rx != R0 and imm16 != 0)
     : bs5_cond? bs5_flag? 
-      Bs5_mov bs5_reg_1_15 COMMA number16bitsNotZero
+      Bs5_mov bs5_reg_1_15 COMMA number16bitsNotZero                                { prg.asm_mov_Rx_imm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bitsNotZero.immediat ); }
     // ccc f mov R0, imm16 ( imm16 != 0 )
     | bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_reg0 COMMA number16bitsNotZero
+      Bs5_mov Bs5_reg0 COMMA number16bitsNotZero                                    { prg.asm_mov_R0_imm16($bs5_cond.text, $bs5_flag.text, $number16bitsNotZero.immediat ); }
     // ccc f add Rx, imm16 (Rx != R0 and imm16 > 15)
     | bs5_cond? bs5_flag? 
-      Bs5_add bs5_reg_1_15 COMMA number16bitsNotQuad
+      Bs5_add bs5_reg_1_15 COMMA number16bitsNotQuad                                { prg.asm_add_Rx_imm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bitsNotQuad.immediat ); }
     // ccc f sub Rx, imm16 (Rx != R0 and imm16 > 15)
     | bs5_cond? bs5_flag? 
-      Bs5_sub bs5_reg_1_15 COMMA number16bitsNotQuad
+      Bs5_sub bs5_reg_1_15 COMMA number16bitsNotQuad                                { prg.asm_sub_Rx_imm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bitsNotQuad.immediat ); }
     // ccc f mov Rx, [imm16] 
     | bs5_cond? bs5_flag? 
-      Bs5_sub bs5_reg COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+      Bs5_sub bs5_reg COMMA OPEN_BRACKET number16bits CLOSE_BRACKET                 { prg.asm_mov_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg.text, $number16bits.immediat ); }
     // ccc f mov [imm16], Rx ( Rx != R0 )
     | bs5_cond? bs5_flag? 
-      Bs5_sub OPEN_BRACKET number16bits CLOSE_BRACKET COMMA bs5_reg_1_15 
+      Bs5_sub OPEN_BRACKET number16bits CLOSE_BRACKET COMMA bs5_reg_1_15            { prg.asm_mov_atImm16_Rx($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat );}
     // ccc f add Rx, [imm16] ( Rx != R0 )
     | bs5_cond? bs5_flag? 
-      Bs5_add bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+      Bs5_add bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET            { prg.asm_add_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }      
     // ccc f sub Rx, [imm16] ( Rx != R0 )
     | bs5_cond? bs5_flag? 
-      Bs5_sub bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+      Bs5_sub bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET            { prg.asm_sub_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
     // ccc f and Rx, imm16 (Rx != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_and bs5_reg_1_15 COMMA number16bits
+      Bs5_and bs5_reg_1_15 COMMA number16bits                                       { prg.asm_add_Rx_imm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
     // ccc f or Rx, imm16 (Rx != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_or bs5_reg_1_15 COMMA number16bits
+      Bs5_or bs5_reg_1_15 COMMA number16bits                                        { prg.asm_or_Rx_imm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
     // ccc f and Rx, [imm16] (Rx != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_and bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+      Bs5_and bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET            { prg.asm_add_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
     // ccc f or Rx, [imm16] (Rx != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_or bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET;
+      Bs5_or bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET             { prg.asm_or_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
+    ;
 
 // any register reference
 bs5_reg
@@ -260,7 +261,7 @@ bs5_flag
     | Bs5_flag_unchanged;
 
 number16bits
-    locals [ String immediat ]
+    returns [ String immediat ]
     :  Bs5_num_hexa_word                        { $immediat = $text; }
     |  Bs5_num_hexa_byte                        { $immediat = $text; }
     |  Bs5_num_hexa_quad                        { $immediat = $text; }
@@ -282,7 +283,7 @@ number16bits
     ;
 
 number16bitsNumeral
-    locals [ String immediat ]
+    returns [ String immediat ]
     :  Bs5_num_hexa_word                        { $immediat = $text; }
     |  Bs5_num_hexa_byte                        { $immediat = $text; }
     |  Bs5_num_hexa_quad                        { $immediat = $text; }
@@ -301,7 +302,7 @@ number16bitsNumeral
 
 
 number16bitsNotQuad
-    locals [ String immediat ]
+    returns [ String immediat ]
     :  Bs5_num_hexa_word                        { $immediat = $text; }
     |  Bs5_num_hexa_byte                        { $immediat = $text; }
     |  Bs5_num_decimal_unsigned_word            { $immediat = $text; }
@@ -315,7 +316,7 @@ number16bitsNotQuad
     ;
 
 number16bitsNotZero
-    locals [ String immediat ]
+    returns [ String immediat ]
     :  Bs5_num_hexa_word                        { $immediat = $text; }
     |  Bs5_num_hexa_byte                        { $immediat = $text; }
     |  Bs5_num_hexa_quad                        { $immediat = $text; }
@@ -334,17 +335,15 @@ number16bitsNotZero
     ;
 
 numberZero
-    locals [ String immediat ]
-    :  Bs5_num_hexa_zero                        { $immediat = $text; }
-    |  Bs5_num_decimal_unsigned_zero            { $immediat = $text; }
-    |  Bs5_num_decimal_signed_zero              { $immediat = $text; }
+    :  Bs5_num_hexa_zero
+    |  Bs5_num_decimal_unsigned_zero
+    |  Bs5_num_decimal_signed_zero
     ;
 
 numberOne
-    locals [ String immediat ]
-    :  Bs5_num_hexa_one                         { $immediat = $text; }
-    |  Bs5_num_decimal_unsigned_one             { $immediat = $text; }
-    |  Bs5_num_decimal_signed_one               { $immediat = $text; }
+    :  Bs5_num_hexa_one                         
+    |  Bs5_num_decimal_unsigned_one             
+    |  Bs5_num_decimal_signed_one               
     ;
 
 numberUnsignedByte
@@ -388,7 +387,7 @@ returns [ String immediat ]
     ;
 
 numberUnsignedQuadNotOne
-locals [ String immediat ]
+returns [ String immediat ]
     :  Bs5_num_hexa_quad                        { $immediat = $text; }
     |  Bs5_num_hexa_zero                        { $immediat = $text; }
     |  Bs5_num_decimal_unsigned_quad            { $immediat = $text; }
