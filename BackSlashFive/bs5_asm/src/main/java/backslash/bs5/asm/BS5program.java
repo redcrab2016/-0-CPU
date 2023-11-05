@@ -48,6 +48,7 @@ public class BS5program {
         BS5Label labelObj;
         if (label.charAt(0) != '.') { // global label, get it directly
             labelObj = bs5Labels.get(label);
+            if (labelObj != null) labelObj.useIt();
             return labelObj==null?-1:labelObj.getAddr(); // found global label address
         } else { // local label
             for (String labelKey: bs5Labels.keySet()) { // search each label entry
@@ -56,6 +57,7 @@ public class BS5program {
                     if (    labelObj.getName().equals(label) &&
                             labelObj.getLinenum() <= linenum &&
                             labelObj.getLinenumend() >= linenum ) {
+                        labelObj.useIt();
                         return labelObj.getAddr(); // found local label address
                     }
                 }
@@ -69,6 +71,7 @@ public class BS5program {
         try {
             if (label.charAt(0) != '.') {  // global label
                 if (bs5Labels.containsKey(label)) throw new BS5Exception("Duplicate label definition '" + label + "'");
+                if (label.indexOf((int)'.') != -1) throw new BS5Exception("Can't define global label containing local label designation '" + label + "'");
                 bs5Labels.put(label, new BS5Label(label, PC, linenum));
                 if (currentGlobalLabel != null) {
                     bs5Labels.get(currentGlobalLabel).setLinenumend(linenum-1);
@@ -80,6 +83,8 @@ public class BS5program {
                 bs5Labels.put(localGlobal, new BS5Label( bs5Labels.get(currentGlobalLabel),label, PC, linenum));           
             }
         } catch (BS5Exception e) {
+            e.PC = PC;
+            e.linenum = linenum;
             exceptionLst.add(e);
         }
         return this;
@@ -90,6 +95,8 @@ public class BS5program {
         try {
             PC = BS5MemoryCell.get16bitsNumeral(this,PC,linenum,addr);
         } catch (BS5Exception e) {
+            e.PC = PC;
+            e.linenum = linenum;
             exceptionLst.add(e);
         }
         return this;
@@ -107,6 +114,8 @@ public class BS5program {
             bs5memoryMap.put(PC, mcell);
             PC++;
         } catch (BS5Exception e) {
+            e.PC = PC;
+            e.linenum = linenum;
             exceptionLst.add(e);
         }
         return this;
@@ -122,6 +131,8 @@ public class BS5program {
         try {
             return addMemoryCell(new BS5MemoryCell_oooo_yyyy_xxxx(this, PC, linenum, ccc, f, instruction, ry, rx));
         } catch (BS5Exception e ) {
+            e.PC = PC;
+            e.linenum = linenum;
             exceptionLst.add(e);
         }
         return this;
@@ -132,6 +143,8 @@ public class BS5program {
         try {
             return addMemoryCell(new BS5MemoryCell_oooo_iiii_iiii(this, PC, linenum, ccc, f, instruction, immediat));
         } catch (BS5Exception e) {
+            e.PC = PC;
+            e.linenum = linenum;
             exceptionLst.add(e);
         }
         return this;
@@ -142,6 +155,8 @@ public class BS5program {
         try {
             return addMemoryCell(new BS5MemoryCell_oooo_iiii_xxxx(this, PC, linenum, ccc, f, instruction, rx, immediat));
         } catch (BS5Exception e) {
+            e.PC = PC;
+            e.linenum = linenum;
             exceptionLst.add(e);
         }
         return this;
@@ -152,6 +167,8 @@ public class BS5program {
         try {
             return addMemoryCell(new BS5MemoryCell_oooo_oooo_xxxx(this, PC, linenum, ccc, f, instruction, rx));
         } catch (BS5Exception e) {
+            e.PC = PC;
+            e.linenum = linenum;
             exceptionLst.add(e);
         }
         return this;
@@ -162,6 +179,8 @@ public class BS5program {
         try {
         return addMemoryCell(new BS5MemoryCell_oooo_oooo_iiii(this, PC, linenum, ccc, f, instruction, immediate));
         } catch (BS5Exception e) {
+            e.PC = PC;
+            e.linenum = linenum;
             exceptionLst.add(e);
         }
         return this;

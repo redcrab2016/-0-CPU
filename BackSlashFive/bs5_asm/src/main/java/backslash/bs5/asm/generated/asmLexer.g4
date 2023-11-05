@@ -38,7 +38,7 @@ Bs5_cond_Zset: 'zs' | 'ZS';
 Bs5_cond_Zclr: 'zc' | 'ZC';
 Bs5_cond_Xset: 'xs' | 'XS';
 Bs5_cond_Xclr: 'xc' | 'XC';
-Bs5_cond_never: 'ne' | 'NE';
+Bs5_cond_never: 'ne' | 'NE' | 'no' | 'NO' { setText("ne");} ;
 
 Bs5_flag_unchanged: 'nf' | 'NF';
 Bs5_flag_changed: 'fl' | 'FL';
