@@ -1,5 +1,6 @@
 package backslash.bs5.asm;
 import java.util.*;
+import java.util.Map.Entry;
 
 public class BS5program {
     private int PC;
@@ -19,6 +20,25 @@ public class BS5program {
         reset();
     }
 
+    public BS5program lastEval() {
+        for (Entry<Integer,BS5MemoryCell> entry: bs5memoryMap.entrySet()) {
+            try {
+            if (!entry.getValue().isEvaluated()) {
+                if (entry.getValue().lastException != null)  {
+                    entry.getValue().lastException.PC = entry.getKey();
+                    entry.getValue().lastException.linenum = entry.getValue().linenum;
+                    throw entry.getValue().lastException;
+                }
+            }
+            } catch (BS5Exception e) {
+                    exceptionLst.add(e);
+            }
+        }
+        return this;
+    }
+
+
+    
     public BS5program reset() {
         PC = 0;
         linenum = 1;

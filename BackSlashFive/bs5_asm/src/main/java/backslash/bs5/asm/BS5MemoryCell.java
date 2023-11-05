@@ -7,11 +7,13 @@ public class BS5MemoryCell {
     protected BS5program prg;
     protected int linenum;
     protected int addr;
+    protected BS5Exception lastException;
 
     public BS5MemoryCell(BS5program prg, int addr, int linenum) throws BS5Exception {
         this.addr = addr;
         this.prg = prg;
         this.linenum = linenum;
+        lastException = null;
         setValue(0);
         isEvaluated = false;
     }
@@ -20,6 +22,7 @@ public class BS5MemoryCell {
          this.addr = addr;
         this.prg = prg;
         this.linenum = linenum;
+        lastException = null;
         setValue(sourceValue);
     }
 
@@ -27,6 +30,7 @@ public class BS5MemoryCell {
         this.addr = addr;
         this.prg = prg;
         this.linenum = linenum;
+        lastException = null;
         setValue(sourceValue);
     }
 
@@ -44,6 +48,7 @@ public class BS5MemoryCell {
             isEvaluated = true;
 
         } catch (BS5Exception e) {
+            lastException = e;
             value16bits = 0;
             isEvaluated = false;
         }
