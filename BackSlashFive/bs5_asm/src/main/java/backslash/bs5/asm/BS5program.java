@@ -3,13 +3,16 @@ import java.util.*;
 import java.util.Map.Entry;
 
 public class BS5program {
+    // construction progress information
     private int PC;
     private int linenum;
-    private Map<Integer,BS5MemoryCell> bs5memoryMap;
-    private Map<String,BS5Label> bs5Labels;
     private int memorySize;
     private String currentGlobalLabel;
+    // report information
+    private Map<Integer,BS5MemoryCell> bs5memoryMap;
+    private Map<String,BS5Label> bs5Labels;
     private List<BS5Exception> exceptionLst;
+    private Map<Integer, String> sourcecode;
 
     public BS5program()  {
         this(65536);
@@ -38,20 +41,28 @@ public class BS5program {
     }
 
 
-    
+
+
     public BS5program reset() {
         PC = 0;
         linenum = 1;
         exceptionLst = new ArrayList<BS5Exception>();
         bs5memoryMap = new HashMap<Integer,BS5MemoryCell>();
         bs5Labels = new HashMap<String,BS5Label>();
+        sourcecode = new HashMap<Integer,String>();
         currentGlobalLabel=null;
         addLabel("__GLOBAL__");
         return this;
     }
 
+    public int getNbException() { return exceptionLst.size();}
     public List<BS5Exception> getExceptionList() { return exceptionLst;}
 
+    public BS5program addSourceLine(String line) {
+        sourcecode.put(linenum, line);
+        return this;
+    }
+    
 // does addr is correct (in range) ,if no then exception, if yes: does the memory is already mapped to a value ?
     private boolean isMemoryMapped(int addr) throws BS5Exception {
         if (addr < 0 || addr >= memorySize) throw new BS5Exception("Out of range memory address (program too large ?)"); 

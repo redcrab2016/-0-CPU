@@ -16,7 +16,7 @@ public BS5program prg = new BS5program();
 program: statement+ EOF;
 
 statement: 
-    label? instruction? Bs5comment? Bs5nl                                           { prg.incrementLine(); }
+    label? instruction? Bs5comment? Bs5nl                                           { prg.addSourceLine($text).incrementLine(); }
     ;
 
 label:
