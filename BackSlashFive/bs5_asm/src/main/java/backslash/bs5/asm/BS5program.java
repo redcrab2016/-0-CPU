@@ -79,11 +79,13 @@ public class BS5program {
                 int minAddress = 0;
                 int minIdx = -1;
                 int idx = 0;
+                int wordPerLine = 8;
                 String codeline ="";
                 List<BS5MemoryCell> lstCode;
                 List<BS5MemoryCell> lstCodeSorted;
                 List<String> lstCodeBlock;
                 ps.println("Program:");
+                ps.printf("Addr | %1$-40s| Source \n", "Assembly");
                 for (int line=1; line <= linenum; line++) { // for each source code line
                     if (sourcecode.get(line)!=null) { // we have source code at line
                         codeline = sourcecode.get(line);
@@ -116,16 +118,38 @@ public class BS5program {
                         for (BS5MemoryCell mcell: lstCodeSorted) {
                             aBlock += String.format("%1$04X ", mcell.getValue());
                             idx++;
-                            if (idx % 8 == 0) {
+                            if (idx % wordPerLine == 0) {
                                 lstCodeBlock.add(aBlock);
                                 aBlock = "";
                             }
                         }
                         if (idx == 0) lstCodeBlock.add("");
                         if (idx != 0 && !aBlock.isEmpty()) lstCodeBlock.add(aBlock); 
+                        // construct the line(s)
+                        if (!lstCodeSorted.isEmpty()) { // if word code to show
+                            //     1st line 
+                            address = lstCodeSorted.get(0).getAddr();
+                            ps.printf("%1$04X | %2$-40s| %3$s\n",
+                                      address, 
+                                      lstCodeBlock.get(0), 
+                                      codeline);
+                            //     possible other lines
+                            for (int i = 1 ; i < lstCodeSorted.size() ; i++) {
+                                address += wordPerLine;
+                                ps.printf("%1$04X | %1$-40s| \n", address,lstCodeBlock.get(0));                                
+                            }
+                            address = lstCodeSorted.get(0).getAddr() + lstCodeSorted.size();
+                        } else { // no word code to show
+                            ps.printf("%1$04X | %2$-40s| %3$s\n",
+                                      address,
+                                      "", 
+                                      codeline);
+                        }
 
                     }
                 }
+                // add new line
+                ps.println("");
                 if (bs5Labels.size() > 0) { // if there is label defined
                     boolean bFound = false;
                     // label addresses
@@ -147,12 +171,15 @@ public class BS5program {
                 } else {
                     ps.println("Remark: There is no label defined in code");
                 }
-
+                // add new line
+                ps.println("");
             } else { // semantic errors
                 ps.println("Errors:");
                 for (BS5Exception ex: exceptionLst) {
                     ps.printf(" Line %1$d : %2$s\n", ex.linenum, ex.getMessage());
                 }
+                // add new line
+                ps.println("");
             }
             ps.flush();
             return this;
