@@ -1,8 +1,5 @@
 package backslash.bs5.asm;
-import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.util.*;
 import java.util.Map.Entry;
@@ -79,10 +76,53 @@ public class BS5program {
             if (getNbException() == 0) { // if program is ok (no error found)
                 // program
                 int address = 0;
+                int minAddress = 0;
+                int minIdx = -1;
+                int idx = 0;
                 String codeline ="";
+                List<BS5MemoryCell> lstCode;
+                List<BS5MemoryCell> lstCodeSorted;
+                List<String> lstCodeBlock;
                 ps.println("Program:");
-                for (int line=1; line <= linenum; line++) {
-                    if (sourcecode.get(line)!=null) {
+                for (int line=1; line <= linenum; line++) { // for each source code line
+                    if (sourcecode.get(line)!=null) { // we have source code at line
+                        codeline = sourcecode.get(line);
+                        lstCode = new ArrayList<BS5MemoryCell>();
+                        // search memory cells corresponding to current code line
+                        for (Entry<Integer,BS5MemoryCell> entry:bs5memoryMap.entrySet()) {
+                            if (entry.getValue().getLinenum() == line) {
+                                lstCode.add(entry.getValue());
+                            }
+                        }
+                        // Sort the found memory cells at code line, by address
+                        lstCodeSorted = new ArrayList<BS5MemoryCell>();
+                        while (lstCode.size()>0) {
+                            minAddress = 65536;
+                            minIdx = -1;
+                            idx = 0;
+                            for (BS5MemoryCell mcell: lstCode) {
+                                if (mcell.getAddr() < minAddress) {
+                                    minIdx = idx;
+                                    minAddress = mcell.getAddr();
+                                }
+                                idx++;
+                            }
+                            lstCodeSorted.add(lstCode.remove(minIdx));
+                        }
+                        // build word code string block
+                        lstCodeBlock = new ArrayList<String>();
+                        String aBlock = "";
+                        idx = 0;
+                        for (BS5MemoryCell mcell: lstCodeSorted) {
+                            aBlock += String.format("%1$04X ", mcell.getValue());
+                            idx++;
+                            if (idx % 8 == 0) {
+                                lstCodeBlock.add(aBlock);
+                                aBlock = "";
+                            }
+                        }
+                        if (idx == 0) lstCodeBlock.add("");
+                        if (idx != 0 && !aBlock.isEmpty()) lstCodeBlock.add(aBlock); 
 
                     }
                 }
