@@ -1,4 +1,9 @@
 package backslash.bs5.asm;
+import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -8,6 +13,7 @@ public class BS5program {
     private int linenum;
     private int memorySize;
     private String currentGlobalLabel;
+    private boolean isLastEvalDone;
     // report information
     private Map<Integer,BS5MemoryCell> bs5memoryMap;
     private Map<String,BS5Label> bs5Labels;
@@ -24,6 +30,7 @@ public class BS5program {
     }
 
     public BS5program lastEval() {
+        if (isLastEvalDone) return this;
         for (Entry<Integer,BS5MemoryCell> entry: bs5memoryMap.entrySet()) {
             try {
             if (!entry.getValue().isEvaluated()) {
@@ -37,6 +44,7 @@ public class BS5program {
                     exceptionLst.add(e);
             }
         }
+        isLastEvalDone = true;
         return this;
     }
 
@@ -51,6 +59,7 @@ public class BS5program {
         bs5Labels = new HashMap<String,BS5Label>();
         sourcecode = new HashMap<Integer,String>();
         currentGlobalLabel=null;
+        isLastEvalDone = false;
         addLabel("__GLOBAL__");
         return this;
     }
@@ -62,7 +71,58 @@ public class BS5program {
         sourcecode.put(linenum, line);
         return this;
     }
-    
+
+    public BS5program report(OutputStream out) {
+        try {
+            lastEval(); // it does nothing if it is already done.
+            PrintStream ps =  new PrintStream(out, true);
+            if (getNbException() == 0) { // if program is ok (no error found)
+                // program
+                int address = 0;
+                String codeline ="";
+                ps.println("Program:");
+                for (int line=1; line <= linenum; line++) {
+                    if (sourcecode.get(line)!=null) {
+
+                    }
+                }
+                if (bs5Labels.size() > 0) { // if there is label defined
+                    boolean bFound = false;
+                    // label addresses
+                    ps.println("Label address:");
+                    for (Entry<String,BS5Label> entry: bs5Labels.entrySet()) {
+                        ps.printf(" %1$40s : %2$04X\n", entry.getKey(), entry.getValue().getAddr());
+                        if (!entry.getValue().isUsed()) bFound = true;
+                    }
+                    if (bFound) {// found unused labels
+                        // warning unused label
+                        ps.println("Unused label:");
+                        for (Entry<String,BS5Label> entry: bs5Labels.entrySet()) {
+                            if (!entry.getValue().isUsed()) {
+                                ps.printf(" %1$40s : %2$04X at line %3$d\n", entry.getKey(), entry.getValue().getAddr(), entry.getValue().getLinenum());
+                                bFound = true;
+                            }
+                        }
+                    }
+                } else {
+                    ps.println("Remark: There is no label defined in code");
+                }
+
+            } else { // semantic errors
+                ps.println("Errors:");
+                for (BS5Exception ex: exceptionLst) {
+                    ps.printf(" Line %1$d : %2$s\n", ex.linenum, ex.getMessage());
+                }
+            }
+            ps.flush();
+            return this;
+        } catch (Exception e) {
+            System.err.println("FATAL: Report unhandled error:"+e.getMessage());
+            e.printStackTrace();
+            return this;
+        }
+    }
+
 // does addr is correct (in range) ,if no then exception, if yes: does the memory is already mapped to a value ?
     private boolean isMemoryMapped(int addr) throws BS5Exception {
         if (addr < 0 || addr >= memorySize) throw new BS5Exception("Out of range memory address (program too large ?)"); 
