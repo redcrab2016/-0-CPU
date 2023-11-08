@@ -4,6 +4,7 @@ import java.io.PrintStream;
 import java.util.*;
 import java.util.Map.Entry;
 
+// class mainly dedicated to asmParser (ANTLR4 generated class based on asmParser.g4), then be used for final result by BS5program
 public class BS5program {
     // construction progress information
     private int PC;
@@ -159,7 +160,7 @@ public class BS5program {
                     // label addresses
                     ps.println("Label address:");
                     for (Entry<String,BS5Label> entry: bs5Labels.entrySet()) {
-                        ps.printf(" %1$40s : %2$04X\n", entry.getKey(), entry.getValue().getAddr());
+                        ps.printf(" %1$-40s : 0x%2$04X\n", entry.getKey(), entry.getValue().getAddr());
                         if (!entry.getValue().isUsed()) bFound = true;
                     }
                     if (bFound) {// found unused labels
@@ -167,7 +168,7 @@ public class BS5program {
                         ps.println("Unused label:");
                         for (Entry<String,BS5Label> entry: bs5Labels.entrySet()) {
                             if (!entry.getValue().isUsed()) {
-                                ps.printf(" %1$40s : %2$04X at line %3$d\n", entry.getKey(), entry.getValue().getAddr(), entry.getValue().getLinenum());
+                                ps.printf(" %1$-40s : 0x%2$04X at line %3$d\n", entry.getKey(), entry.getValue().getAddr(), entry.getValue().getLinenum());
                                 bFound = true;
                             }
                         }
@@ -195,20 +196,20 @@ public class BS5program {
     }
 
     public BS5program genVerilogReadmemh(OutputStream out) {
-        lastEval();
+        lastEval(); // it does nothing if it is already done.
         PrintStream ps =  new PrintStream(out, true);
         if (getNbException() != 0) {
-            ps.println("// Verilog readmemh content can't be generated due to error in code");
+            ps.println("// Verilog readmemh content can't be generated due to error during the BS5 assembly.");
             return this;
         }
         if (bs5memoryMap.size() == 0) {
-            ps.println("// No content: Empty program");
+            ps.println("// Empty program: No BS5 assembly content.");
             return this;
         }
-        ps.printf("// BS5 program containing %1$d words\n", bs5memoryMap.size());
+        ps.printf("// BS5 program containing %1$d words.\n", bs5memoryMap.size());
         int lastAddress = -1;
         int wordsOnLine = 0;
-        int nbWordPerLine = 16;
+        int nbWordPerLine = 16; // number of word content per line
         int nbBlock = 0;
         BS5MemoryCell mcell;
         for (int addr= 0; addr <= memorySize ; addr++) {
@@ -216,15 +217,16 @@ public class BS5program {
             if (mcell != null) {
                 // set address if needed
                 if (lastAddress != addr) {
-                    ps.printf("@%1$04X ",addr);
+                    ps.printf("\n@%1$04X ",addr);
                     lastAddress = addr;
+                    wordsOnLine = 1;
                     nbBlock++;
                 }
                 // write word content
                 try {
                     ps.printf("%1$04X ", mcell.getValue());
                     wordsOnLine++;
-                } catch (BS5Exception e) {
+                } catch (BS5Exception e) { // Oops! should never happen
                     ps.printf("\nUnexpected exception during the reading of memory cell value at address %1$04X : %2$s \n", addr, e.getMessage() );
                 }
                 // go to next line when there is enough word content written
@@ -240,6 +242,7 @@ public class BS5program {
         ps.flush();
         return this;
     }
+
 // does addr is correct (in range) ,if no then exception, if yes: does the memory is already mapped to a value ?
     private boolean isMemoryMapped(int addr) throws BS5Exception {
         if (addr < 0 || addr >= memorySize) throw new BS5Exception("Out of range memory address (program too large ?)"); 
@@ -271,7 +274,7 @@ public class BS5program {
                 }
             }
         }
-        return -1; // not fiound
+        return -1; // not found
     }
 
 //  Add label
