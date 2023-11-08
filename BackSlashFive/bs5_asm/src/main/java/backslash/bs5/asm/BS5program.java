@@ -79,13 +79,14 @@ public class BS5program {
                 int minAddress = 0;
                 int minIdx = -1;
                 int idx = 0;
-                int wordPerLine = 8;
+                int wordPerLine = 8; // number of word values to show per line in 'Assembly' column in "Program:" report section
                 String codeline ="";
                 List<BS5MemoryCell> lstCode;
                 List<BS5MemoryCell> lstCodeSorted;
                 List<String> lstCodeBlock;
+                String lineFormat = "%1$04X | %2$-" + String.valueOf(wordPerLine * 5) + "s| %3$s\n";
                 ps.println("Program:");
-                ps.printf("Addr | %1$-40s| Source \n", "Assembly");
+                ps.printf("Addr | %1$-" + String.valueOf(wordPerLine * 5) + "s| Source \n", "Assembly");
                 for (int line=1; line <= linenum; line++) { // for each source code line
                     if (sourcecode.get(line)!=null) { // we have source code at line
                         codeline = sourcecode.get(line);
@@ -129,18 +130,21 @@ public class BS5program {
                         if (!lstCodeSorted.isEmpty()) { // if word code to show
                             //     1st line 
                             address = lstCodeSorted.get(0).getAddr();
-                            ps.printf("%1$04X | %2$-40s| %3$s\n",
+                            ps.printf(lineFormat,
                                       address, 
                                       lstCodeBlock.get(0), 
                                       codeline);
                             //     possible other lines
                             for (int i = 1 ; i < lstCodeSorted.size() ; i++) {
                                 address += wordPerLine;
-                                ps.printf("%1$04X | %1$-40s| \n", address,lstCodeBlock.get(0));                                
+                                ps.printf(lineFormat, 
+                                        address,
+                                        lstCodeBlock.get(0),
+                                        "");                                
                             }
                             address = lstCodeSorted.get(0).getAddr() + lstCodeSorted.size();
                         } else { // no word code to show
-                            ps.printf("%1$04X | %2$-40s| %3$s\n",
+                            ps.printf(lineFormat,
                                       address,
                                       "", 
                                       codeline);
@@ -190,6 +194,52 @@ public class BS5program {
         }
     }
 
+    public BS5program genVerilogReadmemh(OutputStream out) {
+        lastEval();
+        PrintStream ps =  new PrintStream(out, true);
+        if (getNbException() != 0) {
+            ps.println("// Verilog readmemh content can't be generated due to error in code");
+            return this;
+        }
+        if (bs5memoryMap.size() == 0) {
+            ps.println("// No content: Empty program");
+            return this;
+        }
+        ps.printf("// BS5 program containing %1$d words\n", bs5memoryMap.size());
+        int lastAddress = -1;
+        int wordsOnLine = 0;
+        int nbWordPerLine = 16;
+        int nbBlock = 0;
+        BS5MemoryCell mcell;
+        for (int addr= 0; addr <= memorySize ; addr++) {
+            mcell = bs5memoryMap.get(addr);
+            if (mcell != null) {
+                // set address if needed
+                if (lastAddress != addr) {
+                    ps.printf("@%1$04X ",addr);
+                    lastAddress = addr;
+                    nbBlock++;
+                }
+                // write word content
+                try {
+                    ps.printf("%1$04X ", mcell.getValue());
+                    wordsOnLine++;
+                } catch (BS5Exception e) {
+                    ps.printf("\nUnexpected exception during the reading of memory cell value at address %1$04X : %2$s \n", addr, e.getMessage() );
+                }
+                // go to next line when there is enough word content written
+                if (wordsOnLine == nbWordPerLine){
+                    ps.println("");
+                    wordsOnLine = 0;
+                }
+                lastAddress += 1;
+            }
+        }
+        if (wordsOnLine != 0) ps.println("");
+        ps.printf("// Program defined in %1$d part(s)\n",nbBlock);
+        ps.flush();
+        return this;
+    }
 // does addr is correct (in range) ,if no then exception, if yes: does the memory is already mapped to a value ?
     private boolean isMemoryMapped(int addr) throws BS5Exception {
         if (addr < 0 || addr >= memorySize) throw new BS5Exception("Out of range memory address (program too large ?)"); 
