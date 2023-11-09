@@ -17,6 +17,7 @@ public class BS5program {
     private Map<String,BS5Label> bs5Labels;
     private List<BS5Exception> exceptionLst;
     private Map<Integer, String> sourcecode;
+    private String rootLabelName;
 
     public BS5program()  {
         this(65536);
@@ -58,7 +59,8 @@ public class BS5program {
         sourcecode = new HashMap<Integer,String>();
         currentGlobalLabel=null;
         isLastEvalDone = false;
-        addLabel("__GLOBAL__");
+        rootLabelName = "__GLOBAL__";
+        addLabel(rootLabelName, true);
         return this;
     }
 
@@ -66,6 +68,7 @@ public class BS5program {
     public List<BS5Exception> getExceptionList() { return exceptionLst;}
 
     public BS5program addSourceLine(String line) {
+        line = line.stripTrailing();
         sourcecode.put(linenum, line);
         return this;
     }
@@ -136,11 +139,11 @@ public class BS5program {
                                       lstCodeBlock.get(0), 
                                       codeline);
                             //     possible other lines
-                            for (int i = 1 ; i < lstCodeSorted.size() ; i++) {
+                            for (int i = 1 ; i < lstCodeBlock.size() ; i++) {
                                 address += wordPerLine;
                                 ps.printf(lineFormat, 
                                         address,
-                                        lstCodeBlock.get(0),
+                                        lstCodeBlock.get(i),
                                         "");                                
                             }
                             address = lstCodeSorted.get(0).getAddr() + lstCodeSorted.size();
@@ -277,8 +280,12 @@ public class BS5program {
         return -1; // not found
     }
 
-//  Add label
+//  Add label (unused)
     public BS5program addLabel(String label) {
+        return addLabel(label, false);
+    }
+// Add label (may be already in used)
+    public BS5program addLabel(String label, boolean isused) {
         try {
             if (label.charAt(0) != '.') {  // global label
                 if (bs5Labels.containsKey(label)) throw new BS5Exception("Duplicate label definition '" + label + "'");
@@ -291,8 +298,10 @@ public class BS5program {
             } else { // local label
                 String localGlobal = currentGlobalLabel + label; // local label named globally
                 if (bs5Labels.containsKey(localGlobal)) throw new BS5Exception("Duplicate local label definition '" + label + "' for global label '" + currentGlobalLabel + "'");
-                bs5Labels.put(localGlobal, new BS5Label( bs5Labels.get(currentGlobalLabel),label, PC, linenum));           
+                bs5Labels.put(localGlobal, new BS5Label( bs5Labels.get(currentGlobalLabel),label, PC, linenum));
+                label = localGlobal;
             }
+            if (isused) bs5Labels.get(label).useIt();
         } catch (BS5Exception e) {
             e.PC = PC;
             e.linenum = linenum;
@@ -864,7 +873,7 @@ or
 */
     public BS5program asm_mov_R0_imm16(String ccc, String f, String imm16) {
         asm_mov_low_R0_imm8(ccc, "nf", "L8:" + imm16).
-        asm_mov_high_R0_imm8(ccc, f, "H8:"+ imm16);
+        asm_mov_high_R0_imm8(ccc, "nf", "H8:"+ imm16);
         if ("fl".equalsIgnoreCase(f)) asm_mov_Rx_Ry(ccc, f, "R0", "R0");
         return this;
     }

@@ -4,6 +4,7 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
     private String ccc;
     private String f;
     private int oooo_oooo_oooo;
+    private boolean isReadyToSetValue= false;
     protected BS5MemoryCell immediat;
     protected int immediat_mask;
     protected int immediat_shift;
@@ -15,9 +16,12 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
         this.oooo_oooo_oooo = 0;
         this.isEvaluated = false;
         immediat = null;
+        isReadyToSetValue = true;
+        setValue(oooo_oooo_oooo);
     }
     
     protected BS5MemoryCell_ccc_f setValue(int oooo_oooo_oooo) throws BS5Exception {
+        if (!isReadyToSetValue) return this;
         this.oooo_oooo_oooo = oooo_oooo_oooo;
         if (immediat == null)
         {

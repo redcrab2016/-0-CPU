@@ -20,7 +20,7 @@ public class BS5asm {
         {
             String inputFile = null;
             String outputFileNameBase = "out";
-            if ( args.length>0 ) inputFile = args[0];
+            if ( args.length>0 ) inputFile = args[0]; 
             InputStream is = System.in;
             if ( inputFile!=null ) {
                 is = new FileInputStream(inputFile);
@@ -62,11 +62,14 @@ public class BS5asm {
                     prg.report(System.out);
                     System.exit(1);
                 }
+                // All looks ok, then generate the assembly report
                 FileOutputStream fos = new FileOutputStream(new File(outputFileNameBase+".rpt"));
                 prg.report(fos);
                 fos.close();
+                // generate the Verilog bin file to be used with $readmemh
                 fos = new FileOutputStream(new File(outputFileNameBase+".bin"));
                 prg.genVerilogReadmemh(fos);
+                fos.close();
                 System.exit(0);
             }
         } catch (Exception e)
