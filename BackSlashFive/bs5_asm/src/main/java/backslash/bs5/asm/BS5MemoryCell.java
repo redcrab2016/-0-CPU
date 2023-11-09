@@ -36,7 +36,7 @@ public class BS5MemoryCell {
 
     protected BS5MemoryCell setValue(int sourceValue) throws BS5Exception {
         this.sourceValue = String.valueOf(sourceValue);
-        value16bits = sourceValue;
+        value16bits = sourceValue & 0x0000ffff;
         isEvaluated = true;
         return this;
     }
@@ -98,7 +98,7 @@ public class BS5MemoryCell {
         } catch (Exception e) {
             result = prg.findLabelAddress(toEvaluate, linenum);
             if (result == -1) {
-                throw new BS5Exception("Failed to convert in numeral symbol address '" + String.valueOf(toEvaluate) + "'",e);
+                throw new BS5Exception("Failed to convert in numeral symbol address '" + String.valueOf(toEvaluate) + "': "+e.getMessage(),e);
             }
         }
         // modifier action
@@ -121,6 +121,6 @@ public class BS5MemoryCell {
             }
         }
         // after modifer action(s): final result.
-        return result;
+        return result & 0x0000ffff;
     }
 }

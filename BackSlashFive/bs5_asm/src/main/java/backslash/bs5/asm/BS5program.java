@@ -167,6 +167,8 @@ public class BS5program {
                         if (!entry.getValue().isUsed()) bFound = true;
                     }
                     if (bFound) {// found unused labels
+                        // add new line
+                        ps.println("");
                         // warning unused label
                         ps.println("Unused label:");
                         for (Entry<String,BS5Label> entry: bs5Labels.entrySet()) {

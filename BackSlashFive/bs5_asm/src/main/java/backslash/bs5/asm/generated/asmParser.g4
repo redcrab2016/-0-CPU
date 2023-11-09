@@ -53,7 +53,7 @@ wordlist
 
 string
     returns [ List<String> lstWord ]
-    : DBLQUOTE STRDATA DBLQUOTEEND                                                  { $lstWord = new ArrayList<String>(); for (char i: $STRDATA.text.toCharArray()) $lstWord.add(""+i);}
+    : DBLQUOTE STRDATA DBLQUOTEEND                                                  { $lstWord = new ArrayList<String>(); for (char i: $STRDATA.text.toCharArray()) $lstWord.add(""+((int)i));}
     ;
 
 // 31 CPU core instructions
