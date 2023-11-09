@@ -6,12 +6,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.util.List;
 
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTree;
 
 public class BS5asm {
     public static void main( String[] args )
@@ -45,7 +43,8 @@ public class BS5asm {
             parser.removeErrorListeners();
             parser.addErrorListener(errorListener);
             // launch the parsing
-            ParseTree tree = parser.program(); // parse 
+            //ParseTree tree = 
+            parser.program(); // parse 
             //System.out.println("tree:" +tree..toStringTree());
 
             if (errorListener.hasError()) { // lexical and syntaxic error report

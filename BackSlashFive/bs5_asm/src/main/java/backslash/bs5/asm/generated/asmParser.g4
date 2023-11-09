@@ -26,9 +26,10 @@ label:
 
 instruction
     : directive
+   // | bs5_imm16_instruction
     | bs5_core_instruction
-    | bs5_corex_instruction
-    | bs5_imm16_instruction;
+  //  | bs5_corex_instruction
+    ;
 
 directive
     : origin
@@ -154,12 +155,13 @@ bs5_core_instruction
     // ccc f not Rx    
     | bs5_cond? bs5_flag? 
       Bs5_not bs5_reg                                                               { prg.asm_not_Rx($bs5_cond.text, $bs5_flag.text, $bs5_reg.text);}
-    ;
+//    ;
+
 
 // 12 CPU micro programs for register versatility (R0 is modified and can't be used as operand)
-bs5_corex_instruction 
+//bs5_corex_instruction 
     // ccc f mov low Rx, imm8 
-    : bs5_cond? bs5_flag? 
+    /*:*/ | bs5_cond? bs5_flag? 
       Bs5_mov Bs5_low bs5_reg_1_15 COMMA numberUnsignedByte                         { prg.asm_mov_low_Rx_imm8($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedByte.immediat);}
     // ccc f  mov high Rx, imm8
     | bs5_cond? bs5_flag? 
@@ -194,12 +196,12 @@ bs5_corex_instruction
     // ccc f or  Rx, Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? 
       Bs5_or rx=bs5_reg_1_15 COMMA ry=bs5_reg_1_15                                  { prg.asm_or_Rx_Ry($bs5_cond.text, $bs5_flag.text, $rx.text, $ry.text ); }
-;
+//;
 // 12 CPU micro programs for immediate 16 bits value 
 // ( R0 is modified and can't be used as operand, except for "mov R0, imm16" and "mov Rx, [imm16]" )
-bs5_imm16_instruction
+//bs5_imm16_instruction
     // ccc f mov Rx, imm16 (Rx != R0 and imm16 != 0)
-    : bs5_cond? bs5_flag? 
+    /*:*/| bs5_cond? bs5_flag? 
       Bs5_mov bs5_reg_1_15 COMMA number16bitsNotZero                                { prg.asm_mov_Rx_imm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bitsNotZero.immediat ); }
     // ccc f mov R0, imm16 ( imm16 != 0 )
     | bs5_cond? bs5_flag? 

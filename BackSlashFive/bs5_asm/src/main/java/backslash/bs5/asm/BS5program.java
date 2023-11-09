@@ -356,6 +356,11 @@ public class BS5program {
             e.PC = PC;
             e.linenum = linenum;
             exceptionLst.add(e);
+        } catch (Exception e2) {
+            BS5Exception be = new BS5Exception("Error:"+e2.getMessage(),e2);
+            be.PC = PC;
+            be.linenum = linenum;
+            exceptionLst.add(be);
         }
         return this;
     }
@@ -368,6 +373,11 @@ public class BS5program {
             e.PC = PC;
             e.linenum = linenum;
             exceptionLst.add(e);
+        } catch (Exception e2) {
+            BS5Exception be = new BS5Exception("Error:"+e2.getMessage(),e2);
+            be.PC = PC;
+            be.linenum = linenum;
+            exceptionLst.add(be);
         }
         return this;
     }
@@ -380,6 +390,11 @@ public class BS5program {
             e.PC = PC;
             e.linenum = linenum;
             exceptionLst.add(e);
+        } catch (Exception e2) {
+            BS5Exception be = new BS5Exception("Error:"+e2.getMessage(),e2);
+            be.PC = PC;
+            be.linenum = linenum;
+            exceptionLst.add(be);
         }
         return this;
     }
@@ -392,6 +407,11 @@ public class BS5program {
             e.PC = PC;
             e.linenum = linenum;
             exceptionLst.add(e);
+        } catch (Exception e2) {
+            BS5Exception be = new BS5Exception("Error:"+e2.getMessage(),e2);
+            be.PC = PC;
+            be.linenum = linenum;
+            exceptionLst.add(be);
         }
         return this;
     }
@@ -399,11 +419,16 @@ public class BS5program {
 // 4 bits immediate
     private BS5program add_oooo_oooo_iiii(String ccc, String f, String instruction, String immediate)  {
         try {
-        return addMemoryCell(new BS5MemoryCell_oooo_oooo_iiii(this, PC, linenum, ccc, f, instruction, immediate));
+            return addMemoryCell(new BS5MemoryCell_oooo_oooo_iiii(this, PC, linenum, ccc, f, instruction, immediate));
         } catch (BS5Exception e) {
             e.PC = PC;
             e.linenum = linenum;
             exceptionLst.add(e);
+        } catch (Exception e2) {
+            BS5Exception be = new BS5Exception("Error:"+e2.getMessage(),e2);
+            be.PC = PC;
+            be.linenum = linenum;
+            exceptionLst.add(be);
         }
         return this;
     }

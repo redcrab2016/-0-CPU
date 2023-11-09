@@ -59,6 +59,7 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
     }
 
     protected int getvalue_reg(String reg) {
+        if (reg.toUpperCase().charAt(0) != 'R') return Integer.parseInt("Not a register : "+ reg);
         return (Integer.parseInt(reg.substring(1))) & 0x0f;        
     }
 

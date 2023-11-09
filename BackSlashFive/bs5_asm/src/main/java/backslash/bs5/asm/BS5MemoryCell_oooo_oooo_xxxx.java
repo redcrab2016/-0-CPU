@@ -21,7 +21,7 @@ public class BS5MemoryCell_oooo_oooo_xxxx extends BS5MemoryCell_ccc_f {
         case "mov Rx, 0":               result = 0b1111_1100_0000; break;
         case "not Rx":                  result = 0b1111_1101_0000; break;
         case "and R0, Rx":              result = 0b1111_1110_0000; break;
-        case "or  R0, Rx":              result = 0b1111_1111_0000; break;
+        case "or R0, Rx":               result = 0b1111_1111_0000; break;
         default: throw new BS5Exception("Incorrect instruction '" + mnemonic + "' at line " + linenum);// Doh! Must never occur.
     }
     return result;

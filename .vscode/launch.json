@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "BS5asm",
+            "request": "launch",
+            "mainClass": "backslash.bs5.asm.BS5asm",
+            "projectName": "bs5asm"
+        },
+        {
+            "type": "java",
             "name": "BS3tinyc",
             "request": "launch",
             "mainClass": "backslash.bs3.tinyc.BS3tinyc",
