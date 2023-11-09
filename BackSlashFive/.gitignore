@@ -1,5 +1,7 @@
 !*.asm
 !*.inc
+*.bin
+*.rpt
 bs5_asm/target
 bs5_asm/src/main/java/backslash/bs5/asm/generated/*
 !*.g4
