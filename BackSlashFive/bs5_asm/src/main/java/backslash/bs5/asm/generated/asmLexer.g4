@@ -13,44 +13,44 @@ COLON:                    ':';
 COMMA:                    ',';
 DBLQUOTE:                 '"' -> pushMode(DBLQUOTESTRING) ; 
 
-Bs5_org:  'org' | 'ORG';  
-Bs5_dw:   'dw' | 'DW';
+Bs5_org:  'org' | 'ORG'      { setText(getText().toLowerCase());};  
+Bs5_dw:   'dw' | 'DW'        { setText(getText().toLowerCase());};
  
-Bs5_low:  'low' | 'LOW';
-Bs5_high: 'high' | 'HIGH';
+Bs5_low:  'low' | 'LOW'      { setText(getText().toLowerCase());};
+Bs5_high: 'high' | 'HIGH'    { setText(getText().toLowerCase());};
 
-Bs5_flag_c: [Cc];
+Bs5_flag_c: [Cc]             { setText(getText().toUpperCase());};
 
 // basic Mnemonic
-Bs5_mov:  'mov' | 'MOV'; 
-Bs5_add:  'add' | 'ADD';
-Bs5_sub:  'sub' | 'SUB';
-Bs5_and:  'and' | 'AND';
-Bs5_or:   'or'  | 'OR';
-Bs5_not:  'not' | 'NOT';
-Bs5_shl:  'shl' | 'SHL';
-Bs5_shr:  'shr' | 'SHR';
+Bs5_mov:  'mov' | 'MOV'      { setText(getText().toLowerCase());}; 
+Bs5_add:  'add' | 'ADD'      { setText(getText().toLowerCase());};
+Bs5_sub:  'sub' | 'SUB'      { setText(getText().toLowerCase());};
+Bs5_and:  'and' | 'AND'      { setText(getText().toLowerCase());};
+Bs5_or:   'or'  | 'OR'       { setText(getText().toLowerCase());};
+Bs5_not:  'not' | 'NOT'      { setText(getText().toLowerCase());};
+Bs5_shl:  'shl' | 'SHL'      { setText(getText().toLowerCase());};
+Bs5_shr:  'shr' | 'SHR'      { setText(getText().toLowerCase());};
 
-Bs5_cond_always: 'al' | 'AL';
-Bs5_cond_Cset: 'cs' | 'CS';
-Bs5_cond_Cclr: 'cc' | 'CC';
-Bs5_cond_Zset: 'zs' | 'ZS';
-Bs5_cond_Zclr: 'zc' | 'ZC';
-Bs5_cond_Xset: 'xs' | 'XS';
-Bs5_cond_Xclr: 'xc' | 'XC';
-Bs5_cond_never: 'ne' | 'NE' | 'no' | 'NO' { setText("ne");} ;
+Bs5_cond_always: 'al' | 'AL' { setText(getText().toLowerCase());};
+Bs5_cond_Cset: 'cs' | 'CS'   { setText(getText().toLowerCase());};
+Bs5_cond_Cclr: 'cc' | 'CC'   { setText(getText().toLowerCase());};
+Bs5_cond_Zset: 'zs' | 'ZS'   { setText(getText().toLowerCase());};
+Bs5_cond_Zclr: 'zc' | 'ZC'   { setText(getText().toLowerCase());};
+Bs5_cond_Xset: 'xs' | 'XS'   { setText(getText().toLowerCase());};
+Bs5_cond_Xclr: 'xc' | 'XC'   { setText(getText().toLowerCase());};
+Bs5_cond_never: ('ne' | 'NE' | 'no' | 'NO') { setText("ne");} ;
 
-Bs5_flag_unchanged: 'nf' | 'NF';
-Bs5_flag_changed: 'fl' | 'FL';
+Bs5_flag_unchanged: 'nf' | 'NF' { setText(getText().toLowerCase());};
+Bs5_flag_changed: 'fl' | 'FL'   { setText(getText().toLowerCase());};
 
-Bs5_label_ptr: 'ptr' | 'PTR';
-Bs5_label_loffset: 'loffset' | 'LOFFSET';
+Bs5_label_ptr: ('ptr' | 'PTR' | '@') { setText("@");};
+Bs5_label_loffset: 'loffset' | 'LOFFSET' { setText(getText().toLowerCase());};
 
-Bs5_reg0 : [rR] '0';
-Bs5_reg15: [rR] '15';
+Bs5_reg0 : [rR] '0' { setText(getText().toUpperCase());};   
+Bs5_reg15: [rR] '15' { setText(getText().toUpperCase());};
 
 Bs5_reg_1_14
-    : [rR]('1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'11'|'12'|'13'|'14');
+    : [rR]('1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'11'|'12'|'13'|'14') { setText(getText().toUpperCase());};
 
 
 

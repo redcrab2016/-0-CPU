@@ -133,3 +133,9 @@ or R5, 2048
 and R5, [-1]
 ;ccc f or Rx, [imm16]  ; (Rx != R0)
 or R5, [-32768]
+
+; Other basic test
+lastinstr:
+xs nf or R5, [ptr lastinstr]
+xc fl add R5, low ptr lastinstr
+ne nf mov low R5, low ptr lastinstr

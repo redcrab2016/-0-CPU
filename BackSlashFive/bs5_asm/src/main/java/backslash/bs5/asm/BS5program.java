@@ -90,10 +90,10 @@ public class BS5program {
                 List<String> lstCodeBlock;
                 String lineFormat = "%1$04X | %2$-" + String.valueOf(wordPerLine * 5) + "s| %3$s\n";
                 ps.println("Program:");
-                ps.printf("Addr | %1$-" + String.valueOf(wordPerLine * 5) + "s| Source \n", "Assembly");
+                ps.printf("Addr | %1$-" + String.valueOf(wordPerLine * 5) + "s| Line # : Parsed source code \n", "Assembly");
                 for (int line=1; line <= linenum; line++) { // for each source code line
                     if (sourcecode.get(line)!=null) { // we have source code at line
-                        codeline = sourcecode.get(line);
+                        codeline = String.format("%1$6d : %2$s", line, sourcecode.get(line));
                         lstCode = new ArrayList<BS5MemoryCell>();
                         // search memory cells corresponding to current code line
                         for (Entry<Integer,BS5MemoryCell> entry:bs5memoryMap.entrySet()) {
