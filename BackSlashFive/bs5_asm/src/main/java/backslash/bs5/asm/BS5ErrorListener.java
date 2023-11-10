@@ -5,13 +5,14 @@ import java.util.BitSet;
 import java.util.List;
 
 import org.antlr.v4.runtime.BaseErrorListener;
+//import org.antlr.v4.runtime.DiagnosticErrorListener;
 import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
 import org.antlr.v4.runtime.atn.ATNConfigSet;
 import org.antlr.v4.runtime.dfa.DFA;
 
-public class BS5ErrorListener extends BaseErrorListener  {
+public class BS5ErrorListener extends /*DiagnosticErrorListener*/ BaseErrorListener {
 
     private boolean hasError;
     private List<String> errorReport;

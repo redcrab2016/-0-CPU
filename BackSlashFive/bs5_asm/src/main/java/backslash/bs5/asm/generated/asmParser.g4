@@ -12,8 +12,6 @@ public BS5program prg = new BS5program();
 
 }
 
-
-
 program: statement+ EOF;
 
 statement: 
@@ -26,9 +24,9 @@ label:
 
 instruction
     : directive
-   // | bs5_imm16_instruction
     | bs5_core_instruction
-  //  | bs5_corex_instruction
+    | bs5_corex_instruction
+    | bs5_imm16_instruction
     ;
 
 directive
@@ -77,12 +75,12 @@ bs5_core_instruction
     // ccc f mov [Rx], Ry
     | bs5_cond? bs5_flag? 
       Bs5_mov OPEN_BRACKET rx=bs5_reg CLOSE_BRACKET COMMA ry=bs5_reg                { prg.asm_mov_atRx_Ry($bs5_cond.text, $bs5_flag.text, $rx.text, $ry.text); }
-    // ccc f mov low R0, imm8
+    // ccc f mov low R0, imm8 (imm8 != 0)
     | bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_low Bs5_reg0 COMMA numberUnsignedByte                             { prg.asm_mov_low_R0_imm8($bs5_cond.text, $bs5_flag.text, $numberUnsignedByte.immediat); }
-    // ccc f mov high R0, imm8
+      Bs5_mov Bs5_low Bs5_reg0 COMMA numberUnsignedByteNotZero                      { prg.asm_mov_low_R0_imm8($bs5_cond.text, $bs5_flag.text, $numberUnsignedByteNotZero.immediat); }
+    // ccc f mov high R0, imm8 (imm8 != 0)
     | bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_high Bs5_reg0 COMMA numberUnsignedByte                            { prg.asm_mov_high_R0_imm8($bs5_cond.text, $bs5_flag.text, $numberUnsignedByte.immediat); }
+      Bs5_mov Bs5_high Bs5_reg0 COMMA numberUnsignedByteNotZero                     { prg.asm_mov_high_R0_imm8($bs5_cond.text, $bs5_flag.text, $numberUnsignedByteNotZero.immediat); }
     // ccc f mov low R0, low Rx
     | bs5_cond? bs5_flag? 
       Bs5_mov Bs5_low Bs5_reg0 COMMA Bs5_low bs5_reg                                { prg.asm_mov_low_R0_low_Rx($bs5_cond.text, $bs5_flag.text, $bs5_reg.text); }
@@ -155,13 +153,12 @@ bs5_core_instruction
     // ccc f not Rx    
     | bs5_cond? bs5_flag? 
       Bs5_not bs5_reg                                                               { prg.asm_not_Rx($bs5_cond.text, $bs5_flag.text, $bs5_reg.text);}
-//    ;
-
+    ;
 
 // 12 CPU micro programs for register versatility (R0 is modified and can't be used as operand)
-//bs5_corex_instruction 
+bs5_corex_instruction 
     // ccc f mov low Rx, imm8 
-    /*:*/ | bs5_cond? bs5_flag? 
+    : bs5_cond? bs5_flag? 
       Bs5_mov Bs5_low bs5_reg_1_15 COMMA numberUnsignedByte                         { prg.asm_mov_low_Rx_imm8($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedByte.immediat);}
     // ccc f  mov high Rx, imm8
     | bs5_cond? bs5_flag? 
@@ -196,12 +193,13 @@ bs5_core_instruction
     // ccc f or  Rx, Ry (Rx != R0 and Ry != R0)
     | bs5_cond? bs5_flag? 
       Bs5_or rx=bs5_reg_1_15 COMMA ry=bs5_reg_1_15                                  { prg.asm_or_Rx_Ry($bs5_cond.text, $bs5_flag.text, $rx.text, $ry.text ); }
-//;
+    ;
+
 // 12 CPU micro programs for immediate 16 bits value 
 // ( R0 is modified and can't be used as operand, except for "mov R0, imm16" and "mov Rx, [imm16]" )
-//bs5_imm16_instruction
+bs5_imm16_instruction
     // ccc f mov Rx, imm16 (Rx != R0 and imm16 != 0)
-    /*:*/| bs5_cond? bs5_flag? 
+    : bs5_cond? bs5_flag? 
       Bs5_mov bs5_reg_1_15 COMMA number16bitsNotZero                                { prg.asm_mov_Rx_imm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bitsNotZero.immediat ); }
     // ccc f mov R0, imm16 ( imm16 != 0 )
     | bs5_cond? bs5_flag? 
@@ -214,10 +212,10 @@ bs5_core_instruction
       Bs5_sub bs5_reg_1_15 COMMA number16bitsNotQuad                                { prg.asm_sub_Rx_imm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bitsNotQuad.immediat ); }
     // ccc f mov Rx, [imm16] 
     | bs5_cond? bs5_flag? 
-      Bs5_sub bs5_reg COMMA OPEN_BRACKET number16bits CLOSE_BRACKET                 { prg.asm_mov_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg.text, $number16bits.immediat ); }
+      Bs5_mov bs5_reg COMMA OPEN_BRACKET number16bits CLOSE_BRACKET                 { prg.asm_mov_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg.text, $number16bits.immediat ); }
     // ccc f mov [imm16], Rx ( Rx != R0 )
     | bs5_cond? bs5_flag? 
-      Bs5_sub OPEN_BRACKET number16bits CLOSE_BRACKET COMMA bs5_reg_1_15            { prg.asm_mov_atImm16_Rx($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat );}
+      Bs5_mov OPEN_BRACKET number16bits CLOSE_BRACKET COMMA bs5_reg_1_15            { prg.asm_mov_atImm16_Rx($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat );}
     // ccc f add Rx, [imm16] ( Rx != R0 )
     | bs5_cond? bs5_flag? 
       Bs5_add bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET            { prg.asm_add_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }      
@@ -363,6 +361,20 @@ numberUnsignedByte
     |  Bs5_low Bs5_label_ptr Bs5_identifier     { $immediat = "L8:" + $Bs5_identifier.text; }
     |  Bs5_high Bs5_label_ptr Bs5_identifier    { $immediat = "H8:" + $Bs5_identifier.text; }
     ;
+
+numberUnsignedByteNotZero
+    returns [ String immediat ]
+    :  Bs5_num_hexa_byte                        { $immediat = $text; }
+    |  Bs5_num_hexa_quad                        { $immediat = $text; }
+    |  Bs5_num_hexa_one                         { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_byte            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_quad            { $immediat = $text; }
+    |  Bs5_num_decimal_unsigned_one             { $immediat = $text; }
+    |  Bs5_num_char                             { $immediat = $text; }
+    |  Bs5_low Bs5_label_ptr Bs5_identifier     { $immediat = "L8:" + $Bs5_identifier.text; }
+    |  Bs5_high Bs5_label_ptr Bs5_identifier    { $immediat = "H8:" + $Bs5_identifier.text; }
+    ;
+
 
 numberSignedByte
     returns [ String immediat ]
