@@ -371,12 +371,16 @@ ccc f mov Rx, imm16   ; (Rx != R0 and imm16 > 15)
 	al  nf mov high R0, high imm16
 	al  f  mov Rx, R0
 
-ccc f mov R0, imm16   ; ( imm16 != 0 )
+ccc f mov R0, imm16   ; ( imm16 > 15 )
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
 	al  nf mov low R0, low imm16
 	al  nf mov high R0, high imm16
 	al  f  mov R0,R0 ;   if f=fl otherwise no instruction
+or 
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc  f mov R0,R0 ;   if f=fl otherwise no instruction
 
 ccc f add Rx, imm16   ; (Rx != R0 and imm16 > 15)
 	ccc nf add R15, 1  ; if ccc != al
@@ -398,7 +402,6 @@ ccc f mov Rx, [imm16] ; ( Rx can be R0 )
 	al  nf mov low R0, low imm6
 	al  nf mov high R0, high imm16
 	al  f  mov Rx, [R0]
-
 
 ccc f mov [imm16], Rx ; ( Rx != R0 )
 	ccc nf add R15, 1  ; if ccc != al
@@ -449,11 +452,82 @@ ccc f and Rx, [imm16] ; (Rx != R0)
 ccc f or Rx, [imm16]  ; (Rx != R0)
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 5  ; if ccc != al
-	al  nf mov low R0, low imm6
+	al  nf mov low R0, low imm16
 	al  nf mov high R0, high imm16
 	al  nf mov R0, [R0]
 	al  f  or R0, Rx
 	al  nf mov Rx, R0
+
+56 Microprograms to handle stack (backward memory stacking, stack addr in R13, local context in stack addr in R12)
+  Push value into stack 4
+ccc f mov STACK, Rx
+	ccc nf sub R13,1
+	ccc f  mov [R13], Rx
+
+ccc f mov STACK, [Rx]
+	ccc nf sub R13, 1
+	ccc nf mov R0, [Rx]
+	ccc nf mov [R13], Rx
+
+ccc f mov STACK, imm16
+ccc f mov STACK, [imm16]
+  Pop value from stack 3
+ccc f mov Rx, STACK (if R15 then it is like a return from call procedure)
+ccc f mov [Rx], STACK
+ccc f mov [imm16], STACK
+  Call procedure  5
+ccc f mov STACK:R15, Rx
+ccc f mov STACK:R15, [Rx]
+ccc f mov STACK:R15, imm16
+ccc f mov STACK:R15, [imm16]
+ccc f add STACK:R15, simm8  (near address)
+   Write to stack/local context 24
+ccc f mov STACK:imm4, Rx
+ccc f mov STACK:imm4, imm16
+ccc f mov STACK:imm4, [Rx]
+ccc f mov STACK:imm4, [imm16]
+ccc f mov STACK:imm16, Rx
+ccc f mov STACK:imm16, imm16
+ccc f mov STACK:imm16, [Rx]
+ccc f mov STACK:imm16, [imm16]
+ccc f mov STACK:Rx, Ry
+ccc f mov STACK:Rx, imm16
+ccc f mov STACK:Rx, [Ry]
+ccc f mov STACK:Rx, [imm16]
+ccc f mov LOCAL:imm4, Rx
+ccc f mov LOCAL:imm4, imm16
+ccc f mov LOCAL:imm4, [Rx]
+ccc f mov LOCAL:imm4, [imm16]
+ccc f mov LOCAL:imm16, Rx
+ccc f mov LOCAL:imm16, imm16
+ccc f mov LOCAL:imm16, [Rx]
+ccc f mov LOCAL:imm16, [imm16]
+ccc f mov LOCAL:Rx, Ry
+ccc f mov LOCAL:Rx, imm16
+ccc f mov LOCAL:Rx, [Ry]
+ccc f mov LOCAL:Rx, [imm16]
+	Read from stack/local context 18
+ccc f mov Rx, STACK:imm4
+ccc f mov [Rx], STACK:imm4
+ccc f mov [imm16], STACK:imm4
+ccc f mov Rx, STACK:imm16
+ccc f mov [Rx], STACK:imm16
+ccc f mov [imm16], STACK:imm16
+ccc f mov Rx, STACK:Ry
+ccc f mov [Rx], STACK:Ry
+ccc f mov [imm16], STACK:Rx
+ccc f mov Rx, LOCAL:imm4
+ccc f mov [Rx], LOCAL:imm4
+ccc f mov [imm16], LOCAL:imm4
+ccc f mov Rx, LOCAL:imm16
+ccc f mov [Rx], LOCAL:imm16
+ccc f mov [imm16], LOCAL:imm16
+ccc f mov Rx, LOCAL:Ry
+ccc f mov [Rx], LOCAL:Ry
+ccc f mov [imm16], LOCAL:Rx
+	Local context / Stack context setting 2
+ccc f mov STACK, LOCAL  (mov R13, R12)
+ccc f mov LOCAL, STACK  (mov R12, R13)
 
 Example programs
 
