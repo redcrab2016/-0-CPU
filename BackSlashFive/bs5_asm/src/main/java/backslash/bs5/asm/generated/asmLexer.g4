@@ -10,41 +10,44 @@ CLOSE_BRACKET:            ']';
 OPEN_PARENS:              '('; 
 CLOSE_PARENS:             ')';
 COLON:                    ':';
-COMMA:                    ',';
+COMMA:                    ','     { setText(", "); };
 DBLQUOTE:                 '"' -> pushMode(DBLQUOTESTRING) ; 
 
-Bs5_org:  'org' | 'ORG'      { setText(getText().toLowerCase());};  
-Bs5_dw:   'dw' | 'DW'        { setText(getText().toLowerCase());};
+Bs5_org:  ('org' | 'ORG')         { setText(getText().toLowerCase() + " ");};  
+Bs5_dw:   ('dw' | 'DW')           { setText(getText().toLowerCase() + " ");};
  
-Bs5_low:  'low' | 'LOW'      { setText(getText().toLowerCase());};
-Bs5_high: 'high' | 'HIGH'    { setText(getText().toLowerCase());};
+Bs5_low:  ('low' | 'LOW')         { setText(getText().toLowerCase() + " ");};
+Bs5_high: ('high' | 'HIGH')       { setText(getText().toLowerCase() + " ");};
 
-Bs5_flag_c: [Cc]             { setText(getText().toUpperCase());};
+Bs5_flag_c: [Cc]                  { setText(getText().toUpperCase());};
 
 // basic Mnemonic
-Bs5_mov:  'mov' | 'MOV'      { setText(getText().toLowerCase());}; 
-Bs5_add:  'add' | 'ADD'      { setText(getText().toLowerCase());};
-Bs5_sub:  'sub' | 'SUB'      { setText(getText().toLowerCase());};
-Bs5_and:  'and' | 'AND'      { setText(getText().toLowerCase());};
-Bs5_or:   'or'  | 'OR'       { setText(getText().toLowerCase());};
-Bs5_not:  'not' | 'NOT'      { setText(getText().toLowerCase());};
-Bs5_shl:  'shl' | 'SHL'      { setText(getText().toLowerCase());};
-Bs5_shr:  'shr' | 'SHR'      { setText(getText().toLowerCase());};
+Bs5_mov:  ('mov' | 'MOV')         { setText(getText().toLowerCase() + " ");}; 
+Bs5_add:  ('add' | 'ADD')         { setText(getText().toLowerCase() + " ");};
+Bs5_sub:  ('sub' | 'SUB')         { setText(getText().toLowerCase() + " ");};
+Bs5_and:  ('and' | 'AND')         { setText(getText().toLowerCase() + " ");};
+Bs5_or:   ('or'  | 'OR')          { setText(getText().toLowerCase() + "  ");};
+Bs5_not:  ('not' | 'NOT')         { setText(getText().toLowerCase() + " ");};
+Bs5_shl:  ('shl' | 'SHL')         { setText(getText().toLowerCase() + " ");};
+Bs5_shr:  ('shr' | 'SHR')         { setText(getText().toLowerCase() + " ");};
 
-Bs5_cond_always: 'al' | 'AL' { setText(getText().toLowerCase());};
-Bs5_cond_Cset: 'cs' | 'CS'   { setText(getText().toLowerCase());};
-Bs5_cond_Cclr: 'cc' | 'CC'   { setText(getText().toLowerCase());};
-Bs5_cond_Zset: 'zs' | 'ZS'   { setText(getText().toLowerCase());};
-Bs5_cond_Zclr: 'zc' | 'ZC'   { setText(getText().toLowerCase());};
-Bs5_cond_Xset: 'xs' | 'XS'   { setText(getText().toLowerCase());};
-Bs5_cond_Xclr: 'xc' | 'XC'   { setText(getText().toLowerCase());};
-Bs5_cond_never: ('ne' | 'NE' | 'no' | 'NO') { setText("ne");} ;
+Bs5_cond_always: ('al' | 'AL')    { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Cset: ('cs' | 'CS')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Cclr: ('cc' | 'CC')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Zset: ('zs' | 'ZS')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Zclr: ('zc' | 'ZC')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Xset: ('xs' | 'XS')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Xclr: ('xc' | 'XC')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_never: ('ne' | 'NE' | 'no' | 'NO') { setText("ne ");} ;
 
-Bs5_flag_unchanged: 'nf' | 'NF' { setText(getText().toLowerCase());};
-Bs5_flag_changed: 'fl' | 'FL'   { setText(getText().toLowerCase());};
+Bs5_flag_unchanged: ('nf' | 'NF') { setText(getText().toLowerCase() + " ");};
+Bs5_flag_changed: ('fl' | 'FL')   { setText(getText().toLowerCase() + " ");};
 
 Bs5_label_ptr: ('ptr' | 'PTR' | '@') { setText("@");};
-Bs5_label_loffset: 'loffset' | 'LOFFSET' { setText(getText().toLowerCase());};
+Bs5_label_loffset: 'loffset' | 'LOFFSET' { setText(getText().toLowerCase() + " ");};
+
+Bs5_regPC: ('PC' | 'pc') { setText("R15"); } -> type(Bs5_reg15);
+Bs5_regFG: ('FLAG' | 'flag' | 'FG' | 'fg') { setText("R14"); } -> type(Bs5_reg_1_14);
 
 Bs5_reg0 : [rR] '0' { setText(getText().toUpperCase());};   
 Bs5_reg15: [rR] '15' { setText(getText().toUpperCase());};
@@ -157,8 +160,9 @@ Bs5nl
    : [\r\n]
    ;
 
+// single line comment starts with ';' or '//'
 Bs5comment
-   : ';' (~[\r\n])*
+   : (';'|'//') (~[\r\n])*
    ;
 
 Bs5WS

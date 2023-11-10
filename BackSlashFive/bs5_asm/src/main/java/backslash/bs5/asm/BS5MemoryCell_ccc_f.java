@@ -65,7 +65,7 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
 
     private int getvalue_ccc(String ccc) throws BS5Exception {
         int result = -1;
-        switch (ccc.toLowerCase()) {
+        switch (ccc.toLowerCase().trim()) {
             case "al": result = 0b000_0_0000_0000_0000; break;
             case "zs": result = 0b001_0_0000_0000_0000; break; 
             case "zc": result = 0b010_0_0000_0000_0000; break;
@@ -81,7 +81,7 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
 
     private int getvalue_f(String f) throws BS5Exception {
         int result = -1;
-        switch (f.toLowerCase()) {
+        switch (f.toLowerCase().trim()) {
             case "nf": result = 0b000_0_0000_0000_0000; break;
             case "fl": result = 0b000_1_0000_0000_0000; break; 
             default: throw new BS5Exception("Incorrect flag code '" + f + "' at line " + linenum);

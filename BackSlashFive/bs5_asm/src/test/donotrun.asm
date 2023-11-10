@@ -1,6 +1,6 @@
-; this is a source code not intended to be executed
-; The aim is to check the assembly result
-;instruction per mnemonic : 31 instructions
+// This is a source code not intended to be executed
+// The aim is to check the assembly result
+; 31 core instructions
 ;	mov (Z flag )
 ;		mov Rx, 0
 mov R0, 0
