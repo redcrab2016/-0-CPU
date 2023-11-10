@@ -464,10 +464,10 @@ ccc f mov STACK, Rx
 	ccc nf sub R13,1
 	ccc f  mov [R13], Rx
 
-ccc f mov STACK, [Rx]
+ccc f mov STACK, [Rx]  (R0 modified)
 	ccc nf sub R13, 1
 	ccc nf mov R0, [Rx]
-	ccc nf mov [R13], Rx
+	ccc nf mov [R13], R0
 
 ccc f mov STACK, imm16
 ccc f mov STACK, [imm16]
