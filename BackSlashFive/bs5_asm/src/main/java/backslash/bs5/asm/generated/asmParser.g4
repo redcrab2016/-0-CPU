@@ -230,7 +230,7 @@ bs5_imm16_instruction
       Bs5_or bs5_reg_1_15 COMMA number16bits                                        { prg.asm_or_Rx_imm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
     // ccc f and Rx, [imm16] (Rx != R0)
     | bs5_cond? bs5_flag? 
-      Bs5_and bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET            { prg.asm_add_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
+      Bs5_and bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET            { prg.asm_and_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
     // ccc f or Rx, [imm16] (Rx != R0)
     | bs5_cond? bs5_flag? 
       Bs5_or bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET             { prg.asm_or_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
