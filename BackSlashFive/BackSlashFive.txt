@@ -7,7 +7,7 @@ Can be implemented for same address space for program, data and I/O
 or for seperated program and data, I/O address space (no mix betwen data and program, not possible to have self modified program)
 
 registers: - R0 to R15 (designated by 4 bits)
-R0  : 0000 : general most versatile (every instruction can use R0)
+R0  : 0000 : general most versatile (every core instruction can use R0) (used / modified in most microprograms / mostly forbidden to be used as microprogram operand)
 R1  : 0001 : general
 R2  : 0010 : general
 R3  : 0011 : general
@@ -19,8 +19,8 @@ R8  : 1000 : general
 R9  : 1001 : general
 R10 : 1010 : general
 R11 : 1011 : general
-R12 : 1100 : general
-R13 : 1101 : general
+R12 : 1100 :LP/BP: general or base/local pointer in stack dedicated microprograms
+R13 : 1101 :SP: general or stack pointer in stack dedicated microprograms
 R14 : 1110 :FL: 16 bits flags  KIHR---- -----XZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
 R15 : 1111 :PC: Program address
 There is two set of R0 to R15 registers: one when flag K=1 (interrupt handling), 	another one when K=0 (normal execution)
@@ -102,7 +102,7 @@ conditions: ccc
 100	cc or lo	Unsigned lower (or carry clear).			C==0
 101     xs		custom bit set                                          X==1
 110     xc              custom bit clear                                        X==0
-111	no		never executed (NOP)					No flag tested
+111	no		    never executed (NOP)					No flag tested
 
 flag modified : f
 if 0 then no flag is modified by the instruction, 1 flag(s) modified by the instruction
@@ -265,9 +265,11 @@ ccc f 1111 1110 xxxx
 ccc f 1111 1111 xxxx
 	or  R0, Rx
 
-Assembly micro program for missing register versatility (Rx with x != 0)
-Example of missing versatility :
-	  mov low R0, imm8 ; doable 
+Assembly micro program.
+The CPU understand only 31 instruction. But the assembler is completed with other instructions (macro alike)
+to simulate a more extensive instruction set.
+Example of :
+	  mov low R0, imm8 ; doable with core instruction set
 	  mov low R1, imm8 ; not doable by a single instruction
 
 The two first lines of each micro progam below
@@ -275,7 +277,7 @@ The two first lines of each micro progam below
 	al  nf add R15, 3 
 does exist only if ccc != al.
 
-each micro program below do modify register R0 ( at end of each micro program R0 == Rx )
+Most micro programs below do modify register R0 
 
 ccc f mov low Rx, imm8 
 	ccc nf add R15, 1  ; if ccc != al
@@ -459,7 +461,7 @@ ccc f or Rx, [imm16]  ; (Rx != R0)
 	al  nf mov Rx, R0
 
 56 Microprograms to handle stack (backward memory stacking, stack addr in R13, local context in stack addr in R12)
-  Push value into stack 4
+  Push value into stack (4 microprograms)
 ccc f mov STACK, Rx
 	ccc nf sub R13,1
 	ccc f  mov [R13], Rx
@@ -469,25 +471,25 @@ ccc f mov STACK, [Rx]  (R0 modified)
 	ccc nf mov R0, [Rx]
 	ccc f  mov [R13], R0
 
-ccc f mov STACK, imm16
+ccc f mov STACK, imm16 (R0 modified)
 	ccc nf sub R13, 1
 	ccc nf mov low R0, low imm16
 	ccc nf mov high R0, high imm16
 	ccc f  mov [R13], R0
 
-ccc f mov STACK, [imm16]
+ccc f mov STACK, [imm16] ( R0 modified)
 	ccc nf sub R13, 1
 	ccc nf mov low R0, low imm16
 	ccc nf mov high R0, high imm16
 	ccc nf mov R0, [R0]
 	ccc f  mov [R13], R0
 
-  Pop value from stack 3
+  Pop value from stack (3 microprograms)
 ccc f mov Rx, STACK (if R15 then it is like a return from call procedure)
 	ccc f mov Rx, [R13]
 	ccc nf add R13, 1
 
-ccc f mov [Rx], STACK ( Rx != R0)
+ccc f mov [Rx], STACK ( Rx != R0, R0 modified)
 	ccc nf mov R0, [R13]
 	ccc nf add R13,1
 	ccc f mov [Rx], R0
@@ -505,7 +507,7 @@ ccc f mov [imm16], STACK (R0 modified)
 	ccc nf add R13, 1
 	ccc nf add R13, 1
 
-  Call procedure  5
+  Call procedure  (5 microprograms)
 ccc f mov STACK:R15, Rx (Rx != R0 & Rx != R15)
 	ccc nf mov R0, R15
 	ccc nf add R0, 4
@@ -546,13 +548,13 @@ ccc f add STACK:R15, simm8  (near address, R0 modified)
 	ccc nf mov [R13], R0
 	ccc f  add F15, simm8	
 
-   Write to stack/local context 24
+   Write to stack/local context (24 microprograms)
 ccc f mov STACK:imm4, Rx (Rx != R0, R0 modified)
 	ccc nf mov R0, R13
 	ccc nf add R0, imm4
 	ccc f  mov [R0], Rx
 
-ccc f mov STACK:imm4, imm16
+ccc f mov STACK:imm4, imm16 ( R0 modified)
 	ccc nf mov R0, R13
 	ccc nf add R0, imm4
 	ccc nf sub R13, 1
@@ -564,7 +566,7 @@ ccc f mov STACK:imm4, imm16
 	ccc nf mov R1, [R13]
 	ccc nf add R13, 1
 
-ccc f mov STACK:imm4, [Rx]
+ccc f mov STACK:imm4, [Rx] (Rx != R0 , R0 modified)
 	ccc nf mov R0, R13
 	ccc nf add R0, imm4
 	ccc nf sub R13, 1
@@ -575,7 +577,7 @@ ccc f mov STACK:imm4, [Rx]
 	ccc nf mov R1, [R13]
 	ccc nf add R13, 1
 
-ccc f mov STACK:imm4, [imm16]
+ccc f mov STACK:imm4, [imm16] (R0 modified)
 	ccc nf mov R0, R13
 	ccc nf add R0, imm4
 	ccc nf sub R13, 1
@@ -588,13 +590,13 @@ ccc f mov STACK:imm4, [imm16]
 	ccc nf mov R1, [R13]
 	ccc nf add R13, 1
 
-ccc f mov STACK:imm16, Rx
+ccc f mov STACK:imm16, Rx (Rx != R0 , R0 modified)
 	ccc nf mov low R0, low imm16
 	ccc nf mov high R0, high imm16
 	ccc nf add R0, R13
 	ccc f  mov [R0], Rx
 
-ccc f mov STACK:imm16a, imm16b
+ccc f mov STACK:imm16a, imm16b ( R0 modified)
 	ccc nf mov low R0, low imm16a
 	ccc nf mov high R0, high imm16a
 	ccc nf add R0, R13
@@ -607,7 +609,7 @@ ccc f mov STACK:imm16a, imm16b
 	ccc nf mov R1, [R13]
 	ccc nf add R13, 1
 
-ccc f mov STACK:imm16, [Rx]
+ccc f mov STACK:imm16, [Rx] (Rx != R0 , R0 modified)
 	ccc nf mov low R0, low imm16a
 	ccc nf mov high R0, high imm16a
 	ccc nf add R0, R13
@@ -619,7 +621,7 @@ ccc f mov STACK:imm16, [Rx]
 	ccc nf mov R1, [R13]
 	ccc nf add R13, 1
 
-ccc f mov STACK:imm16a, [imm16b]
+ccc f mov STACK:imm16a, [imm16b] ( R0 modified)
 	ccc nf mov low R0, low imm16a
 	ccc nf mov high R0, high imm16a
 	ccc nf add R0, R13
@@ -638,7 +640,7 @@ ccc f mov STACK:Rx, Ry  (Rx and Ry != R15 and R0)
 	ccc nf add R0, R13
 	ccc f  mov [R0], Ry
 
-ccc f mov STACK:Rx, imm16
+ccc f mov STACK:Rx, imm16 (Rx != R0 and R15, R0 modified)
 	ccc nf mov R0, R13
 	ccc nf add R0, Rx
 	ccc nf sub R13, 1
@@ -650,7 +652,7 @@ ccc f mov STACK:Rx, imm16
 	ccc nf mov R1, [R13]
 	ccc nf add R13, 1
 
-ccc f mov STACK:Rx, [Ry]
+ccc f mov STACK:Rx, [Ry] (Rx,Ry != R0 , R0 modified)
 	ccc nf mov R0, R13
 	ccc nf add R0, Rx
 	ccc nf sub R13, 1
@@ -661,7 +663,7 @@ ccc f mov STACK:Rx, [Ry]
 	ccc nf mov R1, [R13]
 	ccc nf add R13, 1
 
-ccc f mov STACK:Rx, [imm16]
+ccc f mov STACK:Rx, [imm16] (Rx != R0 , R0 modified)
 	ccc nf mov R0, R13
 	ccc nf add R0, Rx
 	ccc nf sub R13, 1
@@ -674,40 +676,292 @@ ccc f mov STACK:Rx, [imm16]
 	ccc nf mov R1, [R13]
 	ccc nf add R13, 1
 
-ccc f mov LOCAL:imm4, Rx
-ccc f mov LOCAL:imm4, imm16
-ccc f mov LOCAL:imm4, [Rx]
-ccc f mov LOCAL:imm4, [imm16]
-ccc f mov LOCAL:imm16, Rx
-ccc f mov LOCAL:imm16, imm16
-ccc f mov LOCAL:imm16, [Rx]
-ccc f mov LOCAL:imm16, [imm16]
-ccc f mov LOCAL:Rx, Ry
-ccc f mov LOCAL:Rx, imm16
-ccc f mov LOCAL:Rx, [Ry]
-ccc f mov LOCAL:Rx, [imm16]
-	Read from stack/local context 18
-ccc f mov Rx, STACK:imm4
-ccc f mov [Rx], STACK:imm4
-ccc f mov [imm16], STACK:imm4
-ccc f mov Rx, STACK:imm16
-ccc f mov [Rx], STACK:imm16
-ccc f mov [imm16], STACK:imm16
-ccc f mov Rx, STACK:Ry
-ccc f mov [Rx], STACK:Ry
+ccc f mov LOCAL:imm4, Rx (Rx != R0, R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, imm4
+	ccc f  mov [R0], Rx
+
+ccc f mov LOCAL:imm4, imm16 ( R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, imm4
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+ccc f mov LOCAL:imm4, [Rx] (Rx != R0 , R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, imm4
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov R0, [Rx]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+ccc f mov LOCAL:imm4, [imm16] ( R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, imm4
+	ccc nf sub R13, 1
+	ccc nf [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16	
+	ccc nf mov R0, [R0]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+ccc f mov LOCAL:imm16, Rx (Rx != R0 , R0 modified)
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc nf add R0, R12
+	ccc f  mov [R0], Rx
+
+ccc f mov LOCAL:imm16a, imm16b ( R0 modified)
+	ccc nf mov low R0, low imm16a
+	ccc nf mov high R0, high imm16a
+	ccc nf add R0, R12
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16b
+	ccc nf mov high R0, high imm16b	
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+ccc f mov LOCAL:imm16, [Rx] (Rx != R0 , R0 modified)
+	ccc nf mov low R0, low imm16a
+	ccc nf mov high R0, high imm16a
+	ccc nf add R0, R12
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov R0, [Rx]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+ccc f mov LOCAL:imm16a, [imm16b] ( R0 modified)
+	ccc nf mov low R0, low imm16a
+	ccc nf mov high R0, high imm16a
+	ccc nf add R0, R12
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16b
+	ccc nf mov high R0, high imm16b	
+	ccc nf mov R0, [R0]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+ccc f mov LOCAL:Rx, Ry  (Rx and Ry != R15 and R0)
+	ccc nf mov R0, Rx
+	ccc nf add R0, R12
+	ccc f  mov [R0], Ry
+
+ccc f mov LOCAL:Rx, imm16 (Rx != R0 , R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, Rx
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+ccc f mov LOCAL:Rx, [Ry] (Rx,Ry != R0 , R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, Rx
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov R0, [Ry]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+ccc f mov LOCAL:Rx, [imm16] (Rx != R0 , R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, Rx
+	ccc nf sub R13, 1
+	ccc nf [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16	
+	ccc nf mov R0, [R0]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+	Read from stack/local context (18 microprograms)
+ccc f mov Rx, STACK:imm4 (Rx != R0 , R0 modified)
+	ccc nf mov R0, R13
+	ccc nf add R0, imm4
+	ccc f mov Rx, [R0]
+
+ccc f mov [Rx], STACK:imm4 (Rx != R0 , R0 modified)
+	ccc nf mov R0, R13
+	ccc nf add R0, imm4
+	ccc nf mov R0, [R0]
+	ccc f  mov [Rx], R0
+
+ccc f mov [imm16], STACK:imm4 ( R0 modified)
+	ccc nf mov R0, R13
+	ccc nf add R0, imm4
+	ccc nf mov R0, [R0]
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc f  mov [R0], R1
+	ccc nf mov R1,[R13]
+	ccc nf add R13, 1
+
+ccc f mov Rx, STACK:imm16 (Rx != R0 , R0 modified)
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc nf add R0, R13
+	ccc f mov Rx, [R0]
+
+ccc f mov [Rx], STACK:imm16 (Rx != R0 , R0 modified)
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc nf add R0, R13
+	ccc nf mov R0, [R0]
+	ccc f  mov [Rx], R0
+
+ccc f mov [imm16a], STACK:imm16b ( R0 modified)
+	ccc nf mov low R0, low imm16b
+	ccc nf mov high R0, high imm16b
+	ccc nf add R0, R13
+	ccc nf mov R0, [R0]
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16a
+	ccc nf mov high R0, high imm16a
+	ccc f  mov [R0], R1
+	ccc nf mov R1,[R13]
+	ccc nf add R13, 1
+
+ccc f mov Rx, STACK:Ry (Rx,Ry != R0 , R0 modified)
+	ccc nf mov R0, R13
+	ccc nf add R0, Ry
+	ccc nf mov R0, [R0]
+	ccc f  mov Rx, R0
+
+ccc f mov [Rx], STACK:Ry (Rx,Ry != R0 , R0 modified)
+	ccc nf mov R0, R13
+	ccc nf add R0, Ry
+	ccc nf mov R0, [R0]
+	ccc f  mov [Rx], R0
+
 ccc f mov [imm16], STACK:Rx
-ccc f mov Rx, LOCAL:imm4
-ccc f mov [Rx], LOCAL:imm4
-ccc f mov [imm16], LOCAL:imm4
-ccc f mov Rx, LOCAL:imm16
-ccc f mov [Rx], LOCAL:imm16
-ccc f mov [imm16], LOCAL:imm16
-ccc f mov Rx, LOCAL:Ry
-ccc f mov [Rx], LOCAL:Ry
-ccc f mov [imm16], LOCAL:Rx
-	Local context / Stack context setting 2
-ccc f mov STACK, LOCAL  (mov R13, R12)
-ccc f mov LOCAL, STACK  (mov R12, R13)
+	ccc nf mov low R0, Rx
+	ccc nf add R0, R13
+	ccc nf mov R0, [R0]
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc f  mov [R0], R1
+	ccc nf mov R1,[R13]
+	ccc nf add R13, 1
+
+ccc f mov Rx, LOCAL:imm4 (Rx != R0 , R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, imm4
+	ccc f mov Rx, [R0]
+
+ccc f mov [Rx], LOCAL:imm4 (Rx != R0 , R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, imm4
+	ccc nf mov R0, [R0]
+	ccc f  mov [Rx], R0
+
+ccc f mov [imm16], LOCAL:imm4 (R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, imm4
+	ccc nf mov R0, [R0]
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc f  mov [R0], R1
+	ccc nf mov R1,[R13]
+	ccc nf add R13, 1
+
+ccc f mov Rx, LOCAL:imm16 (Rx != R0 , R0 modified)
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc nf add R0, R12
+	ccc f mov Rx, [R0]
+
+ccc f mov [Rx], LOCAL:imm16 (Rx != R0 , R0 modified)
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc nf add R0, R12
+	ccc nf mov R0, [R0]
+	ccc f  mov [Rx], R0
+
+ccc f mov [imm16a], LOCAL:imm16b ( R0 modified)
+	ccc nf mov low R0, low imm16b
+	ccc nf mov high R0, high imm16b
+	ccc nf add R0, R12
+	ccc nf mov R0, [R0]
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16a
+	ccc nf mov high R0, high imm16a
+	ccc f  mov [R0], R1
+	ccc nf mov R1,[R13]
+	ccc nf add R13, 1
+
+ccc f mov Rx, LOCAL:Ry (Rx,Ry != R0 , R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, Ry
+	ccc nf mov R0, [R0]
+	ccc f  mov Rx, R0
+
+ccc f mov [Rx], LOCAL:Ry (Rx,Ry != R0 , R0 modified)
+	ccc nf mov R0, R12
+	ccc nf add R0, Ry
+	ccc nf mov R0, [R0]
+	ccc f  mov [Rx], R0
+
+ccc f mov [imm16], LOCAL:Rx (Rx != R0 , R0 modified)
+	ccc nf mov low R0, Rx
+	ccc nf add R0, R12
+	ccc nf mov R0, [R0]
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc f  mov [R0], R1
+	ccc nf mov R1,[R13]
+	ccc nf add R13, 1
+
+	Local context / Stack context setting (2 microprograms)
+ccc f mov STACK, LOCAL 
+	ccc f mov R13, R12
+
+ccc f mov LOCAL, STACK 
+	ccc f mov R12, R13
 
 Example programs
 
@@ -785,19 +1039,19 @@ Example programs
   bootstrap (template) for normal and interrupt execution (with branching if interrupt due to external signal or program)
  	org 0 ; start for normal and interrupt. at reset time
 	al nf mov C, R14:15  ; C flag <= K flag
-	cs nf add R15, byte offset interrupt; if we'are in interrupt context go to interrupt handling
+	cs nf add R15, loffset interrupt; if we'are in interrupt context go to interrupt handling
 	; from here we're not in interrupt context, then long jump to start of normal code
-	al nf mov low R0, low offset normalexecution
-	al nf mov high R0, high offset normalexecution
+	al nf mov low R0, low ptr normalexecution
+	al nf mov high R0, high ptr normalexecution
 	al nf mov R15, R0 ; long jump to the normal execution
 
 ; interupt codes : branching if it is external or program interrupt
 ; code below until "normalexecution" label in run under interrupt context only
 interrupt:
 	al nf mov C, R14:14	; C flag <= I flag
-	cc nf add R15, byte offset programinterrupt ; if interrupt due to program
-	al nf mov low R0, low addr externalinterrupt
-	al nf mov high R0, high addr externalinterrupt
+	cc nf add R15, loffset programinterrupt ; if interrupt due to program
+	al nf mov low R0, low ptr externalinterrupt
+	al nf mov high R0, high ptr externalinterrupt
 	al nf mov R15, R0 ; long jump to the external interrupt code
 
 programinterrupt: ; program interrupt
@@ -810,8 +1064,8 @@ programinterrupt: ; program interrupt
 	al nf mov R14:15, 0 ; end of interrupt (switch to normal context)
 	; from here the code is executed when returning in interrupt context
 	; long jump to "interrupt" label
-	al nf mov low R0, low addr interrupt
-	al nf mov high R0, high addr interrupt
+	al nf mov low R0, low ptr interrupt
+	al nf mov high R0, high ptr interrupt
 	al nf mov R15, R0 ; long jump to the interrupt start
 
 externalinterrupt: ; interrupt due to external signal
@@ -824,60 +1078,12 @@ externalinterrupt: ; interrupt due to external signal
 	al nf mov R14:15, 0; end of interrupt (switch to normal context)
 	; from here the code is executed when returning in interrupt context
 	; long jump to "interrupt" label
-	al nf mov low R0, low addr interrupt
-	al nf mov high R0, high addr interrupt
+	al nf mov low R0, low ptr interrupt
+	al nf mov high R0, high ptr interrupt
 	al nf mov R15, R0 ; long jump to the interrupt start
 
 ; code below is run under normal context only
 normalexecution:
 	... 
-	... ; place here normal excution code
+	... ; place here normal execution code
 	...
-
-
-Examples macro (code template with parameter)
-	; macros for stack when R13 is stack pointer, R12 as base pointer
-	ccc f push Rx
-		ccc nf sub R13, 1
-		ccc f  mov [R13], Rx
-
-	ccc f pop Rx
-		ccc f  mov Rx, [R13]
-		ccc nf add R13, 1
-
-	ccc f drop imm4		
-		ccc nf add R13, imm4
-
-	ccc f dup
-		ccc nf sub R13, 2
-		ccc nf mov [R13], R0
-		ccc nf add R13, 2
-		ccc f mov R0, [R13]
-		ccc nf sub R13, 1
-		ccc nf mov [R13], R0
-		ccc nf sub R13, 1
-		ccc nf mov R0, [R13]
-		ccc nf add R13, 1
-		
-	ccc f head Rx, imm4
-		ccc nf mov R0, R13
-		ccc nf add R0, imm4
-		ccc f mov Rx, [R0]
-
-	ccc f base Rx, imm4
-		ccc nf mov R0, R12
-		ccc nf add R0, imm4
-		ccc f mov Rx, [R0]
-
-	ccc f setbase 
-		ccc f mov R12, R13
-
-	ccc f call Rx
-		ccc nf mov R0, R15
-		ccc nf add R0, 3
-		ccc nf push R0
-		ccc nf mov R15, Rx
-		
-	ccc f ret
-		ccc nf pop R0
-		ccc nf mov R15, R0
