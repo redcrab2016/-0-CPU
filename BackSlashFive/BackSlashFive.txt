@@ -539,7 +539,7 @@ ccc f mov STACK:R15, [imm16] (R0 modified)
 	ccc nf mov R0, [R0]
 	ccc f  mov R15, R0
 
-ccc f add STACK:R15, simm8  (near address)
+ccc f add STACK:R15, simm8  (near address, R0 modified)
 	ccc nf mov R0, R15
 	ccc nf add R0, 4
 	ccc nf sub R13, 1
@@ -547,18 +547,133 @@ ccc f add STACK:R15, simm8  (near address)
 	ccc f  add F15, simm8	
 
    Write to stack/local context 24
-ccc f mov STACK:imm4, Rx
+ccc f mov STACK:imm4, Rx (Rx != R0, R0 modified)
+	ccc nf mov R0, R13
+	ccc nf add R0, imm4
+	ccc f  mov [R0], Rx
+
 ccc f mov STACK:imm4, imm16
+	ccc nf mov R0, R13
+	ccc nf add R0, imm4
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
 ccc f mov STACK:imm4, [Rx]
+	ccc nf mov R0, R13
+	ccc nf add R0, imm4
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov R0, [Rx]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
 ccc f mov STACK:imm4, [imm16]
+	ccc nf mov R0, R13
+	ccc nf add R0, imm4
+	ccc nf sub R13, 1
+	ccc nf [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16	
+	ccc nf mov R0, [R0]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
 ccc f mov STACK:imm16, Rx
-ccc f mov STACK:imm16, imm16
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc nf add R0, R13
+	ccc f  mov [R0], Rx
+
+ccc f mov STACK:imm16a, imm16b
+	ccc nf mov low R0, low imm16a
+	ccc nf mov high R0, high imm16a
+	ccc nf add R0, R13
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16b
+	ccc nf mov high R0, high imm16b	
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
 ccc f mov STACK:imm16, [Rx]
-ccc f mov STACK:imm16, [imm16]
-ccc f mov STACK:Rx, Ry
+	ccc nf mov low R0, low imm16a
+	ccc nf mov high R0, high imm16a
+	ccc nf add R0, R13
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov R0, [Rx]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+ccc f mov STACK:imm16a, [imm16b]
+	ccc nf mov low R0, low imm16a
+	ccc nf mov high R0, high imm16a
+	ccc nf add R0, R13
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16b
+	ccc nf mov high R0, high imm16b	
+	ccc nf mov R0, [R0]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+ccc f mov STACK:Rx, Ry  (Rx and Ry != R15 and R0)
+	ccc nf mov R0, Rx
+	ccc nf add R0, R13
+	ccc f  mov [R0], Ry
+
 ccc f mov STACK:Rx, imm16
+	ccc nf mov R0, R13
+	ccc nf add R0, Rx
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
 ccc f mov STACK:Rx, [Ry]
+	ccc nf mov R0, R13
+	ccc nf add R0, Rx
+	ccc nf sub R13, 1
+	ccc nf mov [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov R0, [Ry]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
 ccc f mov STACK:Rx, [imm16]
+	ccc nf mov R0, R13
+	ccc nf add R0, Rx
+	ccc nf sub R13, 1
+	ccc nf [R13], R1
+	ccc nf mov R1, R0
+	ccc nf mov low R0, low imm16
+	ccc nf mov high R0, high imm16	
+	ccc nf mov R0, [R0]
+	ccc f  mov [R1], R0
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
 ccc f mov LOCAL:imm4, Rx
 ccc f mov LOCAL:imm4, imm16
 ccc f mov LOCAL:imm4, [Rx]
