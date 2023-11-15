@@ -76,7 +76,7 @@ Program counter R15:PC
    Same instruction in interrupt context (flag K=1) get stuck forever the cpu by repeating endlessly the instruction.
 
 
-Instruction structure: 16 bits (65536 possible instruction execution: Each value get a valid meaning )
+Instruction structure: 16 bits (65536 possible instructions: Each value get a valid meaning )
 ccc f oooo yyyy xxxx  2 registers parameters
 ccc f oooo iiii iiii  1 unisgned byte parameter
 ccc f oooo siii iiii  1 signed byte parameter
@@ -95,14 +95,20 @@ iiii iiii is the 8 bits of an immediate unsigned integer
 siii iiii is the 8 bits of an immediate signed integer
 
 conditions: ccc
-000	al      	Always executed.					No flag tested.
-001	eq or zs	Equal.							Z==1
-010	ne or zc	Not equal.						Z==0
-011	cs or hs	Unsigned higher or same (or carry set).			C==1
-100	cc or lo	Unsigned lower (or carry clear).			C==0
-101     xs		custom bit set                                          X==1
-110     xc              custom bit clear                                        X==0
-111	no		    never executed (NOP)					No flag tested
+000	al          Always executed.                          No flag tested.
+001	eq or zs    Equal.                                    Z==1
+010	ne or zc    Not equal.                                Z==0
+011	cs or hs    Unsigned higher or same (or carry set).   C==1
+100	cc or lo    Unsigned lower (or carry clear).          C==0
+101 xs          custom bit set                            X==1
+110 xc          custom bit clear                          X==0
+111	no		    never executed (NOP)*                     No flag tested
+
+* intruction executed but result is not written back.
+  If instruction flag is fl then flags are modified.
+  example: no fl sub R2, R3  ; z,c flags modified but R2 is not modified
+  A no operation (nop) is doable by the combination of 'no' with 'nf'
+  example: no nf sub R2, R3  ; operation executed but nothing is modified.
 
 flag modified : f
 if 0 then no flag is modified by the instruction, 1 flag(s) modified by the instruction
@@ -265,12 +271,11 @@ ccc f 1111 1110 xxxx
 ccc f 1111 1111 xxxx
 	or  R0, Rx
 
+==================================================================================
 Assembly micro program.
-The CPU understand only 31 instruction. But the assembler is completed with other instructions (macro alike)
-to simulate a more extensive instruction set.
-Example of :
-	  mov low R0, imm8 ; doable with core instruction set
-	  mov low R1, imm8 ; not doable by a single instruction
+The CPU understand only 31 instructions. But the assembler is completed with other instructions (macro alike)
+to simulate a more extensive instruction set. Each extended instruction (microprogram) are expressed by using only the existing 
+8 mnemonics.
 
 The two first lines of each micro progam below
 	ccc nf add R15, 1 
@@ -279,7 +284,12 @@ does exist only if ccc != al.
 
 Most micro programs below do modify register R0 
 
-ccc f mov low Rx, imm8 
+Microprograms for registry versatility
+Example of missing versatility:
+	  mov low R0, imm8 ; doable with core instruction set
+	  mov low R1, imm8 ; undoable by a single core instruction but a sequence of several instructions.
+
+ccc f mov low Rx, imm8  
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
 	al  nf mov R0, Rx
@@ -460,7 +470,7 @@ ccc f or Rx, [imm16]  ; (Rx != R0)
 	al  f  or R0, Rx
 	al  nf mov Rx, R0
 
-56 Microprograms to handle stack (backward memory stacking, stack addr in R13, local context in stack addr in R12)
+63 Microprograms to handle stack (backward memory stacking, stack addr in R13, local context in stack addr in R12)
   Push value into stack (4 microprograms)
 ccc f mov STACK, Rx
 	ccc nf sub R13,1
@@ -963,6 +973,59 @@ ccc f mov STACK, LOCAL
 ccc f mov LOCAL, STACK 
 	ccc f mov R12, R13
 
+	Standard instructions (add, sub, shl, shr, and, or , not) by stack (7 microprograms)
+ccc f add STACK
+	ccc nf mov R0, [R13]
+	ccc nf add R13, 1
+	ccc  f add R0, [R13]
+	ccc nf mov [R13], R0
+
+ccc f sub STACK
+	ccc nf mov R0, [R13]
+	ccc nf add R13, 1
+	ccc  f sub R0, [R13]
+	ccc nf mov [R13], R0
+
+ccc f shl STACK, imm4
+	ccc nf mov R0, [13]
+	ccc f  shl R0, imm4
+	ccc nf mov [R13], R0
+
+ccc f shr STACK, imm4
+	ccc nf mov R0, [13]
+	ccc f  shr R0, imm4
+	ccc nf mov [R13], R0
+
+ccc f and STACK
+	ccc nf add R13, 1
+	ccc nf mov R0, [R13]
+	ccc nf mov [R13], R1
+	ccc nf add R13, 1
+	ccc nf mov R1, [R13]
+	ccc f  and R0, R1
+	ccc nf mov [R13], R0
+	ccc nf sub R13, 1
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+
+ccc f or STACK
+	ccc nf add R13, 1
+	ccc nf mov R0, [R13]
+	ccc nf mov [R13], R1
+	ccc nf add R13, 1
+	ccc nf mov R1, [R13]
+	ccc f  or  R0, R1
+	ccc nf mov [R13], R0
+	ccc nf sub R13, 1
+	ccc nf mov R1, [R13]
+	ccc nf add R13, 1
+	
+ccc f not STACK
+	ccc nf R0, [R13]
+	ccc f  not R0
+	ccc nf [R13], R0
+
+==================================================================================
 Example programs
 
   Example #1
