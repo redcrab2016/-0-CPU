@@ -1,0 +1,233 @@
+Backslash 6 : 16 bit words simple CPU
+	8 registers of 16 bits each
+	64 KiW 65536 addresses of 16 bits each (word)
+	16 conditions based on flags
+
+Registers
+R0 General
+R1 General
+R2 General
+R3 General
+R4 General
+R5 stack pointer
+R6 Flags
+R7 Program counter
+
+0 xxxxxxxxxxxxxxx : inconditional no flag modified
+0 o sss iiiiiiii xxx  ; immediate assignment
+	0 0 sss iiiiiiii xxx
+	mov Rx, imm8 shl imm3 (=sss + 1) ; shl from 1 to 8
+0 oooo  iiiiiiii xxx
+	0 1000 iiiiiiii xxx
+	mov low Rx, imm8
+	0 1001 iiiiiiii xxx
+	mov high Rx, imm8
+	0 1010 iiiiiiii xxx
+	mov Rx, imm8
+
+0 ooooo iiii yyy xxx  ; short immediate positive offset access
+	0 10110 iiii yyy xxx
+	mov Rx, Ry shl imm4 ; if imm4=0 then it can be written "mov Rx, Ry"
+	0 10111 iiii yyy xxx
+	mov Rx, [Ry + imm4] ; if imm4=0 then it can be written "mov Rx, [Ry]
+	0 11000 iiii yyy xxx
+	mov [Rx + imm4], Ry ; if imm4 =0 then it can be written "mov [Rx], Ry
+	0 11001 iiii yyy xxx
+	mov [Rx], [Ry + imm4] ; if imm4=0 then it can be written "mov [Rx], [Ry]
+	0 11010 iiii yyy xxx
+	mov [Rx + imm4], [Ry] ; imm4 != 0
+
+0 oooooo zzz yyy xxx ; register offset access
+	0 110110 zzz yyy xxx
+	mov Rx, Ry + Rz
+	0 110111 zzz yyy xxx
+	mov Rx, Ry - Rz
+
+	0 111000 zzz yyy xxx
+	mov Rx, [Ry + Rz]
+	0 111001 zzz yyy xxx
+	mov [Rx + Ry], Rz
+	0 111010 zzz yyy xxx
+	mov [Rx], [Ry + Rz]
+	0 111011 zzz yyy xxx
+	mov [Rx + Ry], [Rz]
+
+	0 111100 zzz yyy xxx
+	mov Rx, [Ry - Rz]
+	0 111101 zzz yyy xxx
+	mov [Rx - Ry], Rz
+	0 111110 zzz yyy xxx
+	mov [Rx], [Ry - Rz]
+	0 111111 zzz yyy xxx
+	mov [Rx - Ry], [Rz]
+	
+10 f xxxxxxxxxxxxx : inconditional with possible flag modification
+10 f oooo zzz yyy xxx
+	10 f 0000 zzz yyy xxx
+	add f Rx, Ry , Rz	; Rx = Ry + Rz
+	10 f 0001 zzz yyy xxx
+	sub f Rx, Ry , Rz	; Rx = Ry - Rz
+	10 f 0010 zzz yyy xxx
+	adc f Rx, Ry, Rz        ; Rx = Ry + Rz + C
+	10 f 0011 zzz yyy xxx
+	sbb f Rx, Ry, Rz	; Rx = Ry - Rz - C
+	10 f 0100 zzz yyy xxx
+	shl f Rx, Ry, Rz        ; Rx = Ry << Rz
+	10 f 0101 zzz yyy xxx 
+	shr f Rx, Ry, Rz	; Rx = Ry >> Rz
+	10 f 0110 zzz yyy xxx
+	sar f Rx, Ry, Rz	; Rx = Ry >> Rz signed
+	10 f 0111 zzz yyy xxx
+	rol f Rx, Ry, Rz	; Rx = Roll left Ry, Rz bits introduce C as new bit before C is changed by out bit
+	10 f 1000 zzz yyy xxx
+	ror f Rx, Ry, Rz	; Rx = Roll right Ry, Rz bits introduce C as new bit before C is changed by out bit
+	10 f 1001 zzz yyy xxx
+	and f Rx, Ry, Rz	; Rx = Ry and Rz
+	10 f 1010 zzz yyy xxx
+	or f Rx, Ry, Rz		; Rx = Ry or Rz
+	10 f 1011 zzz yyy xxx
+	xor f Rx, Ry, Rz	; Rx = Ry xor Rz
+	10 f 1100 zzz yyy xxx
+	mul f Rx, Ry, Rz	; Rx = low16(Ry * Rz), Ry= high16(Ry * Rz) : unsigned
+	10 f 1101 zzz yyy xxx
+	mli f Rx, Ry, Rz	; Rx = low16(Ry * Rz), Ry= high16(Ry * Rz) : signed
+
+10 f oooooo iiii xxx
+	10 f 111000 iiii xxx
+	mov f Rx:imm4, C
+	10 f 111001 iiii xxx
+	mov f C, Rx:imm4
+	10 f 111010 iiii xxx
+	mov f Rx:imm4, 0
+	10 f 111011 iiii xxx
+	mov f Rx:imm4, 1
+	10 f 111100 iiii xxx
+	shl f Rx, imm4
+	10 f 111101 iiii xxx
+	shr f Rx, imm4
+	10 f 111110 iiii xxx
+	sar f Rx, imm4
+
+10 f oooooooooo xxx
+	10 f 1111110000 xxx
+	add f Rx, 1
+	10 f 1111110001 xxx
+	sub f Rx, 1
+	10 f 1111110010 xxx
+	adc f Rx, 1
+	10 f 1111110011 xxx
+	sbb f Rx, 1
+	10 f 1111110100 xxx
+	rol f Rx, 1
+	10 f 1111110101 xxx
+	ror f Rx, 1
+	10 f 1111110110 xxx
+	rlc f Rx, 1
+	10 f 1111110111 xxx
+	rrc f Rx, 1
+	10 f 1111111000 xxx
+	not f, Rx 
+	10 f 1111111001 xxx
+	neg f Rx
+	10 f 1111111010 xxx
+	not f low Rx
+	10 f 1111111011 xxx
+	not f high Rx
+	10 f 1111111100 xxx
+	neg f low Rx
+	10 f 1111111101 xxx
+	neg f high Rx
+	10 f 1111111110 xxx
+	swp f low Rx, high Rx
+	10 f 1111111111 xxx
+	swp f Rx, R(x+1)
+
+110 siiiiiiiiiiii unconditional relative immediate jump
+	add R15, simm13
+
+1110 cccc siiiiiii
+	add cccc R15, simm8 ; conditional relative immediate jump
+
+11110 ooo siiii xxx ; compare and test with immediate
+	11110 000 siiii xxx
+	cmp Rx, simm5
+	11110 001 siiii xxx
+	tst Rx, simm5
+	11110 010 siiii xxx
+	cmp low Rx, simm5
+	11110 011 siiii xxx
+	tst low Rx, simm5
+	11110 100 siiii xxx
+	cmp high Rx, simm5
+	11110 101 siiii xxx
+	tst high Rx, simm5
+	11110 110 0iiii xxx
+	is0 Rx:imm4
+	11110 110 1iiii xxx
+	is1 Rx:imm4	
+
+11110 111 f iiii xxx ; "not" a bit
+	not f Rx:imm4
+
+111110 oooo yyy xxx ; compare and test between registers
+	111110 0000 yyy xxx
+	cmp Rx, Ry
+	111110 0001 yyy xxx
+	cmp low Rx, low Ry
+	111110 0010 yyy xxx
+	cmp low Rx, high Ry
+	111110 0011 yyy xxx
+	cmp high Rx, low Ry
+	111110 0100 yyy xxx
+	cmp high Rx, high Ry
+	111110 0101 yyy xxx
+	tst Rx, Ry
+	111110 0110 yyy xxx
+	tst low Rx, low Ry
+	111110 0111 yyy xxx
+	tst low Rx, high Ry
+	111110 1000 yyy xxx
+	tst high Rx, low Ry
+	111110 1001 yyy xxx
+	tst high Rx, high Ry
+	111110 1010 yyy xxx
+	tst Rx, not Ry
+	111110 1011 yyy xxx
+	tst low Rx, not low Ry
+	111110 1100 yyy xxx
+	tst low Rx, not high Ry
+	111110 1101 yyy xxx
+	tst high Rx, not low Ry
+	111110 1110 yyy xxx
+	tst high Rx, not high Ry
+	111110 1111 yyy xxx
+	nop
+
+111111 xxxxxxxxxx ; stacks (R5 stack pointer) (grow downward)
+1111110 siiiiiiii
+	sbr sim9
+11111110 oo yyy xxx/iii
+	11111110 00 yyy xxx
+	psh [Rx + Ry]
+	11111110 01 yyy xxx
+	pop [Rx + Ry]
+	11111110 10 yyy xxx
+	srt [Rx + Ry]
+	11111110 11 000 xxx	 	     
+	psh Rx
+	11111110 11 001 xxx
+	pop Rx
+	11111110 11 010 xxx
+	psh [Rx]
+	11111110 11 011 xxx
+	pop [Rx]
+	11111110 11 100 xxx
+	srt Rx
+	11111110 11 101 xxx 
+	srt [Rx]
+	11111110 11 110 iii
+	drp imm3  (iii = imm3 - 1) imm3 from 1 to 8
+	11111110 11 111 iii
+	dup imm3  ; duplicate content [R5 + imm3]
+	ret  ; same as "pop R7"
+11111111 xxxxxxxx
