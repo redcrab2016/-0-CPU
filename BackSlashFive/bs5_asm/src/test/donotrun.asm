@@ -139,3 +139,9 @@ lastinstr:
 xs nf or R5, [ptr lastinstr]
 xc fl add R5, low ptr lastinstr
 ne nf mov low R5, low ptr lastinstr
+; raw data
+dw 0, ptr lastinstr, low ptr lastinstr, high ptr lastinstr
+org #0x1000
+dw "Hello World, this is a string", 13,10, 0
+.letter: dw 'a','b','c'
+dw 0, loffset .letter

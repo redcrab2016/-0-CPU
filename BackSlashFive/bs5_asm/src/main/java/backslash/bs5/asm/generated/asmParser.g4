@@ -45,7 +45,7 @@ wordlist
     returns [ List<String> lstWord ]
     : (number16bits|string) (COMMA wordlist)?                                       { $lstWord = new ArrayList<String>(); 
                                                                                       if ($string.text !=  null)  $lstWord.addAll($string.lstWord);
-                                                                                      else $lstWord.add($number16bits.text); 
+                                                                                      else $lstWord.add($number16bits.immediat); 
                                                                                       if ($wordlist.text != null) $lstWord.addAll($wordlist.lstWord);
                                                                                     }
     ;

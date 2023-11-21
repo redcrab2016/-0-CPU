@@ -14,7 +14,7 @@ R6 Flags
 R7 Program counter
 
 flags: R6
-	-------- ----NOZC
+	SIHR---- ----NOZC
 	bit 0 : C, carry
 	bit 1 : Z, Zero
 	bit 2 : O, overflow
@@ -177,7 +177,7 @@ Mnemonic
 	add cccc R15, simm8 ; conditional relative immediate jump (-128 to +127)
 
 11110 ooo siiii xxx ; compare and test with immediate
-	11110 000 siiii xxx ; -16 to +15
+	11110 000 siiii xxx ; -16 to +15 or 0 to 31
 	cmp Rx, simm5
 	11110 001 siiii xxx
 	tst Rx, simm5
