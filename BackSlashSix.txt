@@ -13,7 +13,7 @@ R5 stack pointer
 R6 Flags
 R7 Program counter
 
-flags:
+flags: R6
 	-------- ----NOZC
 	bit 0 : C, carry
 	bit 1 : Z, Zero
@@ -258,5 +258,16 @@ Mnemonic
 	11111110 11 111 iii
 	dup imm3  ; duplicate content [R5 + imm3]
 	ret  ; same as "pop R7"
-11111111 xxxxxxxx
+11111111 oo yyy xxx
+	11111111 00 yyy xxx
+	mvs	Rx, Ry  ; user context register Ry is transfered to supervisor register Rx
+	11111111 01 yyy xxx
+	mvu	Rx, Ry  ; supervisor context register Ry is transfered to user register Rx
+	11111111 10 yyy xxx
+	sus Rx, Ry ; swap user register Rx with supervisor register Ry
+11111111 ooooo xxx
+	11111111 11000 xxx
+	sav [Rx]   ; save all user registers in memory at address defined by supervisor register Rx
+	11111111 11001 xxx
+	ldr [Rx] ; set all user registers from memory at address defined by supervisor register Rx	
 	nop
