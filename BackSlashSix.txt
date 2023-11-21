@@ -13,6 +13,13 @@ R5 stack pointer
 R6 Flags
 R7 Program counter
 
+flags:
+	-------- ----NOZC
+	bit 0 : C, carry
+	bit 1 : Z, Zero
+	bit 2 : O, overflow
+	bit 3 : N, Negative
+
 conditions: cccc
 0000	al          Always executed.                                         No flag tested.
 0001	eq or zs    Equal.                                                   Z==1
@@ -114,7 +121,7 @@ Mnemonic
 	mli f Rx, Ry, Rz	; Rx = low16(Ry * Rz), Ry= high16(Ry * Rz) : signed
 
 10 f oooooo iiii xxx
-	10 f 111000 iiii xxx
+	10 f 111000 iiii xxx ; from 0 to 15
 	mov f Rx:imm4, C
 	10 f 111001 iiii xxx
 	mov f C, Rx:imm4
