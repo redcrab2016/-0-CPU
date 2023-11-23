@@ -46,7 +46,13 @@ wordlist
     : (number16bits|string) (COMMA wordlist)?                                       { $lstWord = new ArrayList<String>(); 
                                                                                       if ($string.text !=  null)  $lstWord.addAll($string.lstWord);
                                                                                       else $lstWord.add($number16bits.immediat); 
-                                                                                      if ($wordlist.text != null) $lstWord.addAll($wordlist.lstWord);
+                                                                                      if ($wordlist.text != null) {
+                                                                                        try {
+                                                                                          $lstWord.addAll($wordlist.lstWord);
+                                                                                        } catch (Exception e) {
+                                                                                          /* ignore the exception, because this issue should be reported by the parser */ 
+                                                                                        }
+                                                                                      }
                                                                                     }
     ;
 
@@ -281,6 +287,7 @@ number16bits
     |  Bs5_label_ptr Bs5_identifier             { $immediat = $Bs5_identifier.text; }
     |  Bs5_low Bs5_label_ptr Bs5_identifier     { $immediat = "L8:" + $Bs5_identifier.text; }
     |  Bs5_high Bs5_label_ptr Bs5_identifier    { $immediat = "H8:" + $Bs5_identifier.text; }
+    |  Bs5_label_loffset Bs5_identifier         { $immediat = "O8:" + $Bs5_identifier.text; }
     ;
 
 number16bitsNumeral
