@@ -5,6 +5,7 @@
 ;		mov Rx, 0
 mov R0, 0
 mov R5, 0
+.petitlabel:
 ;		mov low Rx, 0
 mov low R0, 0
 mov low R5, 0
