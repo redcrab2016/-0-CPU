@@ -1069,625 +1069,747 @@ ccc f or Rx, [imm16]  ; (Rx != R0)
 
 /*
 ccc f mov STACK, Rx
-	ccc nf sub R13,1
-	ccc f  mov [R13], Rx
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 2  ; if ccc != al
+	al nf sub R13,1
+	al f  mov [R13], Rx
 */
     public BS5program asm_mov_stack_Rx(String ccc, String f, String rx) {
-        return  asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_atRx_Ry(ccc, f, "R13", rx);
+        return  asm_prologMicroprogram(ccc, f, 2).
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_atRx_Ry("al", f, "R13", rx);
     }
 
 /*
 ccc f mov STACK, [Rx]  (R0 modified)
-	ccc nf sub R13, 1
-	ccc nf mov R0, [Rx]
-	ccc f  mov [R13], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al nf sub R13, 1
+	al nf mov R0, [Rx]
+	al f  mov [R13], R0
 */
     public BS5program asm_mov_stack_atRx(String ccc, String f, String rx) {
-        return  asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_Rx_atRy(ccc, "nf", "R0", rx).
-                asm_mov_atRx_Ry(ccc, f, "R13", "R0");
+        return  asm_prologMicroprogram(ccc, f, 3).
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_Rx_atRy("al", "nf", "R0", rx).
+                asm_mov_atRx_Ry("al", f, "R13", "R0");
     }
 
 /*
 ccc f mov STACK, imm16 (R0 modified)
-	ccc nf sub R13, 1
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc f  mov [R13], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf sub R13, 1
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  mov [R13], R0
 */
     public BS5program asm_mov_stack_imm16(String ccc, String f, String imm16) {
-        return  asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_low_R0_imm8(ccc, "nf", "L8:" + imm16).
-                asm_mov_high_R0_imm8(ccc, "nf", "H8:" + imm16).
-                asm_mov_atRx_Ry(ccc, f, "R13", "R0");
+        return  asm_prologMicroprogram(ccc, f, 4).
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_low_R0_imm8("al", "nf", "L8:" + imm16).
+                asm_mov_high_R0_imm8("al", "nf", "H8:" + imm16).
+                asm_mov_atRx_Ry("al", f, "R13", "R0");
     }
 
 /*
 ccc f mov STACK, [imm16] ( R0 modified)
-	ccc nf sub R13, 1
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc nf mov R0, [R0]
-	ccc f  mov [R13], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 5  ; if ccc != al
+	al  nf sub R13, 1
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  nf mov R0, [R0]
+	al  f  mov [R13], R0
 */
     public BS5program asm_mov_stack_atImm16(String ccc, String f, String imm16) {
-        return  asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_low_R0_imm8(ccc, "nf", "L8:" + imm16).
-                asm_mov_high_R0_imm8(ccc, "nf", "H8:" + imm16).
-                asm_mov_Rx_atRy(ccc, "nf", "R0", "R0").
-                asm_mov_atRx_Ry(ccc, f, "R13", "R0");
+        return  asm_prologMicroprogram(ccc, f, 5).
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_low_R0_imm8("al", "nf", "L8:" + imm16).
+                asm_mov_high_R0_imm8("al", "nf", "H8:" + imm16).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R0").
+                asm_mov_atRx_Ry("al", f, "R13", "R0");
     }
 
 /*  Pop value from stack (3 microprograms)
 ccc f mov Rx, STACK (if R15 then it is like a return from call procedure)
-	ccc f mov Rx, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 2  ; if ccc != al
+	al  f mov Rx, [R13]
+	al  nf add R13, 1
 */
     public BS5program asm_mov_Rx_stack(String ccc, String f, String rx) {
-        return  asm_mov_Rx_atRy(ccc, f, rx, "R13").
-                asm_add_Rx_1(ccc, "nf", "R13");
+        return  asm_prologMicroprogram(ccc, f, 2).
+                asm_mov_Rx_atRy("al", f, rx, "R13").
+                asm_add_Rx_1("al", "nf", "R13");
     }
 
 /*
 ccc f mov [Rx], STACK ( Rx != R0, R0 modified)
-	ccc nf mov R0, [R13]
-	ccc nf add R13,1
-	ccc f mov [Rx], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, [R13]
+	al  nf add R13,1
+	al  f mov [Rx], R0
 */
     public BS5program asm_mov_atRx_stack(String ccc, String f, String rx) {
-        return  asm_mov_Rx_atRy(ccc, "nf", "R0", "R13").
-                asm_add_Rx_1(ccc, "nf", "R13").
-                asm_mov_atRx_Ry(ccc, f, rx, "R0");
+        return  asm_prologMicroprogram(ccc, f, 3).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R13").
+                asm_add_Rx_1("al", "nf", "R13").
+                asm_mov_atRx_Ry("al", f, rx, "R0");
     }
 
 /*
 ccc f mov [imm16], STACK (R0 modified)
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-    ccc nf sub R13, 1
-	ccc nf mov [R13],R1
-	ccc nf add R13, 1
-	ccc nf mov R1, [R13]
-	ccc f  mov [R0], R1
-	ccc nf sub R13, 1
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 11  ; if ccc != al
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+    al  nf sub R13, 1
+	al  nf mov [R13],R1
+	al  nf add R13, 1
+	al  nf mov R1, [R13]
+	al  f  mov [R0], R1
+	al  nf sub R13, 1
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
+	al  nf add R13, 1
 */
     public BS5program asm_mov_atImm16_stack(String ccc, String f, String imm16) {
-        return  asm_mov_low_R0_imm8(ccc, "nf", "L8:" + imm16).
-                asm_mov_high_R0_imm8(ccc, "nf", "H8:" + imm16).
-                asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_atRx_Ry(ccc, "nf", "R13", "R1").
-                asm_add_Rx_1(ccc, "nf", "R13").
-                asm_mov_Rx_atRy(ccc, "nf", "R1", "R13").
-                asm_mov_atRx_Ry(ccc,f, "R0", "R1").
-                asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_Rx_atRy(ccc, "nf", "R1", "R13").
-                asm_add_Rx_1(ccc, "nf", "R13").
-                asm_add_Rx_1(ccc, "nf", "R13");
+        return  asm_prologMicroprogram(ccc, f, 11).
+                asm_mov_low_R0_imm8("al", "nf", "L8:" + imm16).
+                asm_mov_high_R0_imm8("al", "nf", "H8:" + imm16).
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R1").
+                asm_add_Rx_1("al", "nf", "R13").
+                asm_mov_Rx_atRy("al", "nf", "R1", "R13").
+                asm_mov_atRx_Ry("al",f, "R0", "R1").
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_Rx_atRy("al", "nf", "R1", "R13").
+                asm_add_Rx_1("al", "nf", "R13").
+                asm_add_Rx_1("al", "nf", "R13");
     }
 
 /* 
    Call procedure  (5 microprograms)
 ccc f mov STACK:R15, Rx (Rx != R0 & Rx != R15)
-	ccc nf mov R0, R15
-	ccc nf add R0, 4
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R0
-	ccc f  mov R15, Rx
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 5  ; if ccc != al
+	al  nf mov R0, R15
+	al  nf add R0, 4
+	al  nf sub R13, 1
+	al  nf mov [R13], R0
+	al  f  mov R15, Rx
 */
     public BS5program asm_mov_stackR15_Rx(String ccc, String f, String rx) {
-        return  asm_mov_Rx_Ry(ccc, "nf", "R0", "R15").
-                asm_add_R0_imm4(ccc, "nf", "4").
-                asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_atRx_Ry(ccc, "nf", "R13", "R0").
-                asm_mov_Rx_Ry(ccc, f, "R15", rx);
+        return  asm_prologMicroprogram(ccc, f, 5).
+                asm_mov_Rx_Ry("al", "nf", "R0", "R15").
+                asm_add_R0_imm4("al", "nf", "4").
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0").
+                asm_mov_Rx_Ry("al", f, "R15", rx);
     }
 
 /*
 ccc f mov STACK:R15, [Rx] (Rx != R0 & Rx != R15)
-	ccc nf mov R0, R15
-	ccc nf add R0, 4
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R0
-	ccc f  mov R15, [Rx]
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 5  ; if ccc != al
+	al  nf mov R0, R15
+	al  nf add R0, 4
+	al  nf sub R13, 1
+	al  nf mov [R13], R0
+	al  f  mov R15, [Rx]
 */
     public BS5program asm_mov_stackR15_atRx(String ccc, String f, String rx) {
-        return  asm_mov_Rx_Ry(ccc, "nf", "R0", "R15").
-                asm_add_R0_imm4(ccc, "nf", "4").
-                asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_atRx_Ry(ccc, "nf", "R13", "R0").
-                asm_mov_Rx_atRy(ccc, f, "R15", rx);
+        return  asm_prologMicroprogram(ccc, f, 5).
+                asm_mov_Rx_Ry("al", "nf", "R0", "R15").
+                asm_add_R0_imm4("al", "nf", "4").
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0").
+                asm_mov_Rx_atRy("al", f, "R15", rx);
     }
 /*
 ccc f mov STACK:R15, imm16 (R0 modified)
-	ccc nf mov R0, R15
-	ccc nf add R0, 6
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc f  mov R15, R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 7  ; if ccc != al
+	al  nf mov R0, R15
+	al  nf add R0, 6
+	al  nf sub R13, 1
+	al  nf mov [R13], R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  mov R15, R0
 */
     public BS5program asm_mov_stackR15_imm16(String ccc, String f, String imm16) {
-        return  asm_mov_Rx_Ry(ccc, "nf", "R0", "R15").
-                asm_add_R0_imm4(ccc, "nf", "6").
-                asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_atRx_Ry(ccc, "nf", "R13", "R0").
-                asm_mov_low_R0_imm8(ccc, "nf", "L8:" + imm16).
-                asm_mov_high_R0_imm8(ccc,"nf", "H8:" + imm16).
-                asm_mov_Rx_Ry(ccc, f, "R15", "R0");
+        return  asm_prologMicroprogram(ccc, f, 7).
+                asm_mov_Rx_Ry("al", "nf", "R0", "R15").
+                asm_add_R0_imm4("al", "nf", "6").
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0").
+                asm_mov_low_R0_imm8("al", "nf", "L8:" + imm16).
+                asm_mov_high_R0_imm8("al","nf", "H8:" + imm16).
+                asm_mov_Rx_Ry("al", f, "R15", "R0");
     }
 
 /*
 ccc f mov STACK:R15, [imm16] (R0 modified)
-	ccc nf mov R0, R15
-	ccc nf add R0, 7
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc nf mov R0, [R0]
-	ccc f  mov R15, R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 8  ; if ccc != al
+	al  nf mov R0, R15
+	al  nf add R0, 7
+	al  nf sub R13, 1
+	al  nf mov [R13], R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  nf mov R0, [R0]
+	al  f  mov R15, R0
 */
     public BS5program asm_mov_stackR15_atImm16(String ccc, String f, String imm16) {
-        return  asm_mov_Rx_Ry(ccc, "nf", "R0", "R15").
-                asm_add_R0_imm4(ccc, "nf", "7").
-                asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_atRx_Ry(ccc, "nf", "R13", "R0").
-                asm_mov_low_R0_imm8(ccc, "nf", "L8:" + imm16).
-                asm_mov_high_R0_imm8(ccc,"nf", "H8:" + imm16).
-                asm_mov_Rx_atRy(ccc, "nf", "R0", "R0").
-                asm_mov_Rx_Ry(ccc, f, "R15", "R0");
+        return  asm_prologMicroprogram(ccc, f, 8).
+                asm_mov_Rx_Ry("al", "nf", "R0", "R15").
+                asm_add_R0_imm4("al", "nf", "7").
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0").
+                asm_mov_low_R0_imm8("al", "nf", "L8:" + imm16).
+                asm_mov_high_R0_imm8("al","nf", "H8:" + imm16).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R0").
+                asm_mov_Rx_Ry("al", f, "R15", "R0");
     }
 
 /*
 ccc f add STACK:R15, simm8  (near address, R0 modified)
-	ccc nf mov R0, R15
-	ccc nf add R0, 4
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R0
-	ccc f  add F15, simm8	
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 5  ; if ccc != al
+	al  nf mov R0, R15
+	al  nf add R0, 4
+	al  nf sub R13, 1
+	al  nf mov [R13], R0
+	al  f  add F15, simm8	
 */
     public BS5program asm_mov_stackR15_simm8(String ccc, String f, String simm8) {
-        return  asm_mov_Rx_Ry(ccc, "nf", "R0", "R15").
-                asm_add_R0_imm4(ccc, "nf", "4").
-                asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_atRx_Ry(ccc, "nf", "R13", "R0").
-                asm_add_R15_simm8(ccc, f, simm8);
+        return  asm_prologMicroprogram(ccc, f, 5).
+                asm_mov_Rx_Ry("al", "nf", "R0", "R15").
+                asm_add_R0_imm4("al", "nf", "4").
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0").
+                asm_add_R15_simm8("al", f, simm8);
     }
 
 /*
    Write to stack/local context (24 microprograms)
 ccc f mov STACK:imm4, Rx (Rx != R0, R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, imm4
-	ccc f  mov [R0], Rx
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, imm4
+	al  f  mov [R0], Rx
 */
     public BS5program asm_mov_stackImm4_Rx(String ccc, String f, String imm4, String rx) {
-        return  asm_mov_Rx_Ry(ccc, "nf", "R0", "R13").
-                asm_add_R0_imm4(ccc, "nf", imm4).
-                asm_mov_atRx_Ry(ccc,f, "R0", rx);
+        return  asm_prologMicroprogram(ccc, f, 3).
+                asm_mov_Rx_Ry("al", "nf", "R0", "R13").
+                asm_add_R0_imm4("al", "nf", imm4).
+                asm_mov_atRx_Ry("al",f, "R0", rx);
     }
 
 /*
 ccc f mov STACK:imm4, imm16 ( R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, imm4
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 10  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, imm4
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 */
     public BS5program asm_mov_stackImm4_imm16(String ccc, String f, String imm4, String imm16) {
-        return  asm_mov_Rx_Ry(ccc, "nf", "R0", "R13").
-                asm_add_R0_imm4(ccc, "nf", imm4).
-                asm_sub_Rx_1(ccc, "nf", "R13").
-                asm_mov_atRx_Ry(ccc, "nf", "R13", "R1").
-                asm_mov_Rx_Ry(ccc, "nf", "R1", "R0").
-                asm_mov_low_R0_imm8(ccc, "nf", "L8:" + imm16).
-                asm_mov_high_R0_imm8(ccc, "nf", "H8:" + imm16).
-                asm_mov_atRx_Ry(ccc, f, "R1", "R0").
-                asm_mov_Rx_atRy(ccc, "nf", "R1", "R13").
-                asm_add_Rx_1(ccc, "nf", "R13");
+        return  asm_prologMicroprogram(ccc, f, 10).
+                asm_mov_Rx_Ry("al", "nf", "R0", "R13").
+                asm_add_R0_imm4("al", "nf", imm4).
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R1").
+                asm_mov_Rx_Ry("al", "nf", "R1", "R0").
+                asm_mov_low_R0_imm8("al", "nf", "L8:" + imm16).
+                asm_mov_high_R0_imm8("al", "nf", "H8:" + imm16).
+                asm_mov_atRx_Ry("al", f, "R1", "R0").
+                asm_mov_Rx_atRy("al", "nf", "R1", "R13").
+                asm_add_Rx_1("al", "nf", "R13");
     }
-    
+
 /*
 ccc f mov STACK:imm4, [Rx] (Rx != R0 , R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, imm4
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov R0, [Rx]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 9  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, imm4
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov R0, [Rx]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov STACK:imm4, [imm16] (R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, imm4
-	ccc nf sub R13, 1
-	ccc nf [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16	
-	ccc nf mov R0, [R0]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 11  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, imm4
+	al  nf sub R13, 1
+	al  nf [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16	
+	al  nf mov R0, [R0]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov STACK:imm16, Rx (Rx != R0 , R0 modified)
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc nf add R0, R13
-	ccc f  mov [R0], Rx
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  nf add R0, R13
+	al  f  mov [R0], Rx
 
 ccc f mov STACK:imm16a, imm16b ( R0 modified)
-	ccc nf mov low R0, low imm16a
-	ccc nf mov high R0, high imm16a
-	ccc nf add R0, R13
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16b
-	ccc nf mov high R0, high imm16b	
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 11  ; if ccc != al
+	al  nf mov low R0, low imm16a
+	al  nf mov high R0, high imm16a
+	al  nf add R0, R13
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16b
+	al  nf mov high R0, high imm16b	
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov STACK:imm16, [Rx] (Rx != R0 , R0 modified)
-	ccc nf mov low R0, low imm16a
-	ccc nf mov high R0, high imm16a
-	ccc nf add R0, R13
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov R0, [Rx]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 10  ; if ccc != al
+	al  nf mov low R0, low imm16a
+	al  nf mov high R0, high imm16a
+	al  nf add R0, R13
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov R0, [Rx]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov STACK:imm16a, [imm16b] ( R0 modified)
-	ccc nf mov low R0, low imm16a
-	ccc nf mov high R0, high imm16a
-	ccc nf add R0, R13
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16b
-	ccc nf mov high R0, high imm16b	
-	ccc nf mov R0, [R0]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 12  ; if ccc != al
+	al  nf mov low R0, low imm16a
+	al  nf mov high R0, high imm16a
+	al  nf add R0, R13
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16b
+	al  nf mov high R0, high imm16b	
+	al  nf mov R0, [R0]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov STACK:Rx, Ry  (Rx and Ry != R15 and R0)
-	ccc nf mov R0, Rx
-	ccc nf add R0, R13
-	ccc f  mov [R0], Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  nf add R0, R13
+	al  f  mov [R0], Ry
 
 ccc f mov STACK:Rx, imm16 (Rx != R0 and R15, R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, Rx
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 10  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, Rx
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov STACK:Rx, [Ry] (Rx,Ry != R0 , R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, Rx
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov R0, [Ry]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 9  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, Rx
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov R0, [Ry]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov STACK:Rx, [imm16] (Rx != R0 , R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, Rx
-	ccc nf sub R13, 1
-	ccc nf [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16	
-	ccc nf mov R0, [R0]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 11  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, Rx
+	al  nf sub R13, 1
+	al  nf [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16	
+	al  nf mov R0, [R0]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov LOCAL:imm4, Rx (Rx != R0, R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, imm4
-	ccc f  mov [R0], Rx
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, imm4
+	al  f  mov [R0], Rx
 
 ccc f mov LOCAL:imm4, imm16 ( R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, imm4
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 10  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, imm4
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov LOCAL:imm4, [Rx] (Rx != R0 , R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, imm4
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov R0, [Rx]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 9  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, imm4
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov R0, [Rx]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov LOCAL:imm4, [imm16] ( R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, imm4
-	ccc nf sub R13, 1
-	ccc nf [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16	
-	ccc nf mov R0, [R0]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 11  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, imm4
+	al  nf sub R13, 1
+	al  nf [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16	
+	al  nf mov R0, [R0]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov LOCAL:imm16, Rx (Rx != R0 , R0 modified)
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc nf add R0, R12
-	ccc f  mov [R0], Rx
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  nf add R0, R12
+	al  f  mov [R0], Rx
 
 ccc f mov LOCAL:imm16a, imm16b ( R0 modified)
-	ccc nf mov low R0, low imm16a
-	ccc nf mov high R0, high imm16a
-	ccc nf add R0, R12
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16b
-	ccc nf mov high R0, high imm16b	
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 11  ; if ccc != al
+	al  nf mov low R0, low imm16a
+	al  nf mov high R0, high imm16a
+	al  nf add R0, R12
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16b
+	al  nf mov high R0, high imm16b	
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov LOCAL:imm16, [Rx] (Rx != R0 , R0 modified)
-	ccc nf mov low R0, low imm16a
-	ccc nf mov high R0, high imm16a
-	ccc nf add R0, R12
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov R0, [Rx]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 10  ; if ccc != al
+	al  nf mov low R0, low imm16a
+	al  nf mov high R0, high imm16a
+	al  nf add R0, R12
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov R0, [Rx]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov LOCAL:imm16a, [imm16b] ( R0 modified)
-	ccc nf mov low R0, low imm16a
-	ccc nf mov high R0, high imm16a
-	ccc nf add R0, R12
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16b
-	ccc nf mov high R0, high imm16b	
-	ccc nf mov R0, [R0]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 12  ; if ccc != al
+	al  nf mov low R0, low imm16a
+	al  nf mov high R0, high imm16a
+	al  nf add R0, R12
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16b
+	al  nf mov high R0, high imm16b	
+	al  nf mov R0, [R0]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov LOCAL:Rx, Ry  (Rx and Ry != R15 and R0)
-	ccc nf mov R0, Rx
-	ccc nf add R0, R12
-	ccc f  mov [R0], Ry
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, Rx
+	al  nf add R0, R12
+	al  f  mov [R0], Ry
 
 ccc f mov LOCAL:Rx, imm16 (Rx != R0 , R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, Rx
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 10  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, Rx
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov LOCAL:Rx, [Ry] (Rx,Ry != R0 , R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, Rx
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov R0, [Ry]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 9  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, Rx
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov R0, [Ry]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f mov LOCAL:Rx, [imm16] (Rx != R0 , R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, Rx
-	ccc nf sub R13, 1
-	ccc nf [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16	
-	ccc nf mov R0, [R0]
-	ccc f  mov [R1], R0
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 11  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, Rx
+	al  nf sub R13, 1
+	al  nf [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16	
+	al  nf mov R0, [R0]
+	al  f  mov [R1], R0
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 	Read from stack/local context (18 microprograms)
 ccc f mov Rx, STACK:imm4 (Rx != R0 , R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, imm4
-	ccc f mov Rx, [R0]
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, imm4
+	al  f mov Rx, [R0]
 
 ccc f mov [Rx], STACK:imm4 (Rx != R0 , R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, imm4
-	ccc nf mov R0, [R0]
-	ccc f  mov [Rx], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, imm4
+	al  nf mov R0, [R0]
+	al  f  mov [Rx], R0
 
 ccc f mov [imm16], STACK:imm4 ( R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, imm4
-	ccc nf mov R0, [R0]
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc f  mov [R0], R1
-	ccc nf mov R1,[R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 11  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, imm4
+	al  nf mov R0, [R0]
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  mov [R0], R1
+	al  nf mov R1,[R13]
+	al  nf add R13, 1
 
 ccc f mov Rx, STACK:imm16 (Rx != R0 , R0 modified)
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc nf add R0, R13
-	ccc f mov Rx, [R0]
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  nf add R0, R13
+	al  f mov Rx, [R0]
 
 ccc f mov [Rx], STACK:imm16 (Rx != R0 , R0 modified)
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc nf add R0, R13
-	ccc nf mov R0, [R0]
-	ccc f  mov [Rx], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 5  ; if ccc != al
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  nf add R0, R13
+	al  nf mov R0, [R0]
+	al  f  mov [Rx], R0
 
 ccc f mov [imm16a], STACK:imm16b ( R0 modified)
-	ccc nf mov low R0, low imm16b
-	ccc nf mov high R0, high imm16b
-	ccc nf add R0, R13
-	ccc nf mov R0, [R0]
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16a
-	ccc nf mov high R0, high imm16a
-	ccc f  mov [R0], R1
-	ccc nf mov R1,[R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 12  ; if ccc != al
+	al  nf mov low R0, low imm16b
+	al  nf mov high R0, high imm16b
+	al  nf add R0, R13
+	al  nf mov R0, [R0]
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16a
+	al  nf mov high R0, high imm16a
+	al  f  mov [R0], R1
+	al  nf mov R1,[R13]
+	al  nf add R13, 1
 
 ccc f mov Rx, STACK:Ry (Rx,Ry != R0 , R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, Ry
-	ccc nf mov R0, [R0]
-	ccc f  mov Rx, R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, Ry
+	al  nf mov R0, [R0]
+	al  f  mov Rx, R0
 
 ccc f mov [Rx], STACK:Ry (Rx,Ry != R0 , R0 modified)
-	ccc nf mov R0, R13
-	ccc nf add R0, Ry
-	ccc nf mov R0, [R0]
-	ccc f  mov [Rx], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov R0, R13
+	al  nf add R0, Ry
+	al  nf mov R0, [R0]
+	al  f  mov [Rx], R0
 
 ccc f mov [imm16], STACK:Rx
-	ccc nf mov low R0, Rx
-	ccc nf add R0, R13
-	ccc nf mov R0, [R0]
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc f  mov [R0], R1
-	ccc nf mov R1,[R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 11  ; if ccc != al
+	al  nf mov low R0, Rx
+	al  nf add R0, R13
+	al  nf mov R0, [R0]
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  mov [R0], R1
+	al  nf mov R1,[R13]
+	al  nf add R13, 1
 
 ccc f mov Rx, LOCAL:imm4 (Rx != R0 , R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, imm4
-	ccc f mov Rx, [R0]
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, imm4
+	al  f mov Rx, [R0]
 
 ccc f mov [Rx], LOCAL:imm4 (Rx != R0 , R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, imm4
-	ccc nf mov R0, [R0]
-	ccc f  mov [Rx], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, imm4
+	al  nf mov R0, [R0]
+	al  f  mov [Rx], R0
 
 ccc f mov [imm16], LOCAL:imm4 (R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, imm4
-	ccc nf mov R0, [R0]
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc f  mov [R0], R1
-	ccc nf mov R1,[R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 11  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, imm4
+	al  nf mov R0, [R0]
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  mov [R0], R1
+	al  nf mov R1,[R13]
+	al  nf add R13, 1
 
 ccc f mov Rx, LOCAL:imm16 (Rx != R0 , R0 modified)
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc nf add R0, R12
-	ccc f mov Rx, [R0]
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  nf add R0, R12
+	al  f mov Rx, [R0]
 
 ccc f mov [Rx], LOCAL:imm16 (Rx != R0 , R0 modified)
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc nf add R0, R12
-	ccc nf mov R0, [R0]
-	ccc f  mov [Rx], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 5  ; if ccc != al
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  nf add R0, R12
+	al  nf mov R0, [R0]
+	al  f  mov [Rx], R0
 
 ccc f mov [imm16a], LOCAL:imm16b ( R0 modified)
-	ccc nf mov low R0, low imm16b
-	ccc nf mov high R0, high imm16b
-	ccc nf add R0, R12
-	ccc nf mov R0, [R0]
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16a
-	ccc nf mov high R0, high imm16a
-	ccc f  mov [R0], R1
-	ccc nf mov R1,[R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 12  ; if ccc != al
+	al  nf mov low R0, low imm16b
+	al  nf mov high R0, high imm16b
+	al  nf add R0, R12
+	al  nf mov R0, [R0]
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16a
+	al  nf mov high R0, high imm16a
+	al  f  mov [R0], R1
+	al  nf mov R1,[R13]
+	al  nf add R13, 1
 
 ccc f mov Rx, LOCAL:Ry (Rx,Ry != R0 , R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, Ry
-	ccc nf mov R0, [R0]
-	ccc f  mov Rx, R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, Ry
+	al  nf mov R0, [R0]
+	al  f  mov Rx, R0
 
 ccc f mov [Rx], LOCAL:Ry (Rx,Ry != R0 , R0 modified)
-	ccc nf mov R0, R12
-	ccc nf add R0, Ry
-	ccc nf mov R0, [R0]
-	ccc f  mov [Rx], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov R0, R12
+	al  nf add R0, Ry
+	al  nf mov R0, [R0]
+	al  f  mov [Rx], R0
 
 ccc f mov [imm16], LOCAL:Rx (Rx != R0 , R0 modified)
-	ccc nf mov low R0, Rx
-	ccc nf add R0, R12
-	ccc nf mov R0, [R0]
-	ccc nf sub R13, 1
-	ccc nf mov [R13], R1
-	ccc nf mov R1, R0
-	ccc nf mov low R0, low imm16
-	ccc nf mov high R0, high imm16
-	ccc f  mov [R0], R1
-	ccc nf mov R1,[R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 11  ; if ccc != al
+	al  nf mov low R0, Rx
+	al  nf add R0, R12
+	al  nf mov R0, [R0]
+	al  nf sub R13, 1
+	al  nf mov [R13], R1
+	al  nf mov R1, R0
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
+	al  f  mov [R0], R1
+	al  nf mov R1,[R13]
+	al  nf add R13, 1
 
 	Local context / Stack context setting (2 microprograms)
 ccc f mov STACK, LOCAL 
@@ -1698,55 +1820,69 @@ ccc f mov LOCAL, STACK
 
 	Standard instructions (add, sub, shl, shr, and, or , not) by stack (7 microprograms)
 ccc f add STACK
-	ccc nf mov R0, [R13]
-	ccc nf add R13, 1
-	ccc  f add R0, [R13]
-	ccc nf mov [R13], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov R0, [R13]
+	al  nf add R13, 1
+	al   f add R0, [R13]
+	al  nf mov [R13], R0
 
 ccc f sub STACK
-	ccc nf mov R0, [R13]
-	ccc nf add R13, 1
-	ccc  f sub R0, [R13]
-	ccc nf mov [R13], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 4  ; if ccc != al
+	al  nf mov R0, [R13]
+	al  nf add R13, 1
+	al   f sub R0, [R13]
+	al  nf mov [R13], R0
 
 ccc f shl STACK, imm4
-	ccc nf mov R0, [13]
-	ccc f  shl R0, imm4
-	ccc nf mov [R13], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, [13]
+	al  f  shl R0, imm4
+	al  nf mov [R13], R0
 
 ccc f shr STACK, imm4
-	ccc nf mov R0, [13]
-	ccc f  shr R0, imm4
-	ccc nf mov [R13], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf mov R0, [13]
+	al  f  shr R0, imm4
+	al  nf mov [R13], R0
 
 ccc f and STACK
-	ccc nf add R13, 1
-	ccc nf mov R0, [R13]
-	ccc nf mov [R13], R1
-	ccc nf add R13, 1
-	ccc nf mov R1, [R13]
-	ccc f  and R0, R1
-	ccc nf mov [R13], R0
-	ccc nf sub R13, 1
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 10  ; if ccc != al
+	al  nf add R13, 1
+	al  nf mov R0, [R13]
+	al  nf mov [R13], R1
+	al  nf add R13, 1
+	al  nf mov R1, [R13]
+	al  f  and R0, R1
+	al  nf mov [R13], R0
+	al  nf sub R13, 1
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 
 ccc f or STACK
-	ccc nf add R13, 1
-	ccc nf mov R0, [R13]
-	ccc nf mov [R13], R1
-	ccc nf add R13, 1
-	ccc nf mov R1, [R13]
-	ccc f  or  R0, R1
-	ccc nf mov [R13], R0
-	ccc nf sub R13, 1
-	ccc nf mov R1, [R13]
-	ccc nf add R13, 1
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 10  ; if ccc != al
+	al  nf add R13, 1
+	al  nf mov R0, [R13]
+	al  nf mov [R13], R1
+	al  nf add R13, 1
+	al  nf mov R1, [R13]
+	al  f  or  R0, R1
+	al  nf mov [R13], R0
+	al  nf sub R13, 1
+	al  nf mov R1, [R13]
+	al  nf add R13, 1
 	
 ccc f not STACK
-	ccc nf R0, [R13]
-	ccc f  not R0
-	ccc nf [R13], R0
+	ccc nf add R15, 1  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
+	al  nf R0, [R13]
+	al  f  not R0
+	al  nf [R13], R0
 
 */
 
