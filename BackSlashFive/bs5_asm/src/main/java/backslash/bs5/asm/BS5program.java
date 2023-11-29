@@ -1353,14 +1353,28 @@ ccc f mov STACK:imm4, [Rx] (Rx != R0 , R0 modified)
 	al  f  mov [R1], R0
 	al  nf mov R1, [R13]
 	al  nf add R13, 1
+*/
+    public BS5program asm_mov_stackImm4_atRx(String ccc, String f, String imm4, String rx) {
+        return  asm_prologMicroprogram(ccc, f, 9).
+                asm_mov_Rx_Ry("al", "nf", "R0", "R13").
+                asm_add_R0_imm4("al", "nf", imm4).
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R1").
+                asm_mov_Rx_Ry("al", "nf", "R1", "R0").
+                asm_mov_Rx_atRy("al", "nf", "R0", rx).
+                asm_mov_atRx_Ry("al", f, "R1", "R0").
+                asm_mov_Rx_atRy("al", "nf", "R1", "R13").
+                asm_add_Rx_1("al", "nf", "R13");
+    }
 
+/*
 ccc f mov STACK:imm4, [imm16] (R0 modified)
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 11  ; if ccc != al
 	al  nf mov R0, R13
 	al  nf add R0, imm4
 	al  nf sub R13, 1
-	al  nf [R13], R1
+	al  nf mov [R13], R1
 	al  nf mov R1, R0
 	al  nf mov low R0, low imm16
 	al  nf mov high R0, high imm16	
@@ -1368,7 +1382,23 @@ ccc f mov STACK:imm4, [imm16] (R0 modified)
 	al  f  mov [R1], R0
 	al  nf mov R1, [R13]
 	al  nf add R13, 1
+*/
+    public BS5program asm_mov_stackImm4_atImm16(String ccc, String f, String imm4,String imm16) {
+        return  asm_prologMicroprogram(ccc, f, 11).
+                asm_mov_Rx_Ry("al", "nf", "R0", "R13").
+                asm_add_R0_imm4("al", "nf", imm4).
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R1").
+                asm_mov_Rx_Ry("al", "nf", "R1", "R0").
+                asm_mov_low_R0_imm8("al", "nf", "L8:" + imm16).
+                asm_mov_high_R0_imm8("al", "nf", "H8:" + imm16).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R0").
+                asm_mov_atRx_Ry("al", f, "R1", "R0").
+                asm_mov_Rx_atRy("al", "nf", "R1", "R13").
+                asm_add_Rx_1("al", "nf", "R13");
+    }
 
+/*
 ccc f mov STACK:imm16, Rx (Rx != R0 , R0 modified)
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 4  ; if ccc != al

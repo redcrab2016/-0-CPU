@@ -623,7 +623,7 @@ ccc f mov STACK:imm4, [imm16] (R0 modified)
 	al  nf mov R0, R13
 	al  nf add R0, imm4
 	al  nf sub R13, 1
-	al  nf [R13], R1
+	al  nf mov [R13], R1
 	al  nf mov R1, R0
 	al  nf mov low R0, low imm16
 	al  nf mov high R0, high imm16	
