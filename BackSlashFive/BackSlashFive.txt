@@ -658,8 +658,8 @@ ccc f mov STACK:imm16a, imm16b ( R0 modified)
 ccc f mov STACK:imm16, [Rx] (Rx != R0 , R0 modified)
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 10  ; if ccc != al
-	al  nf mov low R0, low imm16a
-	al  nf mov high R0, high imm16a
+	al  nf mov low R0, low imm16
+	al  nf mov high R0, high imm16
 	al  nf add R0, R13
 	al  nf sub R13, 1
 	al  nf mov [R13], R1
