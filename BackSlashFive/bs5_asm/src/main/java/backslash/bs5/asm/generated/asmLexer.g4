@@ -49,6 +49,9 @@ Bs5_label_loffset: 'loffset' | 'LOFFSET' { setText(getText().toLowerCase() + " "
 Bs5_regPC: ('PC' | 'pc') { setText("R15"); } -> type(Bs5_reg15);
 Bs5_regFG: ('FLAG' | 'flag' | 'FG' | 'fg') { setText("R14"); } -> type(Bs5_reg_1_14);
 
+Bs5_stack: ('STACK' | 'stack')     { settext(gettext().toLowerCase());};
+Bs5_local: ('LOCAL' | 'local')     { settext(gettext().toLowerCase());};
+
 Bs5_reg0 : [rR] '0' { setText(getText().toUpperCase());};   
 Bs5_reg15: [rR] '15' { setText(getText().toUpperCase());};
 

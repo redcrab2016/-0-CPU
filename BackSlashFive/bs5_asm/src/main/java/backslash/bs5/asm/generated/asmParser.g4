@@ -27,6 +27,7 @@ instruction
     | bs5_core_instruction
     | bs5_corex_instruction
     | bs5_imm16_instruction
+    | bs5_stack_instruction
     ;
 
 directive
@@ -109,7 +110,7 @@ bs5_core_instruction
     | bs5_cond? bs5_flag? 
       Bs5_mov bs5_reg COLON numberUnsignedQuad COMMA numberZero                     { prg.asm_mov_Rx_imm4_0($bs5_cond.text, $bs5_flag.text, $bs5_reg.text, $numberUnsignedQuad.immediat); }
     // ccc f mov Rx:imm4, 1    
-    | bs5_cond? bs5_flag? 
+    | bs5_cond? bs5_flag?
       Bs5_mov bs5_reg COLON numberUnsignedQuad COMMA numberOne                      { prg.asm_mov_Rx_imm4_1($bs5_cond.text, $bs5_flag.text, $bs5_reg.text, $numberUnsignedQuad.immediat); }
 
     // ccc f add Rx, Ry
@@ -241,6 +242,84 @@ bs5_imm16_instruction
     | bs5_cond? bs5_flag? 
       Bs5_or bs5_reg_1_15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET             { prg.asm_or_Rx_atImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
     ;
+
+//63 Microprograms to handle stack (backward memory stacking, stack addr in R13, local context in stack addr in R12)
+bs5_stack_instruction
+//  Push value into stack (4 microprograms)
+//ccc f mov STACK, Rx
+    : bs5_cond? bs5_flag?
+      Bs5_mov Bs5_stack COMMA bs5_reg
+//ccc f mov STACK, [Rx]  (R0 modified)
+    | bs5_cond? bs5_flag?
+      Bs5_mov Bs5_stack COMMA OPEN_BRACKET bs5_reg CLOSE_BRACKET
+//ccc f mov STACK, imm16 (R0 modified)
+//ccc f mov STACK, [imm16] ( R0 modified)
+//  Pop value from stack (3 microprograms)
+//ccc f mov Rx, STACK (if R15 then it is like a return from call procedure)
+//ccc f mov [Rx], STACK ( Rx != R0, R0 modified)
+//ccc f mov [imm16], STACK (R0 modified)
+//  Call procedure  (5 microprograms)
+//ccc f mov STACK:R15, Rx (Rx != R0 & Rx != R15)
+//ccc f mov STACK:R15, [Rx] (Rx != R0 & Rx != R15)
+//ccc f mov STACK:R15, imm16 (R0 modified)
+//ccc f mov STACK:R15, [imm16] (R0 modified)
+//ccc f add STACK:R15, simm8  (near address, R0 modified)
+//   Write to stack/local context (24 microprograms)
+//ccc f mov STACK:imm4, Rx (Rx != R0, R0 modified)
+//ccc f mov STACK:imm4, imm16 ( R0 modified)
+//ccc f mov STACK:imm4, [Rx] (Rx != R0 , R0 modified)
+//ccc f mov STACK:imm4, [imm16] (R0 modified)
+//ccc f mov STACK:imm16, Rx (Rx != R0 , R0 modified)
+//ccc f mov STACK:imm16a, imm16b ( R0 modified)
+//ccc f mov STACK:imm16, [Rx] (Rx != R0 , R0 modified)
+//ccc f mov STACK:imm16a, [imm16b] ( R0 modified)
+//ccc f mov STACK:Rx, Ry  (Rx and Ry != R15 and R0)
+//ccc f mov STACK:Rx, imm16 (Rx != R0 and R15, R0 modified)
+//ccc f mov STACK:Rx, [Ry] (Rx,Ry != R0 , R0 modified)
+//ccc f mov STACK:Rx, [imm16] (Rx != R0 , R0 modified)
+//ccc f mov LOCAL:imm4, Rx (Rx != R0, R0 modified)
+//ccc f mov LOCAL:imm4, imm16 ( R0 modified)
+//ccc f mov LOCAL:imm4, [Rx] (Rx != R0 , R0 modified)
+//ccc f mov LOCAL:imm4, [imm16] ( R0 modified)
+//ccc f mov LOCAL:imm16, Rx (Rx != R0 , R0 modified)
+//ccc f mov LOCAL:imm16a, imm16b ( R0 modified)
+//ccc f mov LOCAL:imm16, [Rx] (Rx != R0 , R0 modified)
+//ccc f mov LOCAL:imm16a, [imm16b] ( R0 modified)
+//ccc f mov LOCAL:Rx, Ry  (Rx and Ry != R15 and R0)
+//ccc f mov LOCAL:Rx, imm16 (Rx != R0 , R0 modified)
+//ccc f mov LOCAL:Rx, [Ry] (Rx,Ry != R0 , R0 modified)
+//ccc f mov LOCAL:Rx, [imm16] (Rx != R0 , R0 modified)
+//	Read from stack/local context (18 microprograms)
+//ccc f mov Rx, STACK:imm4 (Rx != R0 , R0 modified)
+//ccc f mov [Rx], STACK:imm4 (Rx != R0 , R0 modified)
+//ccc f mov [imm16], STACK:imm4 ( R0 modified)
+//ccc f mov Rx, STACK:imm16 (Rx != R0 , R0 modified)
+//ccc f mov [Rx], STACK:imm16 (Rx != R0 , R0 modified)
+//ccc f mov [imm16a], STACK:imm16b ( R0 modified)
+//ccc f mov Rx, STACK:Ry (Rx,Ry != R0 , R0 modified)
+//ccc f mov [Rx], STACK:Ry (Rx,Ry != R0 , R0 modified)
+//ccc f mov [imm16], STACK:Rx
+//ccc f mov Rx, LOCAL:imm4 (Rx != R0 , R0 modified)
+//ccc f mov [Rx], LOCAL:imm4 (Rx != R0 , R0 modified)
+//ccc f mov [imm16], LOCAL:imm4 (R0 modified)
+//ccc f mov Rx, LOCAL:imm16 (Rx != R0 , R0 modified)
+//ccc f mov [Rx], LOCAL:imm16 (Rx != R0 , R0 modified)
+//ccc f mov [imm16a], LOCAL:imm16b ( R0 modified)
+//ccc f mov Rx, LOCAL:Ry (Rx,Ry != R0 , R0 modified)
+//ccc f mov [Rx], LOCAL:Ry (Rx,Ry != R0 , R0 modified)
+//ccc f mov [imm16], LOCAL:Rx (Rx != R0 , R0 modified)
+//	Local context / Stack context setting (2 microprograms)
+//ccc f mov STACK, LOCAL 
+//ccc f mov LOCAL, STACK 
+//	Standard instructions (add, sub, shl, shr, and, or , not) by stack (7 microprograms)
+//ccc f add STACK
+//ccc f sub STACK // stack head = stack head - stack+1
+//ccc f shl STACK, imm4
+//ccc f shr STACK, imm4
+//ccc f and STACK
+//ccc f or STACK
+//ccc f not STACK
+;
 
 // any register reference
 bs5_reg
