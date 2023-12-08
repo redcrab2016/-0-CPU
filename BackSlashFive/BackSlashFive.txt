@@ -967,11 +967,10 @@ ccc f mov [imm16a], STACK:imm16b ( R0 modified)
 
 ccc f mov Rx, STACK:Ry (Rx,Ry != R0 , R0 modified)
 	ccc nf add R15, 1  ; if ccc != al
-	al  nf add R15, 4  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
 	al  nf mov R0, R13
 	al  nf add R0, Ry
-	al  nf mov R0, [R0]
-	al  f  mov Rx, R0
+	al  f  mov Rx, [R0]
 
 ccc f mov [Rx], STACK:Ry (Rx,Ry != R0 , R0 modified)
 	ccc nf add R15, 1  ; if ccc != al
@@ -984,7 +983,7 @@ ccc f mov [Rx], STACK:Ry (Rx,Ry != R0 , R0 modified)
 ccc f mov [imm16], STACK:Rx
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 11  ; if ccc != al
-	al  nf mov low R0, Rx
+	al  nf mov R0, Rx
 	al  nf add R0, R13
 	al  nf mov R0, [R0]
 	al  nf sub R13, 1
@@ -1061,11 +1060,10 @@ ccc f mov [imm16a], LOCAL:imm16b ( R0 modified)
 
 ccc f mov Rx, LOCAL:Ry (Rx,Ry != R0 , R0 modified)
 	ccc nf add R15, 1  ; if ccc != al
-	al  nf add R15, 4  ; if ccc != al
+	al  nf add R15, 3  ; if ccc != al
 	al  nf mov R0, R12
 	al  nf add R0, Ry
-	al  nf mov R0, [R0]
-	al  f  mov Rx, R0
+	al  f  mov Rx, [R0]
 
 ccc f mov [Rx], LOCAL:Ry (Rx,Ry != R0 , R0 modified)
 	ccc nf add R15, 1  ; if ccc != al
@@ -1078,7 +1076,7 @@ ccc f mov [Rx], LOCAL:Ry (Rx,Ry != R0 , R0 modified)
 ccc f mov [imm16], LOCAL:Rx (Rx != R0 , R0 modified)
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 11  ; if ccc != al
-	al  nf mov low R0, Rx
+	al  nf mov R0, Rx
 	al  nf add R0, R12
 	al  nf mov R0, [R0]
 	al  nf sub R13, 1
