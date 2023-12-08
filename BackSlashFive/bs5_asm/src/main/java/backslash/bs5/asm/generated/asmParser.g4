@@ -99,12 +99,12 @@ bs5_core_instruction
     // ccc f mov high R0, high Rx
     | bs5_cond? bs5_flag? 
       Bs5_mov Bs5_high Bs5_reg0 COMMA Bs5_high bs5_reg                              { prg.asm_mov_high_R0_high_Rx($bs5_cond.text, $bs5_flag.text, $bs5_reg.text); }
-    // ccc f mov C, Rx:imm4
+    // ccc f mov X, Rx:imm4
     | bs5_cond? bs5_flag? 
-      Bs5_mov Bs5_flag_c COMMA bs5_reg COLON numberUnsignedQuad                     { prg.asm_mov_C_Rx_imm4($bs5_cond.text, $bs5_flag.text, $bs5_reg.text, $numberUnsignedQuad.immediat); }
-    // ccc f mov Rx:imm4, C
+      Bs5_mov Bs5_flag_x COMMA bs5_reg COLON numberUnsignedQuad                     { prg.asm_mov_X_Rx_imm4($bs5_cond.text, $bs5_flag.text, $bs5_reg.text, $numberUnsignedQuad.immediat); }
+    // ccc f mov Rx:imm4, X
     | bs5_cond? bs5_flag? 
-      Bs5_mov bs5_reg COLON numberUnsignedQuad COMMA Bs5_flag_c                     { prg.asm_mov_Rx_imm4_C($bs5_cond.text, $bs5_flag.text, $bs5_reg.text, $numberUnsignedQuad.immediat); }
+      Bs5_mov bs5_reg COLON numberUnsignedQuad COMMA Bs5_flag_x                     { prg.asm_mov_Rx_imm4_X($bs5_cond.text, $bs5_flag.text, $bs5_reg.text, $numberUnsignedQuad.immediat); }
     // ccc f mov Rx:imm4, 0
     | bs5_cond? bs5_flag? 
       Bs5_mov bs5_reg COLON numberUnsignedQuad COMMA numberZero                     { prg.asm_mov_Rx_imm4_0($bs5_cond.text, $bs5_flag.text, $bs5_reg.text, $numberUnsignedQuad.immediat); }

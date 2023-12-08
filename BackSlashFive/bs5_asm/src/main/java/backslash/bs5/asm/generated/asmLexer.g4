@@ -19,7 +19,7 @@ Bs5_dw:   ('dw' | 'DW')           { setText(getText().toLowerCase() + " ");};
 Bs5_low:  ('low' | 'LOW')         { setText(getText().toLowerCase() + " ");};
 Bs5_high: ('high' | 'HIGH')       { setText(getText().toLowerCase() + " ");};
 
-Bs5_flag_c: [Cc]                  { setText(getText().toUpperCase());};
+Bs5_flag_x: [Xx]                  { setText(getText().toUpperCase());};
 
 // basic Mnemonic
 Bs5_mov:  ('mov' | 'MOV')         { setText(getText().toLowerCase() + " ");}; 

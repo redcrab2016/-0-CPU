@@ -21,7 +21,7 @@ R10 : 1010 : general
 R11 : 1011 : general
 R12 : 1100 :LP/BP: general or base/local pointer in stack dedicated microprograms
 R13 : 1101 :SP: general or stack pointer in stack dedicated microprograms
-R14 : 1110 :FL: 16 bits flags  KIHR---- -----XZC, bit 0 and 1 are reserved for C carry and Zero flag respectively
+R14 : 1110 :FL: 16 bits flags  KIHR-lGL gbASVXZC, see below flag R14:F for descritption
 R15 : 1111 :PC: Program address
 There is two set of R0 to R15 registers: one when flag K=1 (interrupt handling), 	another one when K=0 (normal execution)
 K=1 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
@@ -47,8 +47,24 @@ flags R14:FL
      Z : After instruction execution if modified register/bit is equal to zero then Z=1, 0 otherwise
    bit 2
      X : custom flag to set/clear usable for conditional execution
-   bit 3 to 11
-     - : other general flags for program usage (bit general registers)
+   bit 3
+	 V : overflow flag , set to 1 if signed addition or signed substraction is overflow.
+   bit 4
+	 S : Sign flag, set to 1 if result is negative (S= most significant bit result)
+   bit 5
+     A : result of bit flag algebra C==1 && Z==0 , "is above"
+   bit 6
+     b : result of bit flag algebra C==0 && Z==1 , "is below or equal"
+   bit 7
+	 g : result of bit flag algebra S==V,  "is greater of equal" (signed integer comparison)
+   bit 8
+     L : result of bit flag algebra S!=V,  "is less" (signed integer comparison)
+   bit 9
+     G : result of bit flag algebra Z==0 && S==V, "is greater" (signed integer comparison)
+   bit 10
+     l : 'lower case L' result of bit flag algebra Z==1 || S!=V, "is less or equal" (signed integer comparison)
+   bit 11
+     - : other general flag for program usage (bit general register)
    bit 12
      R : =1 request a soft cpu reset, =0 default running
          CPU react only if  using  instruction "mov R14:12, x" : x=C and C==1, or x=1 
@@ -120,7 +136,7 @@ raw mnemonic: 8 mnemonics
 	mov, add, sub, and, or, not, shl, shr
 
 instruction per mnemonic : 31 instructions
-	mov (Z flag )
+	mov (Z,S flags )
 		mov Rx, 0
 		mov low Rx, 0
 		mov high Rx, 0
@@ -133,37 +149,37 @@ instruction per mnemonic : 31 instructions
 		mov high R0, low Rx
 		mov low R0, high Rx
 		mov high R0, high Rx
-		mov C, Rx:imm4
-		mov Rx:imm4, C
+		mov X, Rx:imm4
+		mov Rx:imm4, X
 		mov Rx:imm4, 0
 		mov Rx:imm4, 1
 
-	add ( Z, C flags)
+	add ( Z, C, V, S flags)
 		add Rx, Ry
 		add Rx, [Ry]
 		add R0, imm4
 		add Rx, 1
 		add R15, simm8
 	
-	sub ( Z, C flags)
+	sub ( Z, C, V, S flags)
 		sub Rx, Ry
 		sub Rx, [Ry]
 		sub R0, imm4
 		sub Rx, 1
 
-	shl ( Z, C flags)
+	shl ( Z, C, S flags)
 		shl R0, imm4
 
-	shr ( Z, C flags)
+	shr ( Z, C, S flags)
 		shr R0, imm4
 	
-	and (Z flag)
+	and (Z, S flags)
 		and R0, Rx
 
-	or (Z flag)
+	or (Z,S flags)
 		or R0, Rx
 	
-	not (Z flag)
+	not (Z,S flags)
 		not Rx:imm4
 		not Rx
 
@@ -206,10 +222,10 @@ ccc f 1001 siii iiii
 
 1 register and 1 quartet parameter
 ccc f 1010 iiii xxxx
-	mov C, Rx:imm4
+	mov X, Rx:imm4
 
 ccc f 1011 iiii xxxx
-	mov Rx:imm4, C
+	mov Rx:imm4, X
 
 ccc f 1100 iiii xxxx
 	mov Rx:imm4, 0
@@ -1223,8 +1239,8 @@ Example programs
   Example #5
   bootstrap (template) for normal and interrupt execution (with branching if interrupt due to external signal or program)
  	org 0 ; start for normal and interrupt. at reset time
-	al nf mov C, R14:15  ; C flag <= K flag
-	cs nf add R15, loffset interrupt; if we'are in interrupt context go to interrupt handling
+	al nf mov X, R14:15  ; X flag <= K flag
+	xs nf add R15, loffset interrupt; if we'are in interrupt context go to interrupt handling
 	; from here we're not in interrupt context, then long jump to start of normal code
 	al nf mov low R0, low ptr normalexecution
 	al nf mov high R0, high ptr normalexecution
@@ -1233,8 +1249,8 @@ Example programs
 ; interupt codes : branching if it is external or program interrupt
 ; code below until "normalexecution" label in run under interrupt context only
 interrupt:
-	al nf mov C, R14:14	; C flag <= I flag
-	cc nf add R15, loffset programinterrupt ; if interrupt due to program
+	al nf mov X, R14:14	; X flag <= I flag
+	xc nf add R15, loffset programinterrupt ; if interrupt due to program
 	al nf mov low R0, low ptr externalinterrupt
 	al nf mov high R0, high ptr externalinterrupt
 	al nf mov R15, R0 ; long jump to the external interrupt code

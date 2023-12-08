@@ -514,16 +514,16 @@ ccc f 1001 siii iiii
 
 /*
 ccc f 1010 iiii xxxx
-	mov C, Rx:imm4
+	mov X, Rx:imm4
 */
-    public BS5program asm_mov_C_Rx_imm4(String ccc, String f, String rx, String imm4) {
+    public BS5program asm_mov_X_Rx_imm4(String ccc, String f, String rx, String imm4) {
         return add_oooo_iiii_xxxx(ccc, f==null?"nf":f, "mov C, Rx:imm4", rx, imm4);
     }
 
 /*ccc f 1011 iiii xxxx
-	mov Rx:imm4, C
+	mov Rx:imm4, X
 */
-    public BS5program asm_mov_Rx_imm4_C(String ccc, String f, String rx, String imm4) {
+    public BS5program asm_mov_Rx_imm4_X(String ccc, String f, String rx, String imm4) {
         return add_oooo_iiii_xxxx(ccc, f==null?"nf":f, "mov Rx:imm4, C", rx, imm4);
     }
 
@@ -1934,7 +1934,15 @@ ccc f mov Rx, STACK:imm4 (Rx != R0 , R0 modified)
 	al  nf mov R0, R13
 	al  nf add R0, imm4
 	al  f mov Rx, [R0]
+*/
+    public BS5program asm_mov_RX_stackImm4(String ccc, String f, String rx, String imm4) {
+        return  asm_prologMicroprogram(ccc, f, 3).
+                asm_mov_Rx_Ry("al", "nf", "R0", "R13").
+                asm_add_R0_imm4("al", "nf", imm4).
+                asm_mov_Rx_atRy("al", f, rx, "R0");
+    }
 
+/*
 ccc f mov [Rx], STACK:imm4 (Rx != R0 , R0 modified)
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 4  ; if ccc != al
@@ -1942,6 +1950,16 @@ ccc f mov [Rx], STACK:imm4 (Rx != R0 , R0 modified)
 	al  nf add R0, imm4
 	al  nf mov R0, [R0]
 	al  f  mov [Rx], R0
+*/
+    public BS5program asm_mov_atRX_stackImm4(String ccc, String f, String rx, String imm4) {
+        return  asm_prologMicroprogram(ccc, f, 4).
+                asm_mov_Rx_Ry("al", "nf", "R0", "R13").
+                asm_add_R0_imm4("al", "nf", imm4).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R0").
+                asm_mov_atRx_Ry("al", f, rx, "R0");
+    }
+
+/*
 
 ccc f mov [imm16], STACK:imm4 ( R0 modified)
 	ccc nf add R15, 1  ; if ccc != al
