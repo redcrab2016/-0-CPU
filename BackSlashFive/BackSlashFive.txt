@@ -1104,7 +1104,7 @@ ccc f add STACK
 	al   f add R0, [R13]
 	al  nf mov [R13], R0
 
-ccc f sub STACK
+ccc f sub STACK ; stack head = stack head - stack+1
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 4  ; if ccc != al
 	al  nf mov R0, [R13]
@@ -1115,21 +1115,20 @@ ccc f sub STACK
 ccc f shl STACK, imm4
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
-	al  nf mov R0, [13]
+	al  nf mov R0, [R13]
 	al  f  shl R0, imm4
 	al  nf mov [R13], R0
 
 ccc f shr STACK, imm4
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
-	al  nf mov R0, [13]
+	al  nf mov R0, [R13]
 	al  f  shr R0, imm4
 	al  nf mov [R13], R0
 
 ccc f and STACK
 	ccc nf add R15, 1  ; if ccc != al
-	al  nf add R15, 10  ; if ccc != al
-	al  nf add R13, 1
+	al  nf add R15, 9  ; if ccc != al
 	al  nf mov R0, [R13]
 	al  nf mov [R13], R1
 	al  nf add R13, 1
@@ -1142,8 +1141,7 @@ ccc f and STACK
 
 ccc f or STACK
 	ccc nf add R15, 1  ; if ccc != al
-	al  nf add R15, 10  ; if ccc != al
-	al  nf add R13, 1
+	al  nf add R15, 9  ; if ccc != al
 	al  nf mov R0, [R13]
 	al  nf mov [R13], R1
 	al  nf add R13, 1
@@ -1157,9 +1155,9 @@ ccc f or STACK
 ccc f not STACK
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
-	al  nf R0, [R13]
+	al  nf mov R0, [R13]
 	al  f  not R0
-	al  nf [R13], R0
+	al  nf mov [R13], R0
 
 ==================================================================================
 Example programs

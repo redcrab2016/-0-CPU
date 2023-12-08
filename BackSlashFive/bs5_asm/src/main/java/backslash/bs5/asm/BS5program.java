@@ -2321,10 +2321,20 @@ ccc f mov [imm16], LOCAL:Rx (Rx != R0 , R0 modified)
 	Local context / Stack context setting (2 microprograms)
 ccc f mov STACK, LOCAL 
 	ccc f mov R13, R12
+*/
+     public BS5program asm_mov_stack_local(String ccc, String f) {
+        return  asm_mov_Rx_Ry(ccc, f, "R13", "R12");
+     }
 
+/*
 ccc f mov LOCAL, STACK 
 	ccc f mov R12, R13
+*/
+     public BS5program asm_mov_local_stack(String ccc, String f) {
+        return  asm_mov_Rx_Ry(ccc, f, "R12", "R13");
+     }
 
+/*
 	Standard instructions (add, sub, shl, shr, and, or , not) by stack (7 microprograms)
 ccc f add STACK
 	ccc nf add R15, 1  ; if ccc != al
@@ -2333,33 +2343,66 @@ ccc f add STACK
 	al  nf add R13, 1
 	al   f add R0, [R13]
 	al  nf mov [R13], R0
+*/
+     public BS5program asm_add_stack(String ccc, String f) {
+        return  asm_prologMicroprogram(ccc, f, 4).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R13").
+                asm_add_Rx_1("al", "nf", "R13").
+                asm_add_Rx_atRy("al", f, "R0", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0");
+     }
 
-ccc f sub STACK
+/*
+ccc f sub STACK ; stack head = stack head - stack+1
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 4  ; if ccc != al
 	al  nf mov R0, [R13]
 	al  nf add R13, 1
 	al   f sub R0, [R13]
 	al  nf mov [R13], R0
+*/
+     public BS5program asm_sub_stack(String ccc, String f) {
+        return  asm_prologMicroprogram(ccc, f, 4).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R13").
+                asm_add_Rx_1("al", "nf", "R13").
+                asm_sub_Rx_atRy("al", f, "R0", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0");
+     }
 
+/*
 ccc f shl STACK, imm4
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
-	al  nf mov R0, [13]
+	al  nf mov R0, [R13]
 	al  f  shl R0, imm4
 	al  nf mov [R13], R0
+*/
+     public BS5program asm_shl_stack_imm4(String ccc, String f, String imm4) {
+        return  asm_prologMicroprogram(ccc, f, 3).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R13").
+                asm_shl_R0_imm4("al", f, imm4).
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0");
+     }
 
+/*
 ccc f shr STACK, imm4
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
-	al  nf mov R0, [13]
+	al  nf mov R0, [R13]
 	al  f  shr R0, imm4
 	al  nf mov [R13], R0
+*/
+     public BS5program asm_shr_stack_imm4(String ccc, String f, String imm4) {
+        return  asm_prologMicroprogram(ccc, f, 3).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R13").
+                asm_shr_R0_imm4("al", f, imm4).
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0");
+     }
 
+/*
 ccc f and STACK
 	ccc nf add R15, 1  ; if ccc != al
-	al  nf add R15, 10  ; if ccc != al
-	al  nf add R13, 1
+	al  nf add R15, 9  ; if ccc != al
 	al  nf mov R0, [R13]
 	al  nf mov [R13], R1
 	al  nf add R13, 1
@@ -2369,11 +2412,24 @@ ccc f and STACK
 	al  nf sub R13, 1
 	al  nf mov R1, [R13]
 	al  nf add R13, 1
+*/
+     public BS5program asm_and_stack(String ccc, String f) {
+        return  asm_prologMicroprogram(ccc, f, 9).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R1").
+                asm_add_Rx_1("al", "nf", "R13").
+                asm_mov_Rx_atRy("al", "nf", "R1", "R13").
+                asm_and_R0_Rx("al", f, "R1").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0").
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_Rx_atRy("al", "nf", "R1", "R13").
+                asm_add_Rx_1("al", "nf", "R13");
+     }
 
+/*
 ccc f or STACK
 	ccc nf add R15, 1  ; if ccc != al
-	al  nf add R15, 10  ; if ccc != al
-	al  nf add R13, 1
+	al  nf add R15, 9  ; if ccc != al
 	al  nf mov R0, [R13]
 	al  nf mov [R13], R1
 	al  nf add R13, 1
@@ -2383,15 +2439,34 @@ ccc f or STACK
 	al  nf sub R13, 1
 	al  nf mov R1, [R13]
 	al  nf add R13, 1
-	
+*/
+     public BS5program asm_or_stack(String ccc, String f) {
+        return  asm_prologMicroprogram(ccc, f, 9).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R13").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R1").
+                asm_add_Rx_1("al", "nf", "R13").
+                asm_mov_Rx_atRy("al", "nf", "R1", "R13").
+                asm_or_R0_Rx("al", f, "R1").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0").
+                asm_sub_Rx_1("al", "nf", "R13").
+                asm_mov_Rx_atRy("al", "nf", "R1", "R13").
+                asm_add_Rx_1("al", "nf", "R13");
+     }
+
+/*	
 ccc f not STACK
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 3  ; if ccc != al
-	al  nf R0, [R13]
+	al  nf mov R0, [R13]
 	al  f  not R0
-	al  nf [R13], R0
+	al  nf mov [R13], R0
 
 */
-
+     public BS5program asm_not_stack(String ccc, String f) {
+        return  asm_prologMicroprogram(ccc, f, 3).
+                asm_mov_Rx_atRy("al", "nf", "R0", "R13").
+                asm_not_Rx("al", f, "R0").
+                asm_mov_atRx_Ry("al", "nf", "R13", "R0");
+     }
 }
 
