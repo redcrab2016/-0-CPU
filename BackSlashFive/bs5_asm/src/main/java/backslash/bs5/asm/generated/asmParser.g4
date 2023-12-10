@@ -246,10 +246,10 @@ bs5_imm16_instruction
 //63 Microprograms to handle stack (backward memory stacking, stack addr in R13, local context in stack addr in R12)
 bs5_stack_instruction
 //  Push value into stack (4 microprograms)
-//ccc f mov STACK, Rx
+    //ccc f mov STACK, Rx
     : bs5_cond? bs5_flag?
       Bs5_mov Bs5_stack COMMA bs5_reg
-//ccc f mov STACK, [Rx]  (R0 modified)
+    //ccc f mov STACK, [Rx]  (R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_stack COMMA OPEN_BRACKET bs5_reg CLOSE_BRACKET
 //ccc f mov STACK, imm16 (R0 modified)
