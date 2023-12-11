@@ -333,6 +333,7 @@ bs5_reg_1_15
     | Bs5_reg15;
 
 bs5_cond
+    // Core condition
     : Bs5_cond_always
     | Bs5_cond_Zset
     | Bs5_cond_Zclr
@@ -340,7 +341,14 @@ bs5_cond
     | Bs5_cond_Cclr
     | Bs5_cond_Xset
     | Bs5_cond_Xclr
-    | Bs5_cond_never;
+    | Bs5_cond_never
+    // Assembler condition
+    | Bs5_cond_Aset
+    | Bs5_cond_Aclr
+    | Bs5_cond_Lset
+    | Bs5_cond_Lclr
+    | Bs5_cond_Gset
+    | Bs5_cond_Gclr;
 
 bs5_flag
     : Bs5_flag_changed

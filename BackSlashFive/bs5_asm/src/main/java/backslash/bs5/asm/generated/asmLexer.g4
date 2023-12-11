@@ -31,14 +31,25 @@ Bs5_not:  ('not' | 'NOT')         { setText(getText().toLowerCase() + " ");};
 Bs5_shl:  ('shl' | 'SHL')         { setText(getText().toLowerCase() + " ");};
 Bs5_shr:  ('shr' | 'SHR')         { setText(getText().toLowerCase() + " ");};
 
-Bs5_cond_always: ('al' | 'AL')    { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Cset: ('cs' | 'CS')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Cclr: ('cc' | 'CC')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Zset: ('zs' | 'ZS')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Zclr: ('zc' | 'ZC')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Xset: ('xs' | 'XS')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Xclr: ('xc' | 'XC')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_never: ('ne' | 'NE' | 'no' | 'NO') { setText("ne ");} ;
+// core condition
+Bs5_cond_always: ('al' | 'AL')                  { setText("al ");};
+Bs5_cond_Cset: ('cs' | 'CS' | 'hs' | 'HS')      { setText("cs ");};
+Bs5_cond_Cclr: ('cc' | 'CC' | 'lo' | 'LO')      { setText("cc ");};
+Bs5_cond_Zset: ('zs' | 'ZS' | 'eq' | 'EQ')      { setText("zs ");};
+Bs5_cond_Zclr: ('zc' | 'ZC' | 'ne' | 'NE')      { setText("zc ");};
+Bs5_cond_Xset: ('xs' | 'XS')                    { setText("xs ");};
+Bs5_cond_Xclr: ('xc' | 'XC')                    { setText("xc ");};
+Bs5_cond_never: ('no' | 'NO')                   { setText("ne ");} ;
+
+// assembler condition
+Bs5_cond_Vset: ('vs' | 'VS')                    { setText("vs ");};
+Bs5_cond_Vclr: ('vc' | 'VC')                    { setText("vc ");};
+Bs5_cond_Aset: ('hi' | 'HI')                    { setText("hi ");};
+Bs5_cond_Aclr: ('ls' | 'LS')                    { setText("ls ");};
+Bs5_cond_Lset: ('lt' | 'LT')                    { setText("lt ");};
+Bs5_cond_Lclr: ('ge' | 'GE')                    { setText("ge ");};
+Bs5_cond_Gset: ('gt' | 'GT')                    { setText("gt ");};
+Bs5_cond_Gclr: ('le' | 'LE')                    { setText("le ");};
 
 Bs5_flag_unchanged: ('nf' | 'NF') { setText(getText().toLowerCase() + " ");};
 Bs5_flag_changed: ('fl' | 'FL')   { setText(getText().toLowerCase() + " ");};
