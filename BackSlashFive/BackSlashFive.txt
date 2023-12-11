@@ -212,53 +212,51 @@ raw mnemonic: 8 mnemonics
 
 instruction per mnemonic : 31 instructions
 	mov (Z,S flags )
-		mov Rx, 0
-		mov low Rx, 0
-		mov high Rx, 0
-		mov Rx, Ry
-		mov Rx, [Ry]
-		mov [Rx], Ry
-		mov low R0, imm8
-		mov high R0, imm8
-		mov low R0, low Rx
-		mov high R0, low Rx
-		mov low R0, high Rx
-		mov high R0, high Rx
-		mov X, Rx:imm4
-		mov Rx:imm4, X
-		mov Rx:imm4, 0
-		mov Rx:imm4, 1
+		mov Rx, 0				; Rx = 0
+		mov low Rx, 0           ; LSB Rx = 0
+		mov high Rx, 0          ; MSB Rx = 0
+		mov Rx, Ry				; Rx = Ry        
+		mov Rx, [Ry]            ; Rx = [Ry] (content at address Ry)
+		mov [Rx], Ry		    ; [Rx] = Ry  (content at address Rx is replace with value of Ry)
+		mov low R0, imm8	    ; LSB R0 = immediat 8 bits
+		mov high R0, imm8		; MSB R0 = immediat 8 bits
+		mov low R0, low Rx		; LSB R0 = LSB Rx
+		mov high R0, low Rx		; MSB R0 = LSB Rx
+		mov low R0, high Rx		; LSB R0 = MSB Rx
+		mov high R0, high Rx	; MSB R0 = MSB Rx
+		mov X, Rx:imm4			; flag X = bit number designed by a 4 bits immediate, of register Rx
+		mov Rx:imm4, X			; bit number designed by a 4 bits immediate, of register Rx = flag X
+		mov Rx:imm4, 0			; bit number designed by a 4 bits immediate, of register Rx is cleared
+		mov Rx:imm4, 1			; bit number designed by a 4 bits immediate, of register Rx is set
 
 	add ( Z, C, V, S flags)
-		add Rx, Ry
-		add Rx, [Ry]
-		add R0, imm4
-		add Rx, 1
-		add R15, simm8
+		add Rx, Ry				; Rx = Rx + Ry
+		add Rx, [Ry]			; Rx = Rx + [Ry]
+		add R0, imm4			; R0 = R0 + 4 bits immediate (unsigned)
+		add Rx, 1				; Rx = Rx + 1  (increment)
+		add R15, simm8			; R15 = R15 + signed 8 bits immediate (Near relative branching)
 	
 	sub ( Z, C, V, S flags)
-		sub Rx, Ry
-		sub Rx, [Ry]
-		sub R0, imm4
-		sub Rx, 1
+		sub Rx, Ry				; Rx = Rx - Ry
+		sub Rx, [Ry]			; Rx = Rx - [Ry]
+		sub R0, imm4			; R0 = R0 - a 4 bits immediate value
+		sub Rx, 1				; Rx = Rx - 1 (decrement)
 
 	shl ( Z, C, S flags)
-		shl R0, imm4
+		shl R0, imm4			; R0 = R0 << (4 bits immediate)
 
 	shr ( Z, C, S flags)
-		shr R0, imm4
+		shr R0, imm4			; R0 = R0 >> (4 bits immediate)
 	
 	and (Z, S flags)
-		and R0, Rx
+		and R0, Rx				; R0 = R0 binary AND with Rx
 
 	or (Z,S flags)
-		or R0, Rx
+		or R0, Rx				; R0 = R0 binary OR with Rx
 	
 	not (Z,S flags)
-		not Rx:imm4
-		not Rx
-
-
+		not Rx:imm4				; bit number (4 bit immediate) of register Rx is flipped (1 become 0, and 0 become 1)
+		not Rx					; binary NOT every bits of register Rx
 
 Instruction encoding
 
