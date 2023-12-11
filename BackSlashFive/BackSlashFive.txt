@@ -1,6 +1,6 @@
 Light processor
 16 registers 16 bits ( word )
-8 execution conditions
+8 execution conditions (16 with generated assembler condition)
 64 Ki word addresses
 16 bits per instruction ( one word per instruction)
 Can be implemented for same address space for program, data and I/O
@@ -129,16 +129,16 @@ conditions: ccc
 The assembler have to know other conditions that generate an additional move bit instruction before, 
 and change the condition to xs or xc (depending the case)
 for instance:
-	pl nf sub R1, R2
+	pl nf sub R1, R2 ;( if S==0 then R1=R1-R2, and do not modify the flags) : can't be assembled in one word
 is assembled as
-	al nf mov X, R14:4
-	xc nf sub R1, R2
+	al nf mov X, R14:4  ;(X flag = S flag)
+	xc nf sub R1, R2 ;(if X==0 then R1=R1-R2, and do not modify the flags) : assembled in two words
 another example:
 	mi nf add R1, R2
 is assembled as	
 	al nf mov X, R14:4
 	xs nf add R1, R2	
-The additional conditions and encoding is as following
+The additional conditions and encoding is as following ( 10 additional conditions )
 (f is modified flag (fl or nf), ope is the operation to execute under condition (One of the 31 core instructions))
 hi : Higher or same (unsigned) flag register bit 5
   instruction
