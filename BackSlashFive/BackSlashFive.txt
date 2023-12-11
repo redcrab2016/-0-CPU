@@ -53,8 +53,8 @@ flags R14:FL
 	 S : Sign flag, set to 1 if result is negative (S= most significant bit result),0 if positive
    bit 5
      A : computed flag: result of bit flag algebra C==1 && Z==0 
-	 	1 :  "is above"
-		0 :  "is below or equal"
+	 	1:  "is above"
+		0:  "is below or equal"
    bit 6
      L : computed flag: result of bit flag algebra S!=V,  
 	 	1: "is less" (signed integer comparison)
