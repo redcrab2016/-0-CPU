@@ -21,7 +21,7 @@ R10 : 1010 : general
 R11 : 1011 : general
 R12 : 1100 :LP/BP: general or base/local pointer in stack dedicated microprograms
 R13 : 1101 :SP: general or stack pointer in stack dedicated microprograms
-R14 : 1110 :FL: 16 bits flags  KIHR-lGL gbASVXZC, see below flag R14:FL for description
+R14 : 1110 :FL: 16 bits flags  KIHR---- GLASVXZC, see below flag R14:FL for description
 R15 : 1111 :PC: Program address
 There is two set of R0 to R15 registers: one when flag K=1 (interrupt handling), 	another one when K=0 (normal execution)
 K=1 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
@@ -52,18 +52,18 @@ flags R14:FL
    bit 4
 	 S : Sign flag, set to 1 if result is negative (S= most significant bit result),0 if positive
    bit 5
-     A : computed flag: result of bit flag algebra C==1 && Z==0 , "is above"
+     A : computed flag: result of bit flag algebra C==1 && Z==0 
+	 	1 :  "is above"
+		0 :  "is below or equal"
    bit 6
-     b : computed flag: result of bit flag algebra C==0 || Z==1 , "is below or equal"
+     L : computed flag: result of bit flag algebra S!=V,  
+	 	1: "is less" (signed integer comparison)
+		0: "is greater or equal"
    bit 7
-	 g : computed flag: result of bit flag algebra S==V,  "is greater of equal" (signed integer comparison)
-   bit 8
-     L : computed flag: result of bit flag algebra S!=V,  "is less" (signed integer comparison)
-   bit 9
-     G : computed flag: result of bit flag algebra Z==0 && S==V, "is greater" (signed integer comparison)
-   bit 10
-     l : computed flag: 'lower case L' result of bit flag algebra Z==1 || S!=V, "is less or equal" (signed integer comparison)
-   bit 11
+     G : computed flag: result of bit flag algebra Z==0 && S==V, 
+	 	1: "is greater" (signed integer comparison)
+		0: "is less or equal"
+   bit 8 - 11
      - : general flag for program usage (bit general register)
    bit 12
      R : =1 request a soft cpu reset, =0 default running
@@ -140,42 +140,42 @@ is assembled as
 	xs nf add R1, R2	
 The additional conditions and encoding is as following ( 10 additional conditions )
 (f is modified flag (fl or nf), ope is the operation to execute under condition (One of the 31 core instructions))
-hi : Higher or same (unsigned) flag register bit 5
+hi : Higher (unsigned) flag register bit 5
   instruction
 	hi f ope
   become 
     al nf mov x, R14:5
 	xs f ope
-ls : Less or same (unsigned) flag register bit 6
+ls : Less or same (unsigned) not flag register bit 5
   instruction 
 	ls f ope
   become
-    al nf mov x, R14:6
-	xs f ope
-ge : is greater or equal (signed) flag register bit 7
+    al nf mov x, R14:5
+	xc f ope
+ge : is greater or equal (signed) not flag register bit 6
   instruction
     ge f ope
   become
-    al nf mov x, R14:7
-	xs f ope
-lt : is less (signed) flag register bit 8
+    al nf mov x, R14:6
+	xc f ope
+lt : is less (signed) flag register bit 6
   instruction
     lt f ope
   become
-    al nf mov x, R14:8
+    al nf mov x, R14:6
 	xs f ope
-gt : is greater (signed) flag register bit 9
+gt : is greater (signed) flag register bit 7
   instruction
     gt f ope
   become
-    al nf mov x, R14:9
+    al nf mov x, R14:7
 	xs f ope
-le : is less or equal (signed) flag register 10
+le : is less or equal (signed) not flag register 7
   instruction
     le f ope
   become 
-    al nf mov x, R14:10
-	xs f ope
+    al nf mov x, R14:7
+	xc f ope
 vc : no overflow (signed) flag register 3
   instruction
     vc f ope
