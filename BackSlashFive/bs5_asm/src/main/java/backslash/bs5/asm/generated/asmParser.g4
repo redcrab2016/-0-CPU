@@ -465,6 +465,10 @@ bs5_cond
     | Bs5_cond_Xclr
     | Bs5_cond_never
     // Assembler condition
+    | Bs5_cond_Sset
+    | Bs5_cond_Sclr
+    | Bs5_cond_Vset
+    | Bs5_cond_Vclr
     | Bs5_cond_Aset
     | Bs5_cond_Aclr
     | Bs5_cond_Lset
