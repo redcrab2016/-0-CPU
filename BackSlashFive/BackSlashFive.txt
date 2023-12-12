@@ -1146,7 +1146,7 @@ ccc f mov [Rx], LOCAL:Ry (Rx,Ry != R0 , R0 modified)
 	al  nf mov R0, [R0]
 	al  f  mov [Rx], R0
 
-ccc f mov [imm16], LOCAL:Rx (Rx != R0 , R0 modified)
+ccc f mov [imm16], LOCAL:Rx (R0 usable but R0 modified)
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 11  ; if ccc != al
 	al  nf mov R0, Rx

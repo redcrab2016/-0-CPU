@@ -299,16 +299,16 @@ bs5_stack_instruction
       Bs5_mov Bs5_stack COLON numberUnsignedQuad COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
     //ccc f mov STACK:imm16, Rx (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_stack COLON number16bits COMMA bs5_reg_1_15
+      Bs5_mov Bs5_stack COLON number16bitsNotQuad COMMA bs5_reg_1_15
     //ccc f mov STACK:imm16a, imm16b ( R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_stack COLON numa=number16bits COMMA numb=number16bits
+      Bs5_mov Bs5_stack COLON numa=number16bitsNotQuad COMMA numb=number16bits
     //ccc f mov STACK:imm16, [Rx] (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_stack COLON number16bits COMMA OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET
+      Bs5_mov Bs5_stack COLON number16bitsNotQuad COMMA OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET
     //ccc f mov STACK:imm16a, [imm16b] ( R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_stack COLON numa=number16bits COMMA OPEN_BRACKET numb=number16bits CLOSE_BRACKET
+      Bs5_mov Bs5_stack COLON numa=number16bitsNotQuad COMMA OPEN_BRACKET numb=number16bits CLOSE_BRACKET
     //ccc f mov STACK:Rx, Ry  (Rx and Ry != R15 and R0)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_stack COLON rx=Bs5_reg_1_14 COMMA ry=Bs5_reg_1_14
@@ -335,16 +335,16 @@ bs5_stack_instruction
       Bs5_mov Bs5_local COLON numberUnsignedQuad COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
     //ccc f mov LOCAL:imm16, Rx (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_local COLON number16bits COMMA bs5_reg_1_15
+      Bs5_mov Bs5_local COLON number16bitsNotQuad COMMA bs5_reg_1_15
     //ccc f mov LOCAL:imm16a, imm16b ( R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_local COLON numa=number16bits COMMA numb=number16bits
+      Bs5_mov Bs5_local COLON numa=number16bitsNotQuad COMMA numb=number16bits
     //ccc f mov LOCAL:imm16, [Rx] (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_local COLON number16bits COMMA OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET
+      Bs5_mov Bs5_local COLON number16bitsNotQuad COMMA OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET
     //ccc f mov LOCAL:imm16a, [imm16b] ( R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_local COLON numa=number16bits COMMA OPEN_BRACKET numb=number16bits CLOSE_BRACKET
+      Bs5_mov Bs5_local COLON numa=number16bitsNotQuad COMMA OPEN_BRACKET numb=number16bits CLOSE_BRACKET
     //ccc f mov LOCAL:Rx, Ry  (Rx and Ry != R15 and R0)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON rx=Bs5_reg_1_14 COMMA ry=Bs5_reg_1_14
@@ -369,13 +369,13 @@ bs5_stack_instruction
       Bs5_mov OPEN_BRACKET number16bits CLOSE_BRACKET COMMA Bs5_stack COLON numberUnsignedQuad
     //ccc f mov Rx, STACK:imm16 (Rx != R0 , R0 modified)
      | bs5_cond? bs5_flag?
-      Bs5_mov bs5_reg_1_15 COMMA Bs5_stack COLON number16bits
+      Bs5_mov bs5_reg_1_15 COMMA Bs5_stack COLON number16bitsNotQuad
     //ccc f mov [Rx], STACK:imm16 (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET COMMA Bs5_stack COLON number16bits
+      Bs5_mov OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET COMMA Bs5_stack COLON number16bitsNotQuad
     //ccc f mov [imm16a], STACK:imm16b ( R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov OPEN_BRACKET numa=number16bits CLOSE_BRACKET COMMA Bs5_stack COLON numb=number16bits
+      Bs5_mov OPEN_BRACKET numa=number16bits CLOSE_BRACKET COMMA Bs5_stack COLON numb=number16bitsNotQuad
     //ccc f mov Rx, STACK:Ry (Rx,Ry != R0 , R0 modified)
      | bs5_cond? bs5_flag?
       Bs5_mov rx=bs5_reg_1_15 COMMA Bs5_stack COLON ry=bs5_reg_1_15
@@ -396,33 +396,51 @@ bs5_stack_instruction
       Bs5_mov OPEN_BRACKET number16bits CLOSE_BRACKET COMMA Bs5_local COLON numberUnsignedQuad
     //ccc f mov Rx, LOCAL:imm16 (Rx != R0 , R0 modified)
      | bs5_cond? bs5_flag?
-      Bs5_mov bs5_reg_1_15 COMMA Bs5_local COLON number16bits
+      Bs5_mov bs5_reg_1_15 COMMA Bs5_local COLON number16bitsNotQuad
     //ccc f mov [Rx], LOCAL:imm16 (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET COMMA Bs5_local COLON number16bits
+      Bs5_mov OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET COMMA Bs5_local COLON number16bitsNotQuad
     //ccc f mov [imm16a], LOCAL:imm16b ( R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov OPEN_BRACKET numa=number16bits CLOSE_BRACKET COMMA Bs5_local COLON numb=number16bits
+      Bs5_mov OPEN_BRACKET numa=number16bits CLOSE_BRACKET COMMA Bs5_local COLON numb=number16bitsNotQuad
     //ccc f mov Rx, LOCAL:Ry (Rx,Ry != R0 , R0 modified)
      | bs5_cond? bs5_flag?
       Bs5_mov rx=bs5_reg_1_15 COMMA Bs5_local COLON ry=bs5_reg_1_15
     //ccc f mov [Rx], LOCAL:Ry (Rx,Ry != R0 , R0 modified)
      | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET rx=bs5_reg_1_15 CLOSE_BRACKET COMMA Bs5_local COLON ry=bs5_reg_1_15
-    //ccc f mov [imm16], LOCAL:Rx (Rx != R0 , R0 modified)
+    //ccc f mov [imm16], LOCAL:Rx  (R0 usable but R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET number16bits CLOSE_BRACKET COMMA Bs5_local COLON bs5_reg
 //	Local context / Stack context setting (2 microprograms)
-//ccc f mov STACK, LOCAL 
-//ccc f mov LOCAL, STACK 
+    //ccc f mov STACK, LOCAL 
+    | bs5_cond? bs5_flag?
+      Bs5_mov Bs5_local COMMA Bs5_stack
+    //ccc f mov LOCAL, STACK 
+    | bs5_cond? bs5_flag?
+      Bs5_mov Bs5_stack COMMA Bs5_local
 //	Standard instructions (add, sub, shl, shr, and, or , not) by stack (7 microprograms)
-//ccc f add STACK
-//ccc f sub STACK // stack head = stack head - stack+1
-//ccc f shl STACK, imm4
-//ccc f shr STACK, imm4
-//ccc f and STACK
-//ccc f or STACK
-//ccc f not STACK
+    //ccc f add STACK
+    | bs5_cond? bs5_flag?
+      Bs5_add Bs5_stack
+    //ccc f sub STACK // stack head = stack head - stack+1
+    | bs5_cond? bs5_flag?
+      Bs5_sub Bs5_stack
+    //ccc f shl STACK, imm4
+    | bs5_cond? bs5_flag?
+      Bs5_shl Bs5_stack COMMA numberUnsignedQuad
+    //ccc f shr STACK, imm4
+    | bs5_cond? bs5_flag?
+      Bs5_shr Bs5_stack COMMA numberUnsignedQuad
+    //ccc f and STACK
+    | bs5_cond? bs5_flag?
+      Bs5_and Bs5_stack
+    //ccc f or STACK
+    | bs5_cond? bs5_flag?
+      Bs5_or Bs5_stack
+    //ccc f not STACK
+    | bs5_cond? bs5_flag?
+      Bs5_not Bs5_stack
 ;
 
 // any register reference
