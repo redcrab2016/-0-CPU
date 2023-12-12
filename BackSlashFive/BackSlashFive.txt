@@ -1053,7 +1053,7 @@ ccc f mov [Rx], STACK:Ry (Rx,Ry != R0 , R0 modified)
 	al  nf mov R0, [R0]
 	al  f  mov [Rx], R0
 
-ccc f mov [imm16], STACK:Rx
+ccc f mov [imm16], STACK:Rx (R0 usable but modified)
 	ccc nf add R15, 1  ; if ccc != al
 	al  nf add R15, 11  ; if ccc != al
 	al  nf mov R0, Rx
