@@ -13,6 +13,9 @@ COLON:                    ':';
 COMMA:                    ','     { setText(", "); };
 DBLQUOTE:                 '"' -> pushMode(DBLQUOTESTRING) ; 
 
+Bs5_label_ptr:     (([pP][tT][rR]) | '@')         { setText("@");};
+Bs5_label_loffset: ([lL][oO][fF][fF][sS][eE][tT]) { setText(getText().toLowerCase() + " ");};
+
 Bs5_stack: ([sS][tT][aA][cC][kK]) { setText(getText().toLowerCase());};
 Bs5_local: ([lL][oO][cC][aA][lL]) { setText(getText().toLowerCase());};
 
@@ -55,10 +58,6 @@ Bs5_cond_Lset: (([lL][tT]) | ([lL][lL]))        { setText(getText().toLowerCase(
 Bs5_cond_Lclr: (([gG][eE]) | ([lL][cC]))        { setText(getText().toLowerCase() + " ");};
 Bs5_cond_Gset: (([gG][tT]) | ([gG][sS]))        { setText(getText().toLowerCase() + " ");};
 Bs5_cond_Gclr: (([lL][eE]) | ([gG][cC]))        { setText(getText().toLowerCase() + " ");};
-
-
-Bs5_label_ptr: (([pP][tT][rR]) | '@')           { setText("@");};
-Bs5_label_loffset: ([lL][oO][fF][fF][sS][eE][tT]) { setText(getText().toLowerCase() + " ");};
 
 // alias for register R15
 Bs5_regPC: ([pP][cC])                           { setText("R15"); } -> type(Bs5_reg15);
