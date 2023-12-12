@@ -348,9 +348,67 @@ public class BS5program {
         return addMemoryCell(new BS5MemoryCell(this,PC,linenum,word));
     }
 
+// generate code for assembler condition (not core condition)
+    private String conditionPrefix(String ccc) {
+        if (ccc == null) return null;
+        String _ccc = ccc.trim().toLowerCase();
+        switch (_ccc) {
+            case "as": // A flag is set
+            case "hi": // unsigned higher
+                asm_mov_X_Rx_imm4("al", "nf", "R14", "5");
+                ccc = "xs ";
+                break;
+            case "ac": // A flag is cleared
+            case "ls": // unsigned lower or same
+                asm_mov_X_Rx_imm4("al", "nf", "R14", "5");
+                ccc = "xc ";
+                break;
+            case "lc": // L flag is cleared
+            case "ge": // signed greater or equal
+                asm_mov_X_Rx_imm4("al", "nf", "R14", "6");
+                ccc = "xc ";
+                break;
+            case "ll": // L flag is set
+            case "lt": // signed less
+                asm_mov_X_Rx_imm4("al", "nf", "R14", "6");
+                ccc = "xs ";
+                break;
+            case "gs": // G flag is set
+            case "gt": // signed greater
+                asm_mov_X_Rx_imm4("al", "nf", "R14", "7");
+                ccc = "xs ";
+                break;
+            case "gc": // G flag is cleared
+            case "le": // signed less or equal
+                asm_mov_X_Rx_imm4("al", "nf", "R14", "7");
+                ccc = "xc ";
+                break; // V flag is cleared
+            case "vc": // no signed overflow
+                asm_mov_X_Rx_imm4("al", "nf", "R14", "3");
+                ccc = "xc ";
+                break; // V flag is set
+            case "vs": // signed overflow
+                asm_mov_X_Rx_imm4("al", "nf", "R14", "3");
+                ccc = "xs ";
+                break;
+            case "pl": // S flag is cleared
+            case "sc": // signed positive
+                asm_mov_X_Rx_imm4("al", "nf", "R14", "4");
+                ccc = "xc ";
+                break;
+            case "mi": // S flag is set
+            case "ss": // signed negative
+                asm_mov_X_Rx_imm4("al", "nf", "R14", "4");
+                ccc = "xs ";
+                break;               
+        }
+        return ccc;
+    }
+
 // Two registers encoding
     private BS5program add_oooo_yyyy_xxxx(String ccc, String f, String instruction, String ry, String rx) {
         try {
+            ccc = conditionPrefix(ccc);
             return addMemoryCell(new BS5MemoryCell_oooo_yyyy_xxxx(this, PC, linenum, ccc, f, instruction, ry, rx));
         } catch (BS5Exception e ) {
             e.PC = PC;
@@ -368,6 +426,7 @@ public class BS5program {
 // 8 bits immediate (valid also for signed 8 bits immediate: oooo_siii_iiii )   
     private BS5program add_oooo_iiii_iiii(String ccc, String f, String instruction, String immediat) {
         try {
+            ccc = conditionPrefix(ccc);
             return addMemoryCell(new BS5MemoryCell_oooo_iiii_iiii(this, PC, linenum, ccc, f, instruction, immediat));
         } catch (BS5Exception e) {
             e.PC = PC;
@@ -385,6 +444,7 @@ public class BS5program {
 // 1 register and 4 bits immediate
     private BS5program add_oooo_iiii_xxxx(String ccc, String f, String instruction, String rx, String immediat) {
         try {
+            ccc = conditionPrefix(ccc);
             return addMemoryCell(new BS5MemoryCell_oooo_iiii_xxxx(this, PC, linenum, ccc, f, instruction, rx, immediat));
         } catch (BS5Exception e) {
             e.PC = PC;
@@ -402,6 +462,7 @@ public class BS5program {
 // 1 register
     private BS5program add_oooo_oooo_xxxx(String ccc, String f, String instruction, String rx) {
         try {
+            ccc = conditionPrefix(ccc);
             return addMemoryCell(new BS5MemoryCell_oooo_oooo_xxxx(this, PC, linenum, ccc, f, instruction, rx));
         } catch (BS5Exception e) {
             e.PC = PC;
@@ -419,6 +480,7 @@ public class BS5program {
 // 4 bits immediate
     private BS5program add_oooo_oooo_iiii(String ccc, String f, String instruction, String immediate)  {
         try {
+            ccc = conditionPrefix(ccc);
             return addMemoryCell(new BS5MemoryCell_oooo_oooo_iiii(this, PC, linenum, ccc, f, instruction, immediate));
         } catch (BS5Exception e) {
             e.PC = PC;

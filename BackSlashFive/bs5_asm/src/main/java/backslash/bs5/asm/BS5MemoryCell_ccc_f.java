@@ -66,14 +66,18 @@ public class BS5MemoryCell_ccc_f extends BS5MemoryCell {
     private int getvalue_ccc(String ccc) throws BS5Exception {
         int result = -1;
         switch (ccc.toLowerCase().trim()) {
-            case "al": result = 0b000_0_0000_0000_0000; break;
-            case "zs": result = 0b001_0_0000_0000_0000; break; 
-            case "zc": result = 0b010_0_0000_0000_0000; break;
-            case "cs": result = 0b011_0_0000_0000_0000; break;
-            case "cc": result = 0b100_0_0000_0000_0000; break;
-            case "xs": result = 0b101_0_0000_0000_0000; break;
-            case "xc": result = 0b110_0_0000_0000_0000; break;
-            case "ne": result = 0b111_0_0000_0000_0000; break;
+            case "al": result = 0b000_0_0000_0000_0000; break;  // always, unconditional
+            case "eq":                                          // is equal
+            case "zs": result = 0b001_0_0000_0000_0000; break;  // Z flag is set
+            case "ne":                                          // is not equal
+            case "zc": result = 0b010_0_0000_0000_0000; break;  // Z flag is cleared
+            case "hs":                                          // Higher or same (unsigned)
+            case "cs": result = 0b011_0_0000_0000_0000; break;  // C flag is set
+            case "lo":                                          // Lower (unsigned)
+            case "cc": result = 0b100_0_0000_0000_0000; break;  // C flag is cleared
+            case "xs": result = 0b101_0_0000_0000_0000; break;  // X flag is set
+            case "xc": result = 0b110_0_0000_0000_0000; break;  // X flag is cleared
+            case "no": result = 0b111_0_0000_0000_0000; break;  // no operation (operation do not change value on target)
             default: throw new BS5Exception("Incorrect conditionnal execution code '" + ccc + "' at line " + linenum);
         }
         return result;

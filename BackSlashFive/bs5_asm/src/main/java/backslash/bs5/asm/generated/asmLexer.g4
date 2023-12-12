@@ -33,23 +33,25 @@ Bs5_shr:  ('shr' | 'SHR')         { setText(getText().toLowerCase() + " ");};
 
 // core condition
 Bs5_cond_always: ('al' | 'AL')                  { setText("al ");};
-Bs5_cond_Cset: ('cs' | 'CS' | 'hs' | 'HS')      { setText("cs ");};
-Bs5_cond_Cclr: ('cc' | 'CC' | 'lo' | 'LO')      { setText("cc ");};
-Bs5_cond_Zset: ('zs' | 'ZS' | 'eq' | 'EQ')      { setText("zs ");};
-Bs5_cond_Zclr: ('zc' | 'ZC' | 'ne' | 'NE')      { setText("zc ");};
+Bs5_cond_Cset: ('cs' | 'CS' | 'hs' | 'HS')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Cclr: ('cc' | 'CC' | 'lo' | 'LO')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Zset: ('zs' | 'ZS' | 'eq' | 'EQ')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Zclr: ('zc' | 'ZC' | 'ne' | 'NE')      { setText(getText().toLowerCase() + " ");};
 Bs5_cond_Xset: ('xs' | 'XS')                    { setText("xs ");};
 Bs5_cond_Xclr: ('xc' | 'XC')                    { setText("xc ");};
-Bs5_cond_never: ('no' | 'NO')                   { setText("ne ");} ;
+Bs5_cond_never: ('no' | 'NO')                   { setText("no ");};
 
 // assembler condition
-Bs5_cond_Vset: ('vs' | 'VS')                    { setText("vs ");};
-Bs5_cond_Vclr: ('vc' | 'VC')                    { setText("vc ");};
-Bs5_cond_Aset: ('hi' | 'HI')                    { setText("hi ");};
-Bs5_cond_Aclr: ('ls' | 'LS')                    { setText("ls ");};
-Bs5_cond_Lset: ('lt' | 'LT')                    { setText("lt ");};
-Bs5_cond_Lclr: ('ge' | 'GE')                    { setText("ge ");};
-Bs5_cond_Gset: ('gt' | 'GT')                    { setText("gt ");};
-Bs5_cond_Gclr: ('le' | 'LE')                    { setText("le ");};
+Bs5_cond_Sset: ('ss' | 'SS' | 'mi' | 'MI')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Sclr: ('sc' | 'SC' | 'pl' | 'PL')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Vset: ('vs' | 'VS')                    { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Vclr: ('vc' | 'VC')                    { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Aset: ('hi' | 'HI' | 'as' | 'AS')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Aclr: ('ls' | 'LS' | 'ac' | 'AC')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Lset: ('lt' | 'LT' | 'll' | 'LL')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Lclr: ('ge' | 'GE' | 'lc' | 'LC')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Gset: ('gt' | 'GT' | 'gs' | 'GS')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Gclr: ('le' | 'LE' | 'gc' | 'GC')      { setText(getText().toLowerCase() + " ");};
 
 Bs5_flag_unchanged: ('nf' | 'NF') { setText(getText().toLowerCase() + " ");};
 Bs5_flag_changed: ('fl' | 'FL')   { setText(getText().toLowerCase() + " ");};
@@ -60,10 +62,10 @@ Bs5_label_loffset: 'loffset' | 'LOFFSET' { setText(getText().toLowerCase() + " "
 Bs5_regPC: ('PC' | 'pc') { setText("R15"); } -> type(Bs5_reg15);
 Bs5_regFG: ('FLAG' | 'flag' | 'FG' | 'fg') { setText("R14"); } -> type(Bs5_reg_1_14);
 
-Bs5_stack: ('STACK' | 'stack')     { settext(gettext().toLowerCase());};
-Bs5_local: ('LOCAL' | 'local')     { settext(gettext().toLowerCase());};
+Bs5_stack: ('STACK' | 'stack')     { setText(getText().toLowerCase());};
+Bs5_local: ('LOCAL' | 'local')     { setText(getText().toLowerCase());};
 
-Bs5_reg0 : [rR] '0' { setText(getText().toUpperCase());};   
+Bs5_reg0 : [rR] '0' { setText(getText().toUpperCase());};
 Bs5_reg15: [rR] '15' { setText(getText().toUpperCase());};
 
 Bs5_reg_1_14
