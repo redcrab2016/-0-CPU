@@ -38,7 +38,7 @@ When switching to context, the program continue where the last context switch oc
 
 flags R14:FG
    bit 0
-   C : =1 if 
+     C : =1 if 
     addition has a carry
     substaction has a borrow
     last evacuated bit by shift left/right is 1
@@ -53,15 +53,15 @@ flags R14:FG
      S : Sign flag, set to 1 if result is negative (S= most significant bit result),0 if positive
    bit 5
      A : computed flag: result of bit flag algebra C==1 && Z==0 
-         1:  "is above"
-        0:  "is below or equal"
+        1:  "is above" "is higher" unsigned
+        0:  "is below or equal" "is lower or same" unsigned
    bit 6
      L : computed flag: result of bit flag algebra S!=V,  
-         1: "is less" (signed integer comparison)
+        1: "is less" (signed integer comparison)
         0: "is greater or equal"
    bit 7
      G : computed flag: result of bit flag algebra Z==0 && S==V, 
-         1: "is greater" (signed integer comparison)
+        1: "is greater" (signed integer comparison)
         0: "is less or equal"
    bit 8 - 11
      - : general flag for program usage (bit general register)

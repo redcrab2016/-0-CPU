@@ -391,13 +391,13 @@ public class BS5program {
                 asm_mov_X_Rx_imm4("al", "nf", "R14", "3");
                 ccc = "xs ";
                 break;
-            case "pl": // S flag is cleared
-            case "sc": // signed positive
+            case "pl": // signed positive
+            case "sc": // S flag is cleared
                 asm_mov_X_Rx_imm4("al", "nf", "R14", "4");
                 ccc = "xc ";
                 break;
-            case "mi": // S flag is set
-            case "ss": // signed negative
+            case "mi": // signed negative
+            case "ss": // S flag is set
                 asm_mov_X_Rx_imm4("al", "nf", "R14", "4");
                 ccc = "xs ";
                 break;               

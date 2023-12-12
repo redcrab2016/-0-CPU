@@ -13,70 +13,70 @@ COLON:                    ':';
 COMMA:                    ','     { setText(", "); };
 DBLQUOTE:                 '"' -> pushMode(DBLQUOTESTRING) ; 
 
-Bs5_org:  ('org' | 'ORG')         { setText(getText().toLowerCase() + " ");};  
-Bs5_dw:   ('dw' | 'DW')           { setText(getText().toLowerCase() + " ");};
+Bs5_stack: ([sS][tT][aA][cC][kK]) { setText(getText().toLowerCase());};
+Bs5_local: ([lL][oO][cC][aA][lL]) { setText(getText().toLowerCase());};
+
+Bs5_org:  ([oO][rR][gG])          { setText(getText().toLowerCase() + " ");};  
+Bs5_dw:   ([dD][wW])              { setText(getText().toLowerCase() + " ");};
  
-Bs5_low:  ('low' | 'LOW')         { setText(getText().toLowerCase() + " ");};
-Bs5_high: ('high' | 'HIGH')       { setText(getText().toLowerCase() + " ");};
+Bs5_low:  ([lL][oO][wW])          { setText(getText().toLowerCase() + " ");};
+Bs5_high: ([hH][iI][gG][hH])      { setText(getText().toLowerCase() + " ");};
 
 Bs5_flag_x: [Xx]                  { setText(getText().toUpperCase());};
 
 // basic Mnemonic
-Bs5_mov:  ('mov' | 'MOV')         { setText(getText().toLowerCase() + " ");}; 
-Bs5_add:  ('add' | 'ADD')         { setText(getText().toLowerCase() + " ");};
-Bs5_sub:  ('sub' | 'SUB')         { setText(getText().toLowerCase() + " ");};
-Bs5_and:  ('and' | 'AND')         { setText(getText().toLowerCase() + " ");};
-Bs5_or:   ('or'  | 'OR')          { setText(getText().toLowerCase() + "  ");};
-Bs5_not:  ('not' | 'NOT')         { setText(getText().toLowerCase() + " ");};
-Bs5_shl:  ('shl' | 'SHL')         { setText(getText().toLowerCase() + " ");};
-Bs5_shr:  ('shr' | 'SHR')         { setText(getText().toLowerCase() + " ");};
+Bs5_mov:  ([mM][oO][vV])          { setText(getText().toLowerCase() + " ");}; 
+Bs5_add:  ([aA][dD][dD])          { setText(getText().toLowerCase() + " ");};
+Bs5_sub:  ([sS][uU][bB])          { setText(getText().toLowerCase() + " ");};
+Bs5_and:  ([aA][nN][dD])          { setText(getText().toLowerCase() + " ");};
+Bs5_or:   ([oO][rR])              { setText(getText().toLowerCase() + "  ");};
+Bs5_not:  ([nN][oO][tT])          { setText(getText().toLowerCase() + " ");};
+Bs5_shl:  ([sS][hH][lL])          { setText(getText().toLowerCase() + " ");};
+Bs5_shr:  ([sS][hH][rR])          { setText(getText().toLowerCase() + " ");};
 
 // core condition
-Bs5_cond_always: ('al' | 'AL')                  { setText("al ");};
-Bs5_cond_Cset: ('cs' | 'CS' | 'hs' | 'HS')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Cclr: ('cc' | 'CC' | 'lo' | 'LO')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Zset: ('zs' | 'ZS' | 'eq' | 'EQ')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Zclr: ('zc' | 'ZC' | 'ne' | 'NE')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Xset: ('xs' | 'XS')                    { setText("xs ");};
-Bs5_cond_Xclr: ('xc' | 'XC')                    { setText("xc ");};
-Bs5_cond_never: ('no' | 'NO')                   { setText("no ");};
+Bs5_cond_always: ([aA][lL])                     { setText("al ");};
+Bs5_cond_Cset:   (([cC][sS]) | ([hH][sS]))      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Cclr:   (([cC][cC]) | ([lL][oO]))      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Zset:   (([zZ][sS]) | ([eE][qQ]))      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Zclr:   (([zZ][cC]) | ([nN][eE]))      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Xset:   ([xX][sS])                     { setText("xs ");};
+Bs5_cond_Xclr:   ([xX][cC])                     { setText("xc ");};
+Bs5_cond_never:  ([nN][oO])                     { setText("no ");};
 
 // assembler condition
-Bs5_cond_Sset: ('ss' | 'SS' | 'mi' | 'MI')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Sclr: ('sc' | 'SC' | 'pl' | 'PL')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Vset: ('vs' | 'VS')                    { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Vclr: ('vc' | 'VC')                    { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Aset: ('hi' | 'HI' | 'as' | 'AS')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Aclr: ('ls' | 'LS' | 'ac' | 'AC')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Lset: ('lt' | 'LT' | 'll' | 'LL')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Lclr: ('ge' | 'GE' | 'lc' | 'LC')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Gset: ('gt' | 'GT' | 'gs' | 'GS')      { setText(getText().toLowerCase() + " ");};
-Bs5_cond_Gclr: ('le' | 'LE' | 'gc' | 'GC')      { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Sset: (([sS][sS]) | ([mM][iI]))        { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Sclr: (([sS][cC]) | ([pP][lL]))        { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Vset: ([vV][sS])                       { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Vclr: ([vV][cC])                       { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Aset: (([hH][iI]) | ([aA][sS]))        { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Aclr: (([lL][sS]) | ([aA][cC]))        { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Lset: (([lL][tT]) | ([lL][lL]))        { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Lclr: (([gG][eE]) | ([lL][cC]))        { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Gset: (([gG][tT]) | ([gG][sS]))        { setText(getText().toLowerCase() + " ");};
+Bs5_cond_Gclr: (([lL][eE]) | ([gG][cC]))        { setText(getText().toLowerCase() + " ");};
 
-Bs5_flag_unchanged: ('nf' | 'NF') { setText(getText().toLowerCase() + " ");};
-Bs5_flag_changed: ('fl' | 'FL')   { setText(getText().toLowerCase() + " ");};
 
-Bs5_label_ptr: ('ptr' | 'PTR' | '@') { setText("@");};
-Bs5_label_loffset: 'loffset' | 'LOFFSET' { setText(getText().toLowerCase() + " ");};
+Bs5_label_ptr: (([pP][tT][rR]) | '@')           { setText("@");};
+Bs5_label_loffset: ([lL][oO][fF][fF][sS][eE][tT]) { setText(getText().toLowerCase() + " ");};
+
 // alias for register R15
-Bs5_regPC: ('PC' | 'pc') { setText("R15"); } -> type(Bs5_reg15);
+Bs5_regPC: ([pP][cC])                           { setText("R15"); } -> type(Bs5_reg15);
 // aliases for register R14
-Bs5_regFG: ('FLAG' | 'flag' | 'FG' | 'fg') { setText("R14"); } -> type(Bs5_reg_1_14);
+Bs5_regFG: (([fF][lL][aA][gG]) | ([fF][gG]))    { setText("R14"); } -> type(Bs5_reg_1_14);
 // alias for register R13 (alias for stack related microprogram)
-Bs5_regSP: ('SP' | 'sp') { setText("R13"); } -> type(Bs5_reg_1_14);
+Bs5_regSP: ([sS][pP])                           { setText("R13"); } -> type(Bs5_reg_1_14);
 // aliases for register R12 (aliases for stack related microprogram)
-Bs5_regLP: ('BP' | 'bp' | 'LP' | 'lp') { setText("R12"); } -> type(Bs5_reg_1_14);
+Bs5_regLP: (([bB][pP]) | ([lL][pP]))            { setText("R12"); } -> type(Bs5_reg_1_14);
 
-Bs5_stack: ('STACK' | 'stack')     { setText(getText().toLowerCase());};
-Bs5_local: ('LOCAL' | 'local')     { setText(getText().toLowerCase());};
+Bs5_flag_unchanged: ([nN][fF])                  { setText(getText().toLowerCase() + " ");};
+Bs5_flag_changed:   ([fF][lL])                  { setText(getText().toLowerCase() + " ");};
 
-Bs5_reg0 : [rR] '0' { setText(getText().toUpperCase());};
-Bs5_reg15: [rR] '15' { setText(getText().toUpperCase());};
+Bs5_reg0 : [rR] '0'                             { setText(getText().toUpperCase());};
+Bs5_reg15: [rR] '15'                            { setText(getText().toUpperCase());};
 
 Bs5_reg_1_14
     : [rR]('1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'11'|'12'|'13'|'14') { setText(getText().toUpperCase());};
-
-
 
 // need 16 bits to be encoded
 Bs5_num_hexa_word // if signed, then encode as complementary of two
