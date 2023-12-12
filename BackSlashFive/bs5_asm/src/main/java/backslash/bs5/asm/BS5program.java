@@ -1195,15 +1195,28 @@ ccc f mov STACK, [imm16] ( R0 modified)
 
 /*  Pop value from stack (3 microprograms)
 ccc f mov Rx, STACK (if R15 then it is like a return from call procedure)
-	ccc nf add R15, 1  ; if ccc != al
-	al  nf add R15, 2  ; if ccc != al
-	al  f mov Rx, [R13]
-	al  nf add R13, 1
+ ; if Rx != R15
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 2  ; if ccc != al
+    al  f mov Rx, [R13]
+    al  nf add R13, 1
+ ; if Rx == R15 then R0 is modified
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov R0, [R13]
+    al  nf add R13, 1
+	al  f  mov R15, R0
 */
     public BS5program asm_mov_Rx_stack(String ccc, String f, String rx) {
-        return  asm_prologMicroprogram(ccc, f, 2).
-                asm_mov_Rx_atRy("al", f, rx, "R13").
-                asm_add_Rx_1("al", "nf", "R13");
+        if (rx.equalsIgnoreCase("R15")) // R15 case
+            return  asm_prologMicroprogram(ccc, f, 3).
+                    asm_mov_Rx_atRy("al", "nf", "R0", "R13").
+                    asm_add_Rx_1("al", "nf", "R13").
+                    asm_mov_Rx_Ry("al", f, "R15", "R0");
+        else // rx is amongst R0 to R14
+            return  asm_prologMicroprogram(ccc, f, 2).
+                    asm_mov_Rx_atRy("al", f, rx, "R13").
+                    asm_add_Rx_1("al", "nf", "R13");
     }
 
 /*

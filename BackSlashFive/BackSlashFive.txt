@@ -84,7 +84,7 @@ Program counter R15:PC
    represent the address of the next natural instuction, not the address of current instruction in execution
    branching is typically done by a "mov R15, ..." , "add R15, ..."  instruction
    branching with "not R15..." instruction is allowed
-   At processor reset time PC is set to 0 ( same for all other registers)
+   At processor reset time PC is set to 0 ( same for all other registers, in all contexts)
    
    In normal context( flag K=0), it is possible to block (get stuck) the processor by the following instruction
     al nf sub R15, 1   ; the instruction is repeated endlessly
@@ -116,8 +116,8 @@ conditions: ccc
 010    ne or zc    Not equal.                                Z==0, Z flag is cleared
 011    cs or hs    Unsigned higher or same (or carry set).   C==1, C flag is set
 100    cc or lo    Unsigned lower (or carry clear).          C==0, C flag is cleared
-101 xs          custom bit set                            X==1, X flag is set
-110 xc          custom bit clear                          X==0, X flag is cleared
+101    xs          custom bit set                            X==1, X flag is set
+110    xc          custom bit clear                          X==0, X flag is cleared
 111    no          never executed (NOP)*                     No flag tested
 
 * intruction executed but result is not written back.
@@ -593,10 +593,18 @@ ccc f mov STACK, [imm16] ( R0 modified)
 
   Pop value from stack (3 microprograms)
 ccc f mov Rx, STACK (if R15 then it is like a return from a call procedure)
+ ; if Rx != R15
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 2  ; if ccc != al
     al  f mov Rx, [R13]
     al  nf add R13, 1
+ ; if Rx == R15 then R0 is modified
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov R0, [R13]
+    al  nf add R13, 1
+	al  f  mov R15, R0
+
 
 ccc f mov [Rx], STACK ( Rx != R0, R0 modified)
     ccc nf add R15, 1  ; if ccc != al
