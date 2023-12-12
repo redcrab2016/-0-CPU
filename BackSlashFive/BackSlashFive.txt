@@ -21,7 +21,7 @@ R10 : 1010 : general
 R11 : 1011 : general
 R12 : 1100 :LP/BP: general or base/local pointer in stack dedicated microprograms
 R13 : 1101 :SP: general or stack pointer in stack dedicated microprograms
-R14 : 1110 :FL: 16 bits flags  KIHR---- GLASVXZC, see below flag R14:FL for description
+R14 : 1110 :FG: 16 bits flags  KIHR---- GLASVXZC, see below flag R14:FG for description
 R15 : 1111 :PC: Program address
 There is two set of R0 to R15 registers: one when flag K=1 (interrupt handling),     another one when K=0 (normal execution)
 K=1 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
@@ -36,7 +36,7 @@ From address 0 you can detect the context by testing the flag K.
 In interrupt context handling (K=1) if I==1 that means the context switch due to a external interrupt signal, otherwise due to program.
 When switching to context, the program continue where the last context switch occured.
 
-flags R14:FL
+flags R14:FG
    bit 0
    C : =1 if 
     addition has a carry

@@ -58,9 +58,14 @@ Bs5_flag_changed: ('fl' | 'FL')   { setText(getText().toLowerCase() + " ");};
 
 Bs5_label_ptr: ('ptr' | 'PTR' | '@') { setText("@");};
 Bs5_label_loffset: 'loffset' | 'LOFFSET' { setText(getText().toLowerCase() + " ");};
-
+// alias for register R15
 Bs5_regPC: ('PC' | 'pc') { setText("R15"); } -> type(Bs5_reg15);
+// aliases for register R14
 Bs5_regFG: ('FLAG' | 'flag' | 'FG' | 'fg') { setText("R14"); } -> type(Bs5_reg_1_14);
+// alias for register R13 (alias for stack related microprogram)
+Bs5_regSP: ('SP' | 'sp') { setText("R13"); } -> type(Bs5_reg_1_14);
+// aliases for register R12 (aliases for stack related microprogram)
+Bs5_regLP: ('BP' | 'bp' | 'LP' | 'lp') { setText("R12"); } -> type(Bs5_reg_1_14);
 
 Bs5_stack: ('STACK' | 'stack')     { setText(getText().toLowerCase());};
 Bs5_local: ('LOCAL' | 'local')     { setText(getText().toLowerCase());};
