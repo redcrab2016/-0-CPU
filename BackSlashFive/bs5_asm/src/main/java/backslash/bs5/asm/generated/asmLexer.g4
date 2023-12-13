@@ -25,7 +25,7 @@ Bs5_dw:   ([dD][wW])              { setText(getText().toLowerCase() + " ");};
 Bs5_low:  ([lL][oO][wW])          { setText(getText().toLowerCase() + " ");};
 Bs5_high: ([hH][iI][gG][hH])      { setText(getText().toLowerCase() + " ");};
 
-Bs5_flag_x: [Xx]                  { setText(getText().toUpperCase());};
+Bs5_flag_x: [Xx]                  { setText(getText().toUpperCase());}; 
 
 // basic Mnemonic
 Bs5_mov:  ([mM][oO][vV])          { setText(getText().toLowerCase() + " ");}; 

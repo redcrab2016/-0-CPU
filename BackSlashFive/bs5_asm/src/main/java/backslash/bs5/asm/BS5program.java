@@ -2118,7 +2118,7 @@ ccc f mov [imm16a], STACK:imm16b ( R0 modified)
 	al  nf mov R1,[R13]
 	al  nf add R13, 1
 */
-    public BS5program asm_mov_atImm16a_stackImm16b(String ccc, String f, String imm16a, String imm16b) {
+    public BS5program asm_mov_atImm16_stackImm16(String ccc, String f, String imm16a, String imm16b) {
         return  asm_prologMicroprogram(ccc, f, 12).
                 asm_mov_low_R0_imm8("al", "nf", "L8:" + imm16b).
                 asm_mov_high_R0_imm8("al", "nf", "H8:" + imm16b).
@@ -2313,7 +2313,7 @@ ccc f mov [imm16a], LOCAL:imm16b ( R0 modified)
 	al  nf mov R1,[R13]
 	al  nf add R13, 1
 */
-    public BS5program asm_mov_atImm16a_localImm16b(String ccc, String f, String imm16a, String imm16b) {
+    public BS5program asm_mov_atImm16_localImm16(String ccc, String f, String imm16a, String imm16b) {
         return  asm_prologMicroprogram(ccc, f, 12).
                 asm_mov_low_R0_imm8("al", "nf", "L8:" + imm16b).
                 asm_mov_high_R0_imm8("al", "nf", "H8:" + imm16b).
