@@ -270,25 +270,32 @@ bs5_stack_instruction
     //ccc f mov [Rx], STACK ( Rx != R0, R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET COMMA Bs5_stack
+        { prg.asm_mov_atRx_stack($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text);}
     //ccc f mov [imm16], STACK (R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET number16bits CLOSE_BRACKET COMMA Bs5_stack
+        { prg.asm_mov_atImm16_stack($bs5_cond.text, $bs5_flag.text, $number16bits.immediat);}
 //  Call procedure  (5 microprograms)
     //ccc f mov STACK:R15, Rx (Rx != R0 & Rx != R15)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_stack COLON Bs5_reg15 COMMA Bs5_reg_1_14
+        { prg.asm_mov_stackR15_Rx($bs5_cond.text, $bs5_flag.text, $Bs5_reg_1_14.text);}
     //ccc f mov STACK:R15, [Rx] (Rx != R0 & Rx != R15)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_stack COLON Bs5_reg15 COMMA OPEN_BRACKET Bs5_reg_1_14 CLOSE_BRACKET
+        { prg.asm_mov_stackR15_atRx($bs5_cond.text, $bs5_flag.text, $Bs5_reg_1_14.text);}
     //ccc f mov STACK:R15, imm16 (R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_stack COLON Bs5_reg15 COMMA number16bits 
+      Bs5_mov Bs5_stack COLON Bs5_reg15 COMMA number16bits
+        { prg.asm_mov_stackR15_imm16($bs5_cond.text, $bs5_flag.text, $number16bits.immediat);}
     //ccc f mov STACK:R15, [imm16] (R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_stack COLON Bs5_reg15 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+        { prg.asm_mov_stackR15_atImm16($bs5_cond.text, $bs5_flag.text, $number16bits.immediat);}
     //ccc f add STACK:R15, simm8  (near address, R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_stack COLON Bs5_reg15 COMMA numberSignedByte 
+      Bs5_mov Bs5_stack COLON Bs5_reg15 COMMA numberSignedByte
+        { prg.asm_mov_stackR15_simm8($bs5_cond.text, $bs5_flag.text, $numberSignedByte.immediat);} 
 //   Write to stack/local context (24 microprograms)
     //ccc f mov STACK:imm4, Rx (Rx != R0, R0 modified)
     | bs5_cond? bs5_flag?
@@ -314,55 +321,71 @@ bs5_stack_instruction
     //ccc f mov STACK:imm16a, [imm16b] ( R0 modified) 
     | bs5_cond? bs5_flag? 
       Bs5_mov Bs5_stack COLON numa2=number16bitsNotQuad COMMA OPEN_BRACKET numb2=number16bits CLOSE_BRACKET 
-        { prg.asm_mov_stackImm16_atImm16($bs5_cond.text, $bs5_flag.text,$numa2.immediat, $numb2.immediat);}
+        { prg.asm_mov_stackImm16_atImm16($bs5_cond.text, $bs5_flag.text, $numa2.immediat, $numb2.immediat);}
     //ccc f mov STACK:Rx, Ry  (Rx and Ry != R15 and R0) 
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_stack COLON rx1=Bs5_reg_1_14 COMMA ry1=Bs5_reg_1_14
+        { prg.asm_mov_stackRx_Ry($bs5_cond.text, $bs5_flag.text, $rx1.text, $ry1.text);}
     //ccc f mov STACK:Rx, imm16 (Rx != R0 and R15, R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_stack COLON Bs5_reg_1_14 COMMA number16bits
+        { prg.asm_mov_stackRx_imm16($bs5_cond.text, $bs5_flag.text, $Bs5_reg_1_14.text, $number16bits.immediat);}
     //ccc f mov STACK:Rx, [Ry] (Rx,Ry != R0 , R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_stack COLON rx2=Bs5_reg_1_14 COMMA OPEN_BRACKET r2y=Bs5_reg_1_14 CLOSE_BRACKET
+      Bs5_mov Bs5_stack COLON rx2=Bs5_reg_1_14 COMMA OPEN_BRACKET ry2=Bs5_reg_1_14 CLOSE_BRACKET
+        { prg.asm_mov_stackRx_atRy($bs5_cond.text, $bs5_flag.text, $rx2.text, $ry2.text);}
     //ccc f mov STACK:Rx, [imm16] (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_stack COLON Bs5_reg_1_14 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+        { prg.asm_mov_stackRx_atImm16($bs5_cond.text, $bs5_flag.text, $Bs5_reg_1_14.text, $number16bits.immediat);}
     //ccc f mov LOCAL:imm4, Rx (Rx != R0, R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON numberUnsignedQuad COMMA bs5_reg_1_15
+        { prg.asm_mov_localImm4_Rx($bs5_cond.text, $bs5_flag.text, $numberUnsignedQuad.immediat, $bs5_reg_1_15.text);}
     //ccc f mov LOCAL:imm4, imm16 ( R0 modified)
       | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON numberUnsignedQuad COMMA number16bits
+        { prg.asm_mov_localImm4_imm16($bs5_cond.text, $bs5_flag.text, $numberUnsignedQuad.immediat, $number16bits.immediat);}
     //ccc f mov LOCAL:imm4, [Rx] (Rx != R0 , R0 modified)
       | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON numberUnsignedQuad COMMA OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET
+        { prg.asm_mov_localImm4_atRx($bs5_cond.text, $bs5_flag.text, $numberUnsignedQuad.immediat, $bs5_reg_1_15.text);}
     //ccc f mov LOCAL:imm4, [imm16] ( R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON numberUnsignedQuad COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+        { prg.asm_mov_localImm4_atImm16($bs5_cond.text, $bs5_flag.text, $numberUnsignedQuad.immediat, $number16bits.immediat);}
     //ccc f mov LOCAL:imm16, Rx (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON number16bitsNotQuad COMMA bs5_reg_1_15
+        { prg.asm_mov_localImm4_Rx($bs5_cond.text, $bs5_flag.text, $number16bitsNotQuad.immediat, $bs5_reg_1_15.text);}
     //ccc f mov LOCAL:imm16a, imm16b ( R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON numa3=number16bitsNotQuad COMMA numb3=number16bits
+        { prg.asm_mov_localImm16_imm16($bs5_cond.text, $bs5_flag.text, $numa3.immediat, $numb3.immediat);}
     //ccc f mov LOCAL:imm16, [Rx] (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON number16bitsNotQuad COMMA OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET
+        { prg.asm_mov_localImm16_atRx($bs5_cond.text, $bs5_flag.text, $number16bitsNotQuad.immediat, $bs5_reg_1_15.text);}
     //ccc f mov LOCAL:imm16a, [imm16b] ( R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON numa4=number16bitsNotQuad COMMA OPEN_BRACKET numb4=number16bits CLOSE_BRACKET
+        { prg.asm_mov_localImm16_atImm16($bs5_cond.text, $bs5_flag.text, $numa4.immediat, $numb4.immediat);}
     //ccc f mov LOCAL:Rx, Ry  (Rx and Ry != R15 and R0)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON rx3=Bs5_reg_1_14 COMMA ry3=Bs5_reg_1_14
+        { prg.asm_mov_localRx_Ry($bs5_cond.text, $bs5_flag.text, $rx3.text, $ry3.text);}
     //ccc f mov LOCAL:Rx, imm16 (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON Bs5_reg_1_14 COMMA number16bits
+        { prg.asm_mov_localRx_imm16($bs5_cond.text, $bs5_flag.text, $Bs5_reg_1_14.text, $number16bits.immediat);}
     //ccc f mov LOCAL:Rx, [Ry] (Rx,Ry != R0 , R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON rx4=Bs5_reg_1_14 COMMA OPEN_BRACKET ry4=Bs5_reg_1_14 CLOSE_BRACKET
+        { prg.asm_mov_localRx_atRy($bs5_cond.text, $bs5_flag.text, $rx4.text, $ry4.text);}
     //ccc f mov LOCAL:Rx, [imm16] (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov Bs5_local COLON Bs5_reg_1_14 COMMA OPEN_BRACKET number16bits CLOSE_BRACKET
+        { prg.asm_mov_localRx_atImm16($bs5_cond.text, $bs5_flag.text, $Bs5_reg_1_14.text, $number16bits.immediat);}
 //	Read from stack/local context (18 microprograms)
     //ccc f mov Rx, STACK:imm4 (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
