@@ -2010,7 +2010,7 @@ ccc f mov Rx, STACK:imm4 (Rx != R0 , R0 modified)
 	al  nf add R0, imm4
 	al  f mov Rx, [R0]
 */
-    public BS5program asm_mov_RX_stackImm4(String ccc, String f, String rx, String imm4) {
+    public BS5program asm_mov_Rx_stackImm4(String ccc, String f, String rx, String imm4) {
         return  asm_prologMicroprogram(ccc, f, 3).
                 asm_mov_Rx_Ry("al", "nf", "R0", "R13").
                 asm_add_R0_imm4("al", "nf", imm4).
@@ -2026,7 +2026,7 @@ ccc f mov [Rx], STACK:imm4 (Rx != R0 , R0 modified)
 	al  nf mov R0, [R0]
 	al  f  mov [Rx], R0
 */
-    public BS5program asm_mov_atRX_stackImm4(String ccc, String f, String rx, String imm4) {
+    public BS5program asm_mov_atRx_stackImm4(String ccc, String f, String rx, String imm4) {
         return  asm_prologMicroprogram(ccc, f, 4).
                 asm_mov_Rx_Ry("al", "nf", "R0", "R13").
                 asm_add_R0_imm4("al", "nf", imm4).
@@ -2205,7 +2205,7 @@ ccc f mov Rx, LOCAL:imm4 (Rx != R0 , R0 modified)
 	al  nf add R0, imm4
 	al  f mov Rx, [R0]
 */
-    public BS5program asm_mov_RX_localImm4(String ccc, String f, String rx, String imm4) {
+    public BS5program asm_mov_Rx_localImm4(String ccc, String f, String rx, String imm4) {
         return  asm_prologMicroprogram(ccc, f, 3).
                 asm_mov_Rx_Ry("al", "nf", "R0", "R12").
                 asm_add_R0_imm4("al", "nf", imm4).
@@ -2221,7 +2221,7 @@ ccc f mov [Rx], LOCAL:imm4 (Rx != R0 , R0 modified)
 	al  nf mov R0, [R0]
 	al  f  mov [Rx], R0
 */
-    public BS5program asm_mov_atRX_localImm4(String ccc, String f, String rx, String imm4) {
+    public BS5program asm_mov_atRx_localImm4(String ccc, String f, String rx, String imm4) {
         return  asm_prologMicroprogram(ccc, f, 4).
                 asm_mov_Rx_Ry("al", "nf", "R0", "R12").
                 asm_add_R0_imm4("al", "nf", imm4).

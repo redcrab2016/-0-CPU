@@ -390,36 +390,47 @@ bs5_stack_instruction
     //ccc f mov Rx, STACK:imm4 (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov bs5_reg_1_15 COMMA Bs5_stack COLON numberUnsignedQuad
+        { prg.asm_mov_Rx_stackImm4($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedQuad.immediat );}
     //ccc f mov [Rx], STACK:imm4 (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET COMMA Bs5_stack COLON numberUnsignedQuad
+        { prg.asm_mov_atRx_stackImm4($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedQuad.immediat );}
     //ccc f mov [imm16], STACK:imm4 ( R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET number16bits CLOSE_BRACKET COMMA Bs5_stack COLON numberUnsignedQuad
+        { prg.asm_mov_atImm16_stackImm4($bs5_cond.text, $bs5_flag.text, $number16bits.immediat, $numberUnsignedQuad.immediat);}
     //ccc f mov Rx, STACK:imm16 (Rx != R0 , R0 modified)
      | bs5_cond? bs5_flag?
       Bs5_mov bs5_reg_1_15 COMMA Bs5_stack COLON number16bitsNotQuad
+        { prg.asm_mov_Rx_stackImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bitsNotQuad.immediat );}
     //ccc f mov [Rx], STACK:imm16 (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET COMMA Bs5_stack COLON number16bitsNotQuad
+        { prg.asm_mov_atRx_stackImm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bitsNotQuad.immediat );}
     //ccc f mov [imm16a], STACK:imm16b ( R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET numa5=number16bits CLOSE_BRACKET COMMA Bs5_stack COLON numb5=number16bitsNotQuad
+        { prg.asm_mov_atImm16_stackImm16($bs5_cond.text, $bs5_flag.text, $numa5.immediat, $numb5.immediat );}
     //ccc f mov Rx, STACK:Ry (Rx,Ry != R0 , R0 modified)
      | bs5_cond? bs5_flag?
       Bs5_mov rx5=bs5_reg_1_15 COMMA Bs5_stack COLON ry5=bs5_reg_1_15
+        { prg.asm_mov_Rx_stackRy($bs5_cond.text, $bs5_flag.text, $rx5.text, $ry5.text );}
     //ccc f mov [Rx], STACK:Ry (Rx,Ry != R0 , R0 modified)
      | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET rx6=bs5_reg_1_15 CLOSE_BRACKET COMMA Bs5_stack COLON ry6=bs5_reg_1_15
+        { prg.asm_mov_atRx_stackRy($bs5_cond.text, $bs5_flag.text, $rx6.text, $ry6.text );}
     //ccc f mov [imm16], STACK:Rx (R0 usable but modified)
     | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET number16bits CLOSE_BRACKET COMMA Bs5_stack COLON bs5_reg
+        { prg.asm_mov_atImm16_stackRx($bs5_cond.text, $bs5_flag.text, $number16bits.immediat, $bs5_reg.text );}
     //ccc f mov Rx, LOCAL:imm4 (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov bs5_reg_1_15 COMMA Bs5_local COLON numberUnsignedQuad
+        { prg.asm_mov_Rx_localImm4($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedQuad.immediat );}
     //ccc f mov [Rx], LOCAL:imm4 (Rx != R0 , R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET bs5_reg_1_15 CLOSE_BRACKET COMMA Bs5_local COLON numberUnsignedQuad
+        { prg.asm_mov_atRx_localImm4($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $numberUnsignedQuad.immediat );}
     //ccc f mov [imm16], LOCAL:imm4 (R0 modified)
     | bs5_cond? bs5_flag?
       Bs5_mov OPEN_BRACKET number16bits CLOSE_BRACKET COMMA Bs5_local COLON numberUnsignedQuad
