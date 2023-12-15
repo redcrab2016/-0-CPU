@@ -416,8 +416,8 @@ bs5_stack_instruction
 
     //ccc f add STACK:R15, simm8  (near address, R0 modified)
     | bs5_cond? bs5_flag?
-      Bs5_mov Bs5_stack COLON Bs5_reg15 COMMA numberSignedByte
-        { prg.asm_mov_stackR15_simm8($bs5_cond.text, $bs5_flag.text, $numberSignedByte.immediat);}
+      Bs5_add Bs5_stack COLON Bs5_reg15 COMMA numberSignedByte
+        { prg.asm_add_stackR15_simm8($bs5_cond.text, $bs5_flag.text, $numberSignedByte.immediat);}
 
 //   Write to stack/local context (24 microprograms)
     //ccc f mov STACK:imm4, Rx (Rx != R0, R0 modified)

@@ -1361,7 +1361,7 @@ ccc f add STACK:R15, simm8  (near address, R0 modified)
 	al  nf mov [R13], R0
 	al  f  add F15, simm8	
 */
-    public BS5program asm_mov_stackR15_simm8(String ccc, String f, String simm8) {
+    public BS5program asm_add_stackR15_simm8(String ccc, String f, String simm8) {
         return  asm_prologMicroprogram(ccc, f, 5).
                 asm_mov_Rx_Ry("al", "nf", "R0", "R15").
                 asm_add_R0_imm4("al", "nf", "4").

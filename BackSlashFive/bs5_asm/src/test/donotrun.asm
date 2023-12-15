@@ -32,10 +32,10 @@ mov high R0, low R5
 mov low R0, high R5
 ;		mov high R0, high Rx
 mov high R0, high R5
-;		mov C, Rx:imm4
-mov C, R5:15
-;		mov Rx:imm4, C
-mov r5:15,C
+;		mov X, Rx:imm4
+mov X, R5:15
+;		mov Rx:imm4, X
+mov r5:15,X
 ;		mov Rx:imm4, 0
 mov R5:15,0
 ;		mov Rx:imm4, 1
@@ -164,7 +164,7 @@ mov stack:R15, #0x7000
 ;ccc f mov STACK:R15, [imm16] (R0 modified)
 mov stack:R15, [#0x8000]
 ;ccc f add STACK:R15, simm8  (near address, R0 modified)
-al nf add stack:R15 loffset callproc
+al nf add stack:R15, loffset callproc
 ;   Write to stack/local context (24 microprograms)
 ;ccc f mov STACK:imm4, Rx (Rx != R0, R0 modified)
 mov stack:#0xA, R5
@@ -228,7 +228,7 @@ mov [R5], stack:-32768
 ;ccc f mov [imm16a], STACK:imm16b ( R0 modified)
 mov [#0x7000], stack:#0xFF00
 ;ccc f mov Rx, STACK:Ry (Rx,Ry != R0 , R0 modified)
-gs fl mov Rx, stack:R10
+gs fl mov R5, stack:R10
 ;ccc f mov [Rx], STACK:Ry (Rx,Ry != R0 , R0 modified)
 gc nf mov [R5], stack:R4
 ;ccc f mov [imm16], STACK:Rx
