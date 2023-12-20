@@ -41,8 +41,8 @@ parameter // ISA of 31 instructions based on 8 mnemonics
     INSTR_MOV_LOW_R0_IMM8       = 4'b0111, // mov low R0, Imm8
     INSTR_MOV_HIGH_R0_IMM8      = 4'b1000, // mov high R0, Imm8
     INSTR_ADD_R15_SIMM8         = 4'b1001, // add R15, simm8
-    INSTR_MOV_C_RXIMM4          = 4'b1010, // mov c, Rx:Imm4
-    INSTR_MOV_RXIMM4_C          = 4'b1011, // mov Rx:Imm4, C
+    INSTR_MOV_X_RXIMM4          = 4'b1010, // mov X, Rx:Imm4
+    INSTR_MOV_RXIMM4_X          = 4'b1011, // mov Rx:Imm4, X
     INSTR_MOV_RXIMM4_0          = 4'b1100, // mov Rx:Imm4, 0
     INSTR_MOV_RXIMM4_1          = 4'b1101, // mov Rx:Imm4, 1
     INSTR_NOT_RXIMM4            = 4'b1110, // not Rx:Imm4
@@ -87,10 +87,15 @@ parameter
     CPU_REGISTER_PC             = 4'd15,
     CPU_REGISTER_FLAG           = 4'd14;
 
-parameter
+parameter   // flags KIHR---- GLASVXZC
     FLAG_C                      = 4'd0, // carry flag
     FLAG_Z                      = 4'd1, // Zero  flag
     FLAG_X                      = 4'd2, // Custom flag (usable for conditional instruction execution)
+    FLAG_V                      = 4'd3, // Overflow flag
+    FLAG_S                      = 4'd4, // Sign flag
+    FLAG_A                      = 4'd5, // Computed result of flags C == 1 && Z == 0
+    FLAG_L                      = 4'd6, // Computed result of flags S != V
+    FLAF_G                      = 4'd7, // Computed result of flags Z == 0 && S == V
     FLAG_R                      = 4'd12,// Reset flag 
     FLAG_H                      = 4'd13,// Halt flag
     FLAG_I                      = 4'd14,// Interrupt enabled flag
@@ -130,6 +135,7 @@ reg     [15:0]  alu_param2              = 0;
 reg     [4:0]   write_type              = 0;
 reg     [15:0]  write_type_value        = 0;
 reg             write_to_flag           = 0;
+reg             write_nothing           = 0;
 
 integer i;
 initial begin : initialize_cpu_registers
@@ -169,7 +175,7 @@ assign cpu_cond_exec[3] =  cpu_instr_FLAG[FLAG_C]; // C==1
 assign cpu_cond_exec[4] = ~cpu_instr_FLAG[FLAG_C]; // C==0
 assign cpu_cond_exec[5] =  cpu_instr_FLAG[FLAG_X]; // X==1
 assign cpu_cond_exec[6] = ~cpu_instr_FLAG[FLAG_X]; // X==0
-assign cpu_cond_exec[7] = 1'b0; // never (nop)
+assign cpu_cond_exec[7] = 1'b1; // execute but no write back result
 
 always @ (posedge bus_clock) 
     case (cpu_state)
@@ -178,13 +184,18 @@ always @ (posedge bus_clock)
                 bus_we          <= 0;
                 bus_ack_latency <= 1;
                 if (bus_ready & bus_ack_latency) begin
-                    bus_re                          <= 1;
-                    bus_addr                        <= cpu_register[CPU_REGISTER_PC];
-                    cpu_register[CPU_REGISTER_PC]   <= cpu_register[CPU_REGISTER_PC] + 1;
-                    cpu_instr_R0                    <= cpu_register[0];
-                    cpu_instr_PC                    <= cpu_register[CPU_REGISTER_PC] + 1;
-                    cpu_instr_FLAG                  <= cpu_register[CPU_REGISTER_FLAG];
-                    bus_ack_latency                 <= 0;
+                    bus_re                               <= 1;
+                    bus_addr                             <= cpu_register[CPU_REGISTER_PC];
+                    cpu_register[CPU_REGISTER_PC]        <= cpu_register[CPU_REGISTER_PC] + 1;
+                    cpu_instr_R0                         <= cpu_register[0];
+                    cpu_instr_PC                         <= cpu_register[CPU_REGISTER_PC] + 1;
+                    // Compute G,L,A flags
+                    cpu_register[CPU_REGISTER_FLAG][7:5] <= { 
+                                                                ~(cpu_register[CPU_REGISTER_FLAG][FLAG_Z]) & (  cpu_register[CPU_REGISTER_FLAG][FLAG_S] == cpu_register[CPU_REGISTER_FLAG][FLAG_V] ), // G flag algebra
+                                                                cpu_register[CPU_REGISTER_FLAG][FLAG_S] != cpu_register[CPU_REGISTER_FLAG][FLAG_V],                                                   // L flag algebra
+                                                                cpu_register[CPU_REGISTER_FLAG][FLAG_C] & ~(cpu_register[CPU_REGISTER_FLAG][FLAG_Z])                                                  // A flag algebra 
+                                                            }; 
+                    bus_ack_latency                      <= 0;
                     case ({cpu_reset_pending, cpu_interrupt_pending})
                         {1'b1,1'b0},                                    
                         {1'b1,1'b1}: 
@@ -210,6 +221,7 @@ always @ (posedge bus_clock)
                 bus_re          <= 0;
                 bus_ack_latency <= 1;
                 if (bus_ack && bus_ack_latency ) begin
+                    cpu_instr_FLAG     <= cpu_register[CPU_REGISTER_FLAG];
                     cpu_instr_modflag  <= bus_data_read[12];
                     cpu_instr_p1       <= bus_data_read[11:8]; // instr
                     cpu_instr_p2       <= bus_data_read[7:4];  // instr above  or Ry register number or MSQ simm8 or MSQ imm8 or imm4
@@ -222,7 +234,8 @@ always @ (posedge bus_clock)
                     alu_result_value   <= 0;
                     write_type         <= 0;
                     write_type_value   <= 0;
-                    write_to_flag      <= 0;          
+                    write_to_flag      <= 0;
+                    write_nothing      <= cpu_cond_exec[ bus_data_read[15:13] ] ? ((~bus_data_read[15:13])==0?1:0): 0;   // if 1 then no write result of the instruction   
                 end 
             end 
         CPU_STATE_DECODE:
@@ -351,23 +364,23 @@ always @ (posedge bus_clock)
                         end
                     
                     //ccc f 1010 iiii xxxx
-                    //	mov C, Rx:imm4
-                    INSTR_MOV_C_RXIMM4 :
+                    //	mov X, Rx:imm4
+                    INSTR_MOV_X_RXIMM4 :
                         begin
                             alu_ope             <= ALU_OPE_MOV;
                             alu_result_value    <= {15'b0, cpu_instr_Rx[cpu_instr_p2]}; //cpu_register[cpu_instr_p3][cpu_instr_p2]};
                             write_type          <= WRITE_TYPE_REGISTER_BIT;
-                            write_type_value    <= {4'b0000,8'b0,CPU_REGISTER_FLAG}; // imm4, 0, R14
+                            write_type_value    <= {4'b0010,8'b0,CPU_REGISTER_FLAG}; // imm4=2 , 0, R14  (X flag is the 3rd bit in Flag register)
                             cpu_state           <= CPU_STATE_WRITE_DATA;
                             write_to_flag       <= (cpu_instr_p3 == CPU_REGISTER_FLAG) ? 1: 0;
                         end
                     
                     //ccc f 1011 iiii xxxx
-                    //	mov Rx:imm4, C
-                    INSTR_MOV_RXIMM4_C:
+                    //	mov Rx:imm4, X
+                    INSTR_MOV_RXIMM4_X:
                         begin
                             alu_ope             <= ALU_OPE_MOV;
-                            alu_result_value    <= {15'b0, cpu_instr_FLAG[FLAG_C]}; //cpu_register[CPU_REGISTER_FLAG][FLAG_C]};
+                            alu_result_value    <= {15'b0, cpu_instr_FLAG[FLAG_X]}; //cpu_register[CPU_REGISTER_FLAG][FLAG_X]};
                             write_type          <= WRITE_TYPE_REGISTER_BIT;
                             write_type_value    <= {cpu_instr_p2,8'b0,cpu_instr_p3};
                             cpu_state           <= CPU_STATE_WRITE_DATA;
@@ -617,56 +630,83 @@ always @ (posedge bus_clock)
             begin
                 case (alu_ope)
                     ALU_OPE_MOV: alu_result_value <= alu_result_value ;// should be useless here, because every mov decoding instruction do step to CPU_STATE_WRITE_DATA
-                    ALU_OPE_ADD: {alu_result_flag[0],alu_result_value}  <=  alu_param1 +  alu_param2;
-                    ALU_OPE_SUB: {alu_result_flag[0],alu_result_value}  <=  alu_param1 -  alu_param2; // TODO : check the C flag rule with a substraction
-                    ALU_OPE_AND: alu_result_value                       <=  alu_param1 &  alu_param2;
-                    ALU_OPE_OR:  alu_result_value                       <=  alu_param1 &  alu_param2;
-                    ALU_OPE_NOT: alu_result_value                       <= ~alu_param1;
-                    ALU_OPE_SHL: {alu_result_flag[0],alu_result_value}  <=  {1'b0,alu_param1} << alu_param2;
-                    ALU_OPE_SHR: {alu_result_value,alu_result_flag[0]}  <=  {alu_param1,1'b0} >> alu_param2;
+                    ALU_OPE_ADD: {alu_result_flag[FLAG_C],alu_result_value}  <=  alu_param1 +  alu_param2;
+                    ALU_OPE_SUB: begin
+                                 {alu_result_flag[FLAG_C],alu_result_value}  <=  alu_param1 -  alu_param2; // TODO : check the C flag rule with a substraction
+                                 alu_param2                                  <=  (~alu_param2)+1;
+                                 end
+                    ALU_OPE_AND: alu_result_value                            <=  alu_param1 &  alu_param2;
+                    ALU_OPE_OR:  alu_result_value                            <=  alu_param1 &  alu_param2;
+                    ALU_OPE_NOT: alu_result_value                            <= ~alu_param1;
+                    ALU_OPE_SHL: {alu_result_flag[FLAG_C],alu_result_value}  <=  {1'b0,alu_param1} << alu_param2;
+                    ALU_OPE_SHR: {alu_result_value,alu_result_flag[FLAG_C]}  <=  {alu_param1,1'b0} >> alu_param2;
                 endcase
                 cpu_state <= CPU_STATE_WRITE_DATA;
             end
         CPU_STATE_WRITE_DATA: // this step write the result and take care of the Z flag result, K flag from 0 to 1 and from 1 to 0 (go to interrupt, or go to normal)
             begin
-                case (write_type)
-                    WRITE_TYPE_REGISTER_LOW:  cpu_register[write_type_value[3:0]][7:0]                      <= alu_result_value[7:0];  // type value is register number
-                    WRITE_TYPE_REGISTER_HIGH: cpu_register[write_type_value[3:0]][15:8]                     <= alu_result_value[7:0];  // type value is register number
-                    WRITE_TYPE_REGISTER:      cpu_register[write_type_value[3:0]]                           <= alu_result_value;       // type value is register number
-                    WRITE_TYPE_REGISTER_BIT:  cpu_register[write_type_value[3:0]][write_type_value[15:11]]  <= alu_result_value[0];    // type value is register number, bit 15:11 is bit number
-                    WRITE_TYPE_MEMORY: // type value is write target address
-                        if (bus_ready) begin
-                            bus_we          <= 1;
-                            bus_addr        <= write_type_value;
-                            bus_data_write  <= alu_result_value;
-                            bus_ack_latency <= 0;
-                        end 
-                endcase
-                case ({write_to_flag,write_type})
-                    {1'b0,WRITE_TYPE_MEMORY}       ,
-                    {1'b1,WRITE_TYPE_MEMORY}       : cpu_state <= bus_ready?CPU_STATE_FETCH_INSTR_BEGIN:CPU_STATE_WRITE_DATA;
-                    {1'b0,WRITE_TYPE_REGISTER_LOW} ,
-                    {1'b0,WRITE_TYPE_REGISTER_HIGH},
-                    {1'b0,WRITE_TYPE_REGISTER}     ,
-                    {1'b0,WRITE_TYPE_REGISTER_BIT} ,
-                    {1'b1,WRITE_TYPE_REGISTER_LOW} : cpu_state <= CPU_STATE_FETCH_INSTR_BEGIN;
-                    {1'b1,WRITE_TYPE_REGISTER_HIGH}: cpu_state <= (alu_result_value[FLAG_K-8]!=alu_result_flag[FLAG_K])?(alu_result_value[FLAG_K-8]?CPU_STATE_SWITCH_INTERRUPT:CPU_STATE_SWITCH_NORMAL):CPU_STATE_FETCH_INSTR_BEGIN;
-                    {1'b1,WRITE_TYPE_REGISTER}     : cpu_state <= (alu_result_value[FLAG_K  ]!=alu_result_flag[FLAG_K])?(alu_result_value[FLAG_K  ]?CPU_STATE_SWITCH_INTERRUPT:CPU_STATE_SWITCH_NORMAL):CPU_STATE_FETCH_INSTR_BEGIN;
-                    {1'b1,WRITE_TYPE_REGISTER_BIT} :
-                        begin
-                            case (write_type_value[15:11])
-                                FLAG_K: cpu_state <= (alu_result_value[0]!=alu_result_flag[FLAG_K])?(alu_result_value[0]?CPU_STATE_SWITCH_INTERRUPT:CPU_STATE_SWITCH_NORMAL):CPU_STATE_FETCH_INSTR_BEGIN;
-                                FLAG_H: 
-                                    begin
-                                        cpu_halt <= alu_result_value[0];
-                                        cpu_state <= (alu_result_value[0])?CPU_STATE_HALT:CPU_STATE_FETCH_INSTR_BEGIN;
-                                    end
-                                FLAG_R: cpu_state <= (alu_result_value[0])?CPU_STATE_RESET:CPU_STATE_FETCH_INSTR_BEGIN;
-                            endcase 
-                        end                 
-                endcase 
-                
-                if (cpu_instr_modflag && !write_to_flag) cpu_register[CPU_REGISTER_FLAG][1:0] <= {(alu_result_value==0)/*Z*/, alu_result_flag[0] /*C*/}; 
+                if (~write_nothing) begin // if the result of the operation has to be written
+                    case (write_type)
+                        WRITE_TYPE_REGISTER_LOW:  cpu_register[write_type_value[3:0]][7:0]                      <= alu_result_value[7:0];  // type value is register number
+                        WRITE_TYPE_REGISTER_HIGH: cpu_register[write_type_value[3:0]][15:8]                     <= alu_result_value[7:0];  // type value is register number
+                        WRITE_TYPE_REGISTER:      cpu_register[write_type_value[3:0]]                           <= alu_result_value;       // type value is register number
+                        WRITE_TYPE_REGISTER_BIT:  cpu_register[write_type_value[3:0]][write_type_value[15:11]]  <= alu_result_value[0];    // type value is register number, bit 15:11 is bit number
+                        WRITE_TYPE_MEMORY: // type value is write target address
+                            if (bus_ready) begin
+                                bus_we          <= 1;
+                                bus_addr        <= write_type_value;
+                                bus_data_write  <= alu_result_value;
+                                bus_ack_latency <= 0;
+                            end 
+                    endcase
+                    case ({write_to_flag,write_type})
+                        {1'b0,WRITE_TYPE_MEMORY}       ,
+                        {1'b1,WRITE_TYPE_MEMORY}       : cpu_state <= bus_ready?CPU_STATE_FETCH_INSTR_BEGIN:CPU_STATE_WRITE_DATA;
+                        {1'b0,WRITE_TYPE_REGISTER_LOW} ,
+                        {1'b0,WRITE_TYPE_REGISTER_HIGH},
+                        {1'b0,WRITE_TYPE_REGISTER}     ,
+                        {1'b0,WRITE_TYPE_REGISTER_BIT} ,
+                        {1'b1,WRITE_TYPE_REGISTER_LOW} : cpu_state <= CPU_STATE_FETCH_INSTR_BEGIN;
+                        {1'b1,WRITE_TYPE_REGISTER_HIGH}: cpu_state <= (alu_result_value[FLAG_K-8]!=alu_result_flag[FLAG_K])?(alu_result_value[FLAG_K-8]?CPU_STATE_SWITCH_INTERRUPT:CPU_STATE_SWITCH_NORMAL):CPU_STATE_FETCH_INSTR_BEGIN;
+                        {1'b1,WRITE_TYPE_REGISTER}     : cpu_state <= (alu_result_value[FLAG_K  ]!=alu_result_flag[FLAG_K])?(alu_result_value[FLAG_K  ]?CPU_STATE_SWITCH_INTERRUPT:CPU_STATE_SWITCH_NORMAL):CPU_STATE_FETCH_INSTR_BEGIN;
+                        {1'b1,WRITE_TYPE_REGISTER_BIT} :
+                            begin
+                                case (write_type_value[15:11])
+                                    FLAG_K: cpu_state <= (alu_result_value[0]!=alu_result_flag[FLAG_K])?(alu_result_value[0]?CPU_STATE_SWITCH_INTERRUPT:CPU_STATE_SWITCH_NORMAL):CPU_STATE_FETCH_INSTR_BEGIN;
+                                    FLAG_H: 
+                                        begin
+                                            cpu_halt <= alu_result_value[0];
+                                            cpu_state <= (alu_result_value[0])?CPU_STATE_HALT:CPU_STATE_FETCH_INSTR_BEGIN;
+                                        end
+                                    FLAG_R: cpu_state <= (alu_result_value[0])?CPU_STATE_RESET:CPU_STATE_FETCH_INSTR_BEGIN;
+                                endcase 
+                            end                 
+                    endcase 
+                end
+                else begin // result not written to target 
+                    cpu_state <= CPU_STATE_FETCH_INSTR_BEGIN;
+                end
+                if (cpu_instr_modflag && !write_to_flag) begin  // flags has to be modified 
+                    // Z and C flags
+                    cpu_register[CPU_REGISTER_FLAG][1:0] <= {(alu_result_value==0)/*Z*/, alu_result_flag[0] /*C*/};
+                    // S and V flags
+                    case (alu_ope)
+                        ALU_OPE_MOV: // S flag only
+                            case (write_type)
+                                WRITE_TYPE_REGISTER_LOW:    cpu_register[CPU_REGISTER_FLAG][4]  <= cpu_register[write_type_value[3:0]][15];
+                                WRITE_TYPE_REGISTER_HIGH:   cpu_register[CPU_REGISTER_FLAG][4]  <= alu_result_value[7];
+                                WRITE_TYPE_REGISTER,
+                                WRITE_TYPE_MEMORY:          cpu_register[CPU_REGISTER_FLAG][4]  <= alu_result_value[15];
+                            endcase
+                        ALU_OPE_ADD,
+                        ALU_OPE_SUB: cpu_register[CPU_REGISTER_FLAG][4:3]        <= { alu_result_value[15], (alu_param1[15] & alu_param2[15] & ~alu_result_value[15]) | (~alu_param1[15] & ~alu_param2[15] & alu_result_value[15]) };
+                        ALU_OPE_AND,
+                        ALU_OPE_OR,
+                        ALU_OPE_NOT,
+                        ALU_OPE_SHL,
+                        ALU_OPE_SHR: cpu_register[CPU_REGISTER_FLAG][4]          <=  alu_result_value[15];
+                    endcase                    
+                end 
             end
         CPU_STATE_SWITCH_INTERRUPT:
             begin

@@ -1,5 +1,9 @@
 `timescale 1ns / 1ps
-module backslash5(clk, vgaRed, vgaGreen, vgaBlue, Hsync, Vsync, led);
+// Be sure that you've configured your board constraints accordingly to :
+//    clk : board clock (Basys3 100 Mhz)
+//    vgaRed , vgaGreen, vgaBlue : 4 bits vga color output signal (Basys 3 VGA DAC)
+//    Hsync, Vsync : Horizontal and vertical VGA synchronisation signals. 
+ module backslash5(clk, vgaRed, vgaGreen, vgaBlue, Hsync, Vsync, led,sw, seg, an);
 
     // FPGA board primary clock
     input clk; 
@@ -11,8 +15,15 @@ module backslash5(clk, vgaRed, vgaGreen, vgaBlue, Hsync, Vsync, led);
     output Hsync;
     output Vsync;
     
-    // FPGA led
-    output led;
+    // FPGA board 4x 7segment digital display
+    output [7:0] seg;
+    output [3:0] an;
+    
+    // FPGA leds
+    output [15:0] led;
+    
+    // FPGA switch
+    input [15:0] sw;
     
     wire reset;
     wire bus_clock;
@@ -139,9 +150,12 @@ module backslash5(clk, vgaRed, vgaGreen, vgaBlue, Hsync, Vsync, led);
 
 // Temporary design below                           
 // TODO assign bus_clock and reset with constraints                                                                         
-    assign reset = r_reset; 
- //   assign bus_clock = clk; // clk constraint for board clock 100Mhz for Digilent Basys 3 
-    assign led = Vsync;
+    assign reset = r_reset;
+    assign an = sw[11:8];//4'b0000;
+    assign seg = sw[7:0]; //8'b00000000; 
+//   assign bus_clock = clk; // clk constraint for board clock 100Mhz for Digilent Basys 3 
+    //assign led = Vsync;
+    assign led = sw;
     assign cpu_interrupt = 0;
     always @(posedge bus_clock) begin
         r_reset <= 1'b1;

@@ -118,7 +118,7 @@ conditions: ccc
 100    cc or lo    Unsigned lower (or carry clear).          C==0, C flag is cleared
 101    xs          custom bit set                            X==1, X flag is set
 110    xc          custom bit clear                          X==0, X flag is cleared
-111    no          never executed (NOP)*                     No flag tested
+111    no          no result (NOP)*                          No flag tested
 
 * intruction executed but result is not written back.
   If instruction flag is fl then flags are modified.
@@ -224,10 +224,10 @@ instruction per mnemonic : 31 instructions
         mov high R0, low Rx       ; MSB R0 = LSB Rx
         mov low R0, high Rx       ; LSB R0 = MSB Rx
         mov high R0, high Rx      ; MSB R0 = MSB Rx
-        mov X, Rx:imm4            ; flag X = bit number designed by a 4 bits immediate, of register Rx
-        mov Rx:imm4, X            ; bit number designed by a 4 bits immediate, of register Rx = flag X
-        mov Rx:imm4, 0            ; bit number designed by a 4 bits immediate, of register Rx is cleared
-        mov Rx:imm4, 1            ; bit number designed by a 4 bits immediate, of register Rx is set
+        mov X, Rx:imm4            ; flag X = bit number designed by a 4 bits immediate, of register Rx,  Flag register unchanged
+        mov Rx:imm4, X            ; bit number designed by a 4 bits immediate, of register Rx = flag X, , S flag unchanged, Z flag unchanged if Rx is R14
+        mov Rx:imm4, 0            ; bit number designed by a 4 bits immediate, of register Rx is cleared, S flag unchanged, Z flag unchanged if Rx is R14
+        mov Rx:imm4, 1            ; bit number designed by a 4 bits immediate, of register Rx is set, S flag unchanged, Zflag unchanged if Rx is R14
 
     add ( Z, C, V, S flags)
         add Rx, Ry                ; Rx = Rx + Ry
