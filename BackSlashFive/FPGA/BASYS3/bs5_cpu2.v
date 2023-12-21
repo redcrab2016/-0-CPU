@@ -169,13 +169,13 @@ always @(posedge bus_clock) //* //(cpu_reset_pendingclr, reset,cpu_reset_pending
 
 // conditional execution : BS5 ccc
 assign cpu_cond_exec[0] = 1'b1; // always
-assign cpu_cond_exec[1] =  cpu_instr_FLAG[FLAG_Z]; // Z==1
-assign cpu_cond_exec[2] = ~cpu_instr_FLAG[FLAG_Z]; // Z==0
-assign cpu_cond_exec[3] =  cpu_instr_FLAG[FLAG_C]; // C==1
-assign cpu_cond_exec[4] = ~cpu_instr_FLAG[FLAG_C]; // C==0
-assign cpu_cond_exec[5] =  cpu_instr_FLAG[FLAG_X]; // X==1
-assign cpu_cond_exec[6] = ~cpu_instr_FLAG[FLAG_X]; // X==0
-assign cpu_cond_exec[7] = 1'b1; // execute but no write back result
+assign cpu_cond_exec[1] =  cpu_register[CPU_REGISTER_FLAG][FLAG_Z]; // Z==1
+assign cpu_cond_exec[2] = ~(cpu_register[CPU_REGISTER_FLAG][FLAG_Z]); // Z==0
+assign cpu_cond_exec[3] =  cpu_register[CPU_REGISTER_FLAG][FLAG_C]; // C==1
+assign cpu_cond_exec[4] = ~(cpu_register[CPU_REGISTER_FLAG][FLAG_C]); // C==0
+assign cpu_cond_exec[5] =  cpu_register[CPU_REGISTER_FLAG][FLAG_X]; // X==1
+assign cpu_cond_exec[6] = ~(cpu_register[CPU_REGISTER_FLAG][FLAG_X]); // X==0
+assign cpu_cond_exec[7] = 1'b1;  // execute but no write back result
 
 always @ (posedge bus_clock) 
     case (cpu_state)
@@ -671,7 +671,7 @@ always @ (posedge bus_clock)
                         {1'b1,WRITE_TYPE_REGISTER}     : cpu_state <= (alu_result_value[FLAG_K  ]!=alu_result_flag[FLAG_K])?(alu_result_value[FLAG_K  ]?CPU_STATE_SWITCH_INTERRUPT:CPU_STATE_SWITCH_NORMAL):CPU_STATE_FETCH_INSTR_BEGIN;
                         {1'b1,WRITE_TYPE_REGISTER_BIT} :
                             begin
-                                case (write_type_value[15:11])
+                                case (write_type_value[15:12])
                                     FLAG_K: cpu_state <= (alu_result_value[0]!=alu_result_flag[FLAG_K])?(alu_result_value[0]?CPU_STATE_SWITCH_INTERRUPT:CPU_STATE_SWITCH_NORMAL):CPU_STATE_FETCH_INSTR_BEGIN;
                                     FLAG_H: 
                                         begin
@@ -683,10 +683,10 @@ always @ (posedge bus_clock)
                             end                 
                     endcase 
                 end
-                else begin // result not written to target 
+                else begin  // result not written to target 
                     cpu_state <= CPU_STATE_FETCH_INSTR_BEGIN;
                 end
-                if (cpu_instr_modflag && !write_to_flag) begin  // flags has to be modified 
+                if (cpu_instr_modflag && !write_to_flag) begin   // flags has to be modified 
                     // Z and C flags
                     cpu_register[CPU_REGISTER_FLAG][1:0] <= {(alu_result_value==0)/*Z*/, alu_result_flag[0] /*C*/};
                     // S and V flags

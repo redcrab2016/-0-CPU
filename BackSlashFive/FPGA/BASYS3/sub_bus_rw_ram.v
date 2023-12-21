@@ -15,14 +15,15 @@ module sub_bus_rw_ram(  input           reset,
   reg [15:0] ramdata=0;
   
  
-    integer ram_index;
+    //integer ram_index;
     initial begin
-        ram[0] = 16'h17ff; // al fl mov low r0,255
-        ram[1] = 16'h1401; // al fl mov r1, r0
-        ram[2] = 16'h1f41; // al fl add r1, 1
-        ram[3] = 16'h19fe; // al fl add r15, -2
-        for (ram_index = 4; ram_index < ADDRESS_SIZE; ram_index = ram_index + 1)
-            ram[ram_index] = {16{1'b0}};
+        $readmemh("./progtest.bin", ram );
+        // ram[0] = 16'h17ff; // al fl mov low r0,255
+        // ram[1] = 16'h1401; // al fl mov r1, r0
+        // ram[2] = 16'h1f41; // al fl add r1, 1
+        // ram[3] = 16'h19fe; // al fl add r15, -2
+        // for (ram_index = 4; ram_index < ADDRESS_SIZE; ram_index = ram_index + 1)
+        //    ram[ram_index] = {16{1'b0}};
     end
   
   assign o_bus_data_read = ramdata; 
