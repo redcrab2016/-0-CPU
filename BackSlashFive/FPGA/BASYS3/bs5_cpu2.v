@@ -200,7 +200,7 @@ always @ (posedge bus_clock)
                         {1'b1,1'b0},                                    
                         {1'b1,1'b1}: 
                             begin 
-                                cpu_state               <= CPU_STATE_RESET; // priority to reset signal
+                                cpu_state               <= CPU_STATE_RESET;  // priority to reset signal
                                 cpu_interrupt_bysignal  <= 0;
                             end
                         {1'b0,1'b1}: 
@@ -235,7 +235,7 @@ always @ (posedge bus_clock)
                     write_type         <= 0;
                     write_type_value   <= 0;
                     write_to_flag      <= 0;
-                    write_nothing      <= cpu_cond_exec[ bus_data_read[15:13] ] ? ((~bus_data_read[15:13])==0?1:0): 0;   // if 1 then no write result of the instruction   
+                    write_nothing      <= (bus_data_read[15:13] == 3'b111)?1:0;  // if 1 then no write result of the instruction
                 end 
             end 
         CPU_STATE_DECODE:

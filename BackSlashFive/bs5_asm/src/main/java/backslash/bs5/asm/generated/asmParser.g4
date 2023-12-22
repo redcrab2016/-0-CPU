@@ -336,7 +336,7 @@ bs5_imm16_instruction
     // ccc f and Rx, imm16 (Rx != R0)
     | bs5_cond? bs5_flag? 
       Bs5_and bs5_reg_1_15 COMMA number16bits
-        { prg.asm_add_Rx_imm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
+        { prg.asm_and_Rx_imm16($bs5_cond.text, $bs5_flag.text, $bs5_reg_1_15.text, $number16bits.immediat ); }
 
     // ccc f or Rx, imm16 (Rx != R0)
     | bs5_cond? bs5_flag? 
