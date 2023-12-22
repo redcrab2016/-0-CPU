@@ -175,7 +175,7 @@ module sub_bus_rw_vga2(input            reset,
     case (vga_state)
         VGA_STATE_RESET:
             begin
-                vga_state    <= VGA_STATE_RESETING;
+                vga_state    <= VGA_STATE_RESETING; 
                 vga_substate <= 0;
             end
         VGA_STATE_RESETING:

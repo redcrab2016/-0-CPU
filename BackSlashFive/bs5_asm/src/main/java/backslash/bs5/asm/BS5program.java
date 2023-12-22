@@ -271,7 +271,7 @@ public class BS5program {
                 if (labelKey.contains(label)) {  // if the label contains the local label
                     labelObj = bs5Labels.get(labelKey); // check if it is in line range
                     if (    labelObj.getName().equals(label) &&
-                            labelObj.getLinenum() <= linenum &&
+                            labelObj.getGlobalParent().getLinenum() <= linenum &&
                             labelObj.getLinenumend() >= linenum ) {
                         labelObj.useIt();
                         return labelObj.getAddr(); // found local label address

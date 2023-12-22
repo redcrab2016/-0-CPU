@@ -69,7 +69,7 @@ start:
 ;  the method is to draw 50 times a 112 pixels horizontal line
     mov R1, #0xC000 ;  set R1 to top left corner coordinates of the canva
     add R1, #0x0646 ;  set R1 to coordinates (24, 25) = 25 * 64 + 6*4
-    mov R4, #0x1111 ;  R4 : 4 pixels color, 0x0000 = 0 = all in black, 0x1111 all in blue (CGA text color palette)
+    mov R4, #0xAAA1 ;  R4 : 4 pixels color, 0x0000 = 0 = all in black, 0x1111 all in blue (CGA text color palette)
     mov R5, 50   ; 50 line of height
 .vertiloop:    
     mov R2, R1   ; set the start of horizontal line to R1
