@@ -636,7 +636,7 @@ always @ (posedge bus_clock)
                                  alu_param2                                  <=  (~alu_param2)+1;
                                  end
                     ALU_OPE_AND: alu_result_value                            <=  alu_param1 &  alu_param2;
-                    ALU_OPE_OR:  alu_result_value                            <=  alu_param1 &  alu_param2;
+                    ALU_OPE_OR:  alu_result_value                            <=  alu_param1 |  alu_param2;
                     ALU_OPE_NOT: alu_result_value                            <= ~alu_param1;
                     ALU_OPE_SHL: {alu_result_flag[FLAG_C],alu_result_value}  <=  {1'b0,alu_param1} << alu_param2;
                     ALU_OPE_SHR: {alu_result_value,alu_result_flag[FLAG_C]}  <=  {alu_param1,1'b0} >> alu_param2;
