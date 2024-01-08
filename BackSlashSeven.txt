@@ -268,3 +268,162 @@ ccc f oooooooo xxxx ( 4 instructions)
       11111101 sub Rx, 1
       11111110 not Rx
       11111111 neg Rx  (swap LSB Rx with MSB Rx)
+
+
+Microprograms to complete the instruction set 
+=== assign 16 bits immediate
+ccc f mov R0, imm16
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 2  ; if ccc != al, if f=nf add r15, 3 if f=fl
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  f  mov R0,R0  ; if f is fl, otherwise this line is removed
+
+ccc f mov Rx, imm16 (Rx != R0, R0 modified) 
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  f  mov Rx,R0  
+
+ccc f mov R0, [imm16]
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al 
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  f  mov R0,[R0]  
+
+ccc f mov Rx, [imm16] (Rx != R0, R0 modified) 
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  f  mov Rx,[R0]  
+
+ccc f mov [imm16],Rx (Rx != R0, R0 modified) 
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  f  mov [R0],Rx
+
+=== Stack oriented microprograms
+   === push
+ccc f push Rx
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 2  ; if ccc != al
+    al nf sub R13,1
+    al f  mov [R13], Rx
+
+ccc f push [Rx]  (R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf sub R13, 1
+    al  nf mov R0, [Rx]
+    al  f  mov [R13], R0
+
+ccc f push imm16 (R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 4  ; if ccc != al
+    al  nf sub R13, 1
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  f  mov [R13], R0
+
+ccc f push [imm16] ( R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf sub R13, 1
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  nf mov R0, [R0]
+    al  f  mov [R13], R0
+
+   === pop
+ccc f pop Rx (Rx != R15)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 2  ; if ccc != al
+    al  f mov Rx, [R13]
+    al  nf add R13, 1
+
+ccc f pop [Rx] ( Rx != R0, R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov R0, [R13]
+    al  nf add R13,1
+    al  f mov [Rx], R0
+
+ccc f pop [imm16] (R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 11  ; if ccc != al
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  nf sub R13, 1
+    al  nf mov [R13],R1
+    al  nf add R13, 1
+    al  nf mov R1, [R13]
+    al  f  mov [R0], R1
+    al  nf sub R13, 1
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf add R13, 1
+
+; procedure call and return
+  Call procedure  (5 microprograms)
+ccc f call Rx (Rx != R0 & Rx != R15)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf mov R0, R15
+    al  nf add R0, 4
+    al  nf sub R13, 1
+    al  nf mov [R13], R0
+    al  f  mov R15, Rx
+
+ccc f call [Rx] (Rx != R0 & Rx != R15)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf mov R0, R15
+    al  nf add R0, 4
+    al  nf sub R13, 1
+    al  nf mov [R13], R0
+    al  f  mov R15, [Rx]
+
+ccc f call imm16 (R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 7  ; if ccc != al
+    al  nf mov R0, R15
+    al  nf add R0, 6
+    al  nf sub R13, 1
+    al  nf mov [R13], R0
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  f  mov R15, R0
+
+ccc f call [imm16] (R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 8  ; if ccc != al
+    al  nf mov R0, R15
+    al  nf add R0, 7
+    al  nf sub R13, 1
+    al  nf mov [R13], R0
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  nf mov R0, [R0]
+    al  f  mov R15, R0
+
+ccc f call simm8  (near relative address, R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf mov R0, R15
+    al  nf add R0, 4
+    al  nf sub R13, 1
+    al  nf mov [R13], R0
+    al  f  add F15, simm8    
+
+   === return of subroutine (subroutine called by a "call")
+ccc f ret
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov R0, [R13]
+    al  nf add R13, 1
+	al  f  mov R15, R0    
