@@ -218,9 +218,9 @@ instruction per mnemonic : 31 instructions
         mov Rx, Ry                ; Rx = Ry        
         mov Rx, [Ry]              ; Rx = [Ry] (content at address Ry)
         mov [Rx], Ry              ; [Rx] = Ry  (content at address Rx is replace with value of Ry)
-        mov low R0, imm8          ; LSB R0 = immediat 8 bits
-        mov high R0, imm8         ; MSB R0 = immediat 8 bits
-        mov low R0, low Rx        ; LSB R0 = LSB Rx
+        mov low R0, imm8          ; LSB R0 = immediate 8 bits
+        mov high R0, imm8         ; MSB R0 = immediate 8 bits
+        mov low R0, low Rx        ; LSB R0 = LSB Rxx
         mov high R0, low Rx       ; MSB R0 = LSB Rx
         mov low R0, high Rx       ; LSB R0 = MSB Rx
         mov high R0, high Rx      ; MSB R0 = MSB Rx

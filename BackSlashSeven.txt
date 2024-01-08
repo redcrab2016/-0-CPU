@@ -1,0 +1,270 @@
+BackSlashSeven : BS7 : \7
+Light processor
+16 registers 16 bits ( word )
+8 execution conditions (16 with generated assembler condition)
+64 Ki word addresses
+16 bits per instruction ( one word per instruction)
+Can be implemented for same address space for program, data and I/O
+or for seperated program and data, I/O address space (no mix betwen data and program, not possible to have self modified program)
+
+registers: - R0 to R15 (designated by 4 bits)
+R0  : 0000 : general 
+R1  : 0001 : general
+R2  : 0010 : general
+R3  : 0011 : general
+R4  : 0100 : general
+R5  : 0101 : general
+R6  : 0110 : general
+R7  : 0111 : general
+R8  : 1000 : general
+R9  : 1001 : general
+R10 : 1010 : general
+R11 : 1011 : general
+R12 : 1100 :LP/BP: general or base/local pointer in stack dedicated microprograms
+R13 : 1101 :SP: general or stack pointer in stack dedicated microprograms
+R14 : 1110 :FG: 16 bits flags  KIHR---- GLASVXZC, see below flag R14:FG for description
+R15 : 1111 :PC: Program address
+There is two set of R0 to R15 registers: one when flag K=1 (interrupt handling),     another one when K=0 (normal execution)
+K=1 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
+when going from K=0 to K=1 all registers are switch to the interrupt handling register set: register R14 (flags) is modified with K=1, I=0 if switch occurs due to 
+external context switching, I=1 if the switch occurs due to the program. 
+In context when K=1, I flag a no effect (is like I is always = 0), no re-entrant interrupt possible. 
+when going from K=1 to K=0 all registers are switch to the normal register set: register R14 (flags) is modified with K=0
+when a switch occurs, this will cause a jump (from one R15 register to another)
+As it is not possible to modify one register context from another context and both context R15 register is 0 at reset time, your code has to manage the interrupt
+and non interrupt context from address 0,
+From address 0 you can detect the context by testing the flag K.
+In interrupt context handling (K=1) if I==1 that means the context switch due to a external interrupt signal, otherwise due to program.
+When switching to context, the program continue where the last context switch occured.
+
+flags R14:FG
+   bit 0
+     C : =1 if 
+    addition has a carry
+    substaction has a borrow
+    last evacuated bit by shift left/right is 1
+    =0 otherwise
+   bit 1
+     Z : After instruction execution if register or bit size result is equal to zero then Z=1, 0 otherwise
+   bit 2
+     X : custom flag to set/clear usable for conditional execution
+   bit 3
+     V : overflow flag , set to 1 if signed addition or signed substraction is overflow, 0 otherwise.
+   bit 4
+     S : Sign flag, set to 1 if result is negative (S= most significant bit result),0 if positive
+   bit 5
+     A : computed flag: result of bit flag algebra C==1 && Z==0 
+        1:  "is above" "is higher" unsigned
+        0:  "is below or equal" "is lower or same" unsigned
+   bit 6
+     L : computed flag: result of bit flag algebra S!=V,  
+        1: "is less" (signed integer comparison)
+        0: "is greater or equal"
+   bit 7
+     G : computed flag: result of bit flag algebra Z==0 && S==V, 
+        1: "is greater" (signed integer comparison)
+        0: "is less or equal"
+   bit 8 - 11
+     - : general flag for program usage (bit general register)
+   bit 12
+     R : =1 request a soft cpu reset, =0 default running
+         CPU react only if  using  instruction "mov R14:12, b" : b=X and X==1, or b=1 
+   bit 13:
+     H : =1 to halt processor, =0 by default for running (once halted , no way to continue unless reset)
+         CPU react only if  using  instruction "mov R14:13, b" : b=X and X==1, or b=1 
+   bit 14
+        if K == 0 (normal context)
+           I : =1 Interrupt input signal enabled , =0 Interrupt input signal disabled(default value at reset time)
+        if K == 1 (just entering into interrupt context)
+           I : =0  interrupt by program, =1 interrupt by signal
+   bit 15
+     K : =1 Interrupt context registers, =0 normal context registers(default value at reset time)
+         
+
+Program counter R15:PC
+   represent the address of the next natural instuction, not the address of current instruction in execution
+   branching is typically done by a "mov R15, ..." , "add R15, ..."  instruction
+   branching with "not R15..." instruction is allowed
+   At processor reset time PC is set to 0 ( same for all other registers, in all contexts)
+   
+   In normal context( flag K=0), it is possible to block (get stuck) the processor by the following instruction
+    al nf sub R15, 1   ; the instruction is repeated endlessly
+   Interrupt signal still handled if flag I=1.
+   Same instruction in interrupt context (flag K=1) get stuck forever the cpu by repeating endlessly the instruction.
+
+Instruction structure: 16 bits (65536 possible instructions: Each value get a valid meaning )
+ccc f oooo yyyy xxxx  2 registers parameters
+ccc f oooo iiii iiii  1 unisgned byte parameter
+ccc f oooo siii iiii  1 signed byte parameter
+ccc f oooo iiii xxxx  1 register and 1 quartet parameters
+ccc f oooooo yyy xxx  2 registers parameters (from R0 to R7)
+ccc f oooooo iii xxx  1 register (from R0 to R7) and 3 bits immediate
+ccc f oooooooo xxxx   1 register parameter
+
+ccc       is the 3 bits of instruction execution condition
+f         is the bit of conditional flag modification by instruction execution
+oooo      is the 4 bits instruction code
+oooooo    is the 6 bits instruction code
+oooooooo  is the 8 bits instruction code
+xxxx      is the 4 bits register index (Rx) from R0 to R15
+yyyy      is the 4 bits register index (Ry) from R0 to R15
+xxx       is the 3 bits register index (Rx) from R0 to R7
+yyy       is the 3 bits register index (Ry) from R0 to R7
+iiii      is the 4 bits of an immediate unsigned integer
+iii       is the 3 bits of an immediate unsigned integer
+iiii iiii is the 8 bits of an immediate unsigned integer
+siii iiii is the 8 bits of an immediate signed integer
+
+conditions: ccc
+000    al          Always executed.                          No flag tested.
+001    eq or zs    Equal.                                    Z==1, Z flag is set
+010    ne or zc    Not equal.                                Z==0, Z flag is cleared
+011    cs or hs    Unsigned higher or same (or carry set).   C==1, C flag is set
+100    cc or lo    Unsigned lower (or carry clear).          C==0, C flag is cleared
+101    xs          custom bit set                            X==1, X flag is set
+110    xc          custom bit clear                          X==0, X flag is cleared
+111    no          no result (NOP)*                          No flag tested
+
+* intruction executed but result is not written back.
+  If instruction flag is fl then flags are modified.
+  example: no fl sub R2, R3  ; z,c,s,v flags modified but R2 is not modified
+  A no operation (nop) is doable by the combination of 'no' with 'nf'
+  example: no nf sub R2, R3  ; operation executed but nothing is modified.
+
+The assembler have to know other conditions that generate an additional move bit instruction before, 
+and change the condition to xs or xc (depending the case)
+for instance:
+    pl nf sub R1, R2 ;( if S==0 then R1=R1-R2, and do not modify the flags) : can't be assembled in one word
+is assembled as
+    al nf mov X, R14:4  ;(X flag = S flag)
+    xc nf sub R1, R2 ;(if X==0 then R1=R1-R2, and do not modify the flags) : assembled in two words
+another example:
+    mi nf add R1, R2
+is assembled as    
+    al nf mov X, R14:4
+    xs nf add R1, R2    
+The additional conditions and encoding is as following ( 10 additional conditions )
+(f is modified flag (fl or nf), ope is the operation to execute under condition (One of the 31 core instructions))
+hi,as : Higher (unsigned) flag register bit 5, A flag is set
+  instruction
+    hi f ope
+  become 
+    al nf mov x, R14:5
+    xs f ope
+ls,ac : Less or same (unsigned) not flag register bit 5, A flag is cleared
+  instruction 
+    ls f ope
+  become
+    al nf mov x, R14:5
+    xc f ope
+ge,lc : is greater or equal (signed) not flag register bit 6, L flag is cleared
+  instruction
+    ge f ope
+  become
+    al nf mov x, R14:6
+    xc f ope
+lt,ll : is less (signed) flag register bit 6, L flag is set
+  instruction
+    lt f ope
+  become
+    al nf mov x, R14:6
+    xs f ope
+gt,gs : is greater (signed) flag register bit 7, G flag is set
+  instruction
+    gt f ope
+  become
+    al nf mov x, R14:7
+    xs f ope
+le,gc : is less or equal (signed) not flag register 7, G flag is cleared
+  instruction
+    le f ope
+  become 
+    al nf mov x, R14:7
+    xc f ope
+vc : no overflow (signed) flag register 3, V flag is cleared
+  instruction
+    vc f ope
+  become 
+    al nf mov x, R14:3
+    xc f ope
+vs : overflow (signed) flag register 3, V flag is set
+  instruction
+    vc f ope
+  become 
+    al nf mov x, R14:3
+    xs f ope
+pl, sc : is positive (signed) flag register 4, S flag is cleared
+  instruction
+    pl f ope
+  become
+    al nf mov x, R14:4
+    xc f ope
+mi, ss : is negative (signed) flag register 4, S flag is set
+  instruction
+    pl f ope
+  become
+    al nf mov x, R14:4
+    xs f ope
+
+flag modified : f
+if 0 then no flag is modified by the instruction, 1 flag(s) modified by the instruction
+0    nf
+1    fl
+
+mnemonics : mov, add, sub , and, or , xor, not, shl, shr, sar, mul, div, imul, idiv, neg
+
+30 instructions for 15 mnemonics
+
+=== 8 bits parameter
+    === 2 registers (any registers)
+ccc f oooo yyyy xxxx  ( 3 instructions )
+      0000 mov Rx, Ry
+      0001 mov Rx, [Ry]
+      0010 mov [Rx], Ry
+
+    === 1 register and one 4 bits immediate
+ccc f oooo iiii xxxx  (5 instructions )
+      0011 mov X, Rx:Imm4
+      0101 mov Rx:Imm4, X
+      0110 mov Rx:Imm4, 0
+      0111 mov Rx:Imm4, 1
+      1000 not Rx:imm4 
+
+    === 8 bits unsigned immediate
+ccc f oooo iiiiiiii  ( 2 instructions )
+      1001 mov low R0, imm8
+      1010 mov high R0, imm8
+
+    === 8 bits signed immediate
+ccc f oooo siiiiiii  ( 1 instruction )
+      1011 add R15, simm8
+
+=== 6 bits parameter
+    === 2 registers (register from R0 to R7)
+ccc f oooooo yyy xxx   (Rx is R0 to R7, Ry is R0 to R7 ) ( 12 instructions)
+      110000 add Rx, Ry
+      110001 sub Rx, Ry
+      110010 and Rx, Ry
+      110011 or  Rx, Ry
+      110100 xor Rx, Ry
+      110101 shl Rx, Ry
+      110110 shr Rx, Ry
+      110111 sar Rx, Ry
+      111000 mul Rx, Ry
+      111001 div Rx, Ry
+      111010 imul Rx, Ry
+      111011 idiv Rx, Ry
+
+    === 1 register (register from R0 to R7) and one 3 bits immediate
+ccc f oooooo iii xxx ; R0 to R7 , (iii = 0 to 7) ( 3 instructions)
+      111100 shl Rx, imm3 ;(imm3 = iii + 1) 1 to 8 
+      111101 shr Rx, imm3 ;(imm3 = iii + 1) 1 to 8
+      111110 sar Rx, imm3 ;(imm3 = iii + 1) 1 to 8
+
+=== 4 bits parameter
+    === 1 register (any register)
+ccc f oooooooo xxxx ( 4 instructions)
+      11111100 add Rx, 1 (Rx != R15)
+      11111101 sub Rx, 1
+      11111110 not Rx
+      11111111 neg Rx  (swap LSB Rx with MSB Rx)
