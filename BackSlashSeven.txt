@@ -223,37 +223,34 @@ ccc f oooo yyyy xxxx  ( 3 instructions )
       0010 mov [Rx], Ry
 
     === 1 register and one 4 bits immediate
-ccc f oooo iiii xxxx  (5 instructions )
+ccc f oooo iiii xxxx  (2 instructions )
       0011 mov X, Rx:Imm4
       0101 mov Rx:Imm4, X
-      0110 mov Rx:Imm4, 0
-      0111 mov Rx:Imm4, 1
-      1000 not Rx:imm4 
 
     === 8 bits unsigned immediate
 ccc f oooo iiiiiiii  ( 2 instructions )
-      1001 mov low R0, imm8
-      1010 mov high R0, imm8
+      0110 mov low R0, imm8
+      0111 mov high R0, imm8
 
     === 8 bits signed immediate
 ccc f oooo siiiiiii  ( 1 instruction )
-      1011 add R15, simm8
+      1000 add R15, simm8
 
-=== 6 bits parameter
+=== 7 bits parameter
     === 2 registers (register from R0 to R7)
-ccc f oooooo yyy xxx   (Rx is R0 to R7, Ry is R0 to R7 ) ( 12 instructions)
-      110000 add Rx, Ry
-      110001 sub Rx, Ry
-      110010 and Rx, Ry
-      110011 or  Rx, Ry
-      110100 xor Rx, Ry
-      110101 shl Rx, Ry
-      110110 shr Rx, Ry
-      110111 sar Rx, Ry
-      111000 mul Rx, Ry
-      111001 div Rx, Ry
-      111010 imul Rx, Ry
-      111011 idiv Rx, Ry
+ccc f ooooo yyyy xxx   (Rx is R0 to R7, Ry is R0 to R15 ) ( 12 instructions)
+      10010 add Rx, Ry
+      10011 sub Rx, Ry
+      10100 and Rx, Ry
+      10101 or  Rx, Ry
+      10110 xor Rx, Ry
+      10111 shl Rx, Ry
+      11000 shr Rx, Ry
+      11001 sar Rx, Ry
+      11010 mul Rx, Ry  (Ry != R14 and R15)
+      11011 div Rx, Ry  (Ry != R14 and R15)
+      11100 imul Rx, Ry (Ry != R14 and R15)
+      11101 idiv Rx, Ry (Ry != R14 and R15)
 
     === 1 register (register from R0 to R7) and one 3 bits immediate
 ccc f oooooo iii xxx ; R0 to R7 , (iii = 0 to 7) ( 3 instructions)
@@ -271,6 +268,31 @@ ccc f oooooooo xxxx ( 4 instructions)
 
 
 Microprograms to complete the instruction set 
+=== bit handling
+ccc f mov Rx:imm4,  0   (R0, X flag modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf xor R0, R0
+    al  nf mov X, R0:0
+    al  f  mov Rx:imm4, X
+
+ccc mov Rx:imm4,  1 (R0, X flag modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 4  ; if ccc != al
+    al  nf xor R0, R0
+    al  nf add R0, 1
+    al  nf mov X, R0:0
+    al  f  mov Rx:imm4, X
+
+ccc not Rx:imm4  (R0, X flag modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf xor R0, R0
+    al  nf mov X, Rx:imm4
+    xc  nf add R0, 1
+    al  nf mov X, R0:0
+    al  f  mov Rx:imm4, X
+
 === assign 16 bits immediate
 ccc f mov R0, imm16
     ccc nf add R15, 1  ; if ccc != al
@@ -306,6 +328,37 @@ ccc f mov [imm16],Rx (Rx != R0, R0 modified)
     al  nf mov low R0, low imm16
     al  nf mov high R0, high imm16
     al  f  mov [R0],Rx
+
+=== extra memory addressing mode ( use full for R12, R13 (local and stack) relative access)
+ccc f mov Rx, [Ry + Rz] ; Rx != R0, Ry in R8 to R13, Rz in R1 to R15 (R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov R0, Ry
+    al  nf add R0, Rz
+    al  f  mov Rx, [R0]
+
+ccc f mov Rx, [Ry + imm16] ; Rx != R0 , Ry in R1 to R13, (R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 4  ; if ccc != al
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  nf add R0, Ry
+    al  f  mov Rx, [R0]
+
+ccc f mov [Rx + Ry], Rz ; Rz != R0, Rx in R1 to R13, Ry in R1 to R13 (R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov R0, Rx
+    al  nf add R0, Ry
+    al  f  mov [R0], Rz
+
+ccc f mov [Rx + imm16], Ry ; Ry != R0 , Rx in R1 to R13, (R0 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 4  ; if ccc != al
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  nf add R0, Rx
+    al  f  mov [R0], Ry
 
 === Stack oriented microprograms
    === push
@@ -368,8 +421,170 @@ ccc f pop [imm16] (R0 modified)
     al  nf add R13, 1
     al  nf add R13, 1
 
-; procedure call and return
-  Call procedure  (5 microprograms)
+   === drop
+ccc f drop imm16 (not one, nor zero) (R13, R0)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 4  ; if ccc != al
+    al  nf mov low R0, low imm16
+    al  nf mov high R0, high imm16
+    al  nf add R0, R13
+    al  f  mov R13, R0
+
+ccc f drop 1
+    ccc f add R13, 1
+
+   === dup
+ccc f dup  (R0, R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov R0, [R13]
+    al  nf sub R13, 1
+    al  f  mov [R13], R0    
+
+   === swap the head and next value of the stack
+ccc f swap (R0, R1 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 6  ; if ccc != al
+    al  nf mov R0, [R13]
+    al  nf add R13, 1
+    al  nf mov R1, [R13]
+    al  nf mov [R13], R0
+    al  nf sub R13, 1
+    al  f  mov [R13], R1
+
+   === Logic/Math with stack
+ccc f not  (R0, modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov R0, [R13]
+    al  f  not R0
+    al  nf mov [R13], R0
+
+ccc f and  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  and R0, R1
+    al  nf mov [R13], R0
+
+ccc f or  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  or  R0, R1
+    al  nf mov [R13], R0
+
+ccc f xor  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  xor R0, R1
+    al  nf mov [R13], R0
+
+ccc f shl  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  shl R0, R1
+    al  nf mov [R13], R0
+
+ccc f shr  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  shr R0, R1
+    al  nf mov [R13], R0
+
+ccc f sar  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  sar R0, R1
+    al  nf mov [R13], R0
+
+ccc f add  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  add R0, R1
+    al  nf mov [R13], R0
+
+ccc f sub  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  sub R0, R1
+    al  nf mov [R13], R0
+
+ccc f mul  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 7  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  mul R0, R1
+    al  nf mov [R13], R1
+    al  nf sub R13, 1
+    al  nf mov [R13], R0
+
+ccc f imul  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 7  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  imul R0, R1
+    al  nf mov [R13], R1
+    al  nf sub R13, 1
+    al  nf mov [R13], R0
+
+ccc f div  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 7  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  div R0, R1
+    al  nf mov [R13], R1
+    al  nf sub R13, 1
+    al  nf mov [R13], R0
+
+ccc f idiv  (R0 , R1 , R13 modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 7  ; if ccc != al
+    al  nf mov R1, [R13]
+    al  nf add R13, 1
+    al  nf mov R0, [R13]
+    al  f  idiv R0, R1
+    al  nf mov [R13], R1
+    al  nf sub R13, 1
+    al  nf mov [R13], R0
+
+ccc f neg  (R0, modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov R0, [R13]
+    al  f  neg R0
+    al  nf mov [R13], R0
+
+=== Procedure call and return
+   === Call procedure  (5 microprograms)
 ccc f call Rx (Rx != R0 & Rx != R15)
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 5  ; if ccc != al
@@ -427,3 +642,13 @@ ccc f ret
     al  nf mov R0, [R13]
     al  nf add R13, 1
 	al  f  mov R15, R0    
+
+=== Swap two registers by using the stack
+ccc f swap Rx, Ry
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 5  ; if ccc != al
+    al  nf sub R13, 1
+    al  nf mov [R13], Ry
+    al  nf mov Ry, Rx
+    al   f mov Rx, [R13]
+    al  nf add R13, 1
