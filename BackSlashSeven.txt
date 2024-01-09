@@ -1,5 +1,5 @@
 BackSlashSeven : BS7 : \7
-Light processor
+Light processor inspired by BS5
 16 registers 16 bits ( word )
 8 execution conditions (16 with generated assembler condition)
 64 Ki word addresses
@@ -97,7 +97,7 @@ ccc f oooo yyyy xxxx  2 registers parameters
 ccc f oooo iiii iiii  1 unisgned byte parameter
 ccc f oooo siii iiii  1 signed byte parameter
 ccc f oooo iiii xxxx  1 register and 1 quartet parameters
-ccc f oooooo yyy xxx  2 registers parameters (from R0 to R7)
+ccc f ooooo yyyy xxx  2 registers parameters (from R0 to R7 and from R0 to R15)
 ccc f oooooo iii xxx  1 register (from R0 to R7) and 3 bits immediate
 ccc f oooooooo xxxx   1 register parameter
 
@@ -224,8 +224,8 @@ ccc f oooo yyyy xxxx  ( 3 instructions )
 
     === 1 register and one 4 bits immediate
 ccc f oooo iiii xxxx  (2 instructions )
-      0011 mov X, Rx:Imm4
-      0101 mov Rx:Imm4, X
+      0011 mov X, Rx:Imm4  (flag X is assign with the value of bit imm4 of register Rx)
+      0101 mov Rx:Imm4, X  (The value of bit imm4 of register Rx is assign with the value of flag X)
 
     === 8 bits unsigned immediate
 ccc f oooo iiiiiiii  ( 2 instructions )
@@ -234,10 +234,10 @@ ccc f oooo iiiiiiii  ( 2 instructions )
 
     === 8 bits signed immediate
 ccc f oooo siiiiiii  ( 1 instruction )
-      1000 add R15, simm8
+      1000 add R15, simm8 
 
 === 7 bits parameter
-    === 2 registers (register from R0 to R7)
+    === 2 registers (register from R0 to R7 and register from R0 to R15)
 ccc f ooooo yyyy xxx   (Rx is R0 to R7, Ry is R0 to R15 ) ( 12 instructions)
       10010 add Rx, Ry
       10011 sub Rx, Ry
@@ -247,10 +247,10 @@ ccc f ooooo yyyy xxx   (Rx is R0 to R7, Ry is R0 to R15 ) ( 12 instructions)
       10111 shl Rx, Ry
       11000 shr Rx, Ry
       11001 sar Rx, Ry
-      11010 mul Rx, Ry  (Ry != R14 and R15)
-      11011 div Rx, Ry  (Ry != R14 and R15)
-      11100 imul Rx, Ry (Ry != R14 and R15)
-      11101 idiv Rx, Ry (Ry != R14 and R15)
+      11010 mul Rx, Ry  (Rx,Ry != R14 and R15, legal but weird: should be disallowed by the assembler)
+      11011 div Rx, Ry  (Rx,Ry != R14 and R15, legal but weird: should be disallowed by the assembler)
+      11100 imul Rx, Ry (Rx,Ry != R14 and R15, legal but weird: should be disallowed by the assembler)
+      11101 idiv Rx, Ry (Rx,Ry != R14 and R15, legal but weird: should be disallowed by the assembler)
 
     === 1 register (register from R0 to R7) and one 3 bits immediate
 ccc f oooooo iii xxx ; R0 to R7 , (iii = 0 to 7) ( 3 instructions)
@@ -264,7 +264,7 @@ ccc f oooooooo xxxx ( 4 instructions)
       11111100 add Rx, 1 (Rx != R15)
       11111101 sub Rx, 1
       11111110 not Rx
-      11111111 neg Rx  (swap LSB Rx with MSB Rx)
+      11111111 neg Rx  ( Rx != R15, R14)
 
 
 Microprograms to complete the instruction set 
@@ -330,7 +330,7 @@ ccc f mov [imm16],Rx (Rx != R0, R0 modified)
     al  f  mov [R0],Rx
 
 === extra memory addressing mode ( use full for R12, R13 (local and stack) relative access)
-ccc f mov Rx, [Ry + Rz] ; Rx != R0, Ry in R8 to R13, Rz in R1 to R15 (R0 modified)
+ccc f mov Rx, [Ry + Rz] ; Rx != R0, Ry in R1 to R13, Rz in R1 to R13 (R0 modified)
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 3  ; if ccc != al
     al  nf mov R0, Ry
@@ -452,7 +452,7 @@ ccc f swap (R0, R1 modified)
     al  nf sub R13, 1
     al  f  mov [R13], R1
 
-   === Logic/Math with stack
+   === Binary with stack
 ccc f not  (R0, modified)
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 3  ; if ccc != al
@@ -514,6 +514,7 @@ ccc f sar  (R0 , R1 , R13 modified)
     al  f  sar R0, R1
     al  nf mov [R13], R0
 
+   === Math with stack
 ccc f add  (R0 , R1 , R13 modified)
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 5  ; if ccc != al
