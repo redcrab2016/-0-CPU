@@ -1,29 +1,29 @@
 BackSlashSeven : BS7 : \7
 Light processor inspired by BS5
 16 registers 16 bits ( word )
-8 execution conditions (16 with generated assembler condition)
-64 Ki word addresses
+8 execution conditions (24 with generated assembler condition)
+64 Ki word addresses (memory capacity of 128KiB )
 16 bits per instruction ( one word per instruction)
 Can be implemented for same address space for program, data and I/O
 or for seperated program and data, I/O address space (no mix betwen data and program, not possible to have self modified program)
 
 registers: - R0 to R15 (designated by 4 bits)
-R0  : 0000 : general 
-R1  : 0001 : general
+R0  : 0000 : general (often used in microprograms)
+R1  : 0001 : general (often used in special stack microprograms)
 R2  : 0010 : general
 R3  : 0011 : general
 R4  : 0100 : general
 R5  : 0101 : general
 R6  : 0110 : general
 R7  : 0111 : general
-R8  : 1000 : general
-R9  : 1001 : general
-R10 : 1010 : general
-R11 : 1011 : general
-R12 : 1100 : general
-R13 : 1101 :SP: general or stack pointer in stack dedicated microprograms
-R14 : 1110 :FG: 16 bits flags  KIHRds-D GLASVXZC, see below flag R14:FG for description
-R15 : 1111 :PC: Program address
+R8  : 1000 : general, can't be used as ALU accumulator in 2 registers operation
+R9  : 1001 : general, can't be used as ALU accumulator in 2 registers operation 
+R10 : 1010 : general, can't be used as ALU accumulator in 2 registers operation
+R11 : 1011 : general, can't be used as ALU accumulator in 2 registers operation
+R12 : 1100 : general, can't be used as ALU accumulator in 2 registers operation
+R13 : 1101 :SP: general or stack pointer in stack dedicated microprograms, can't be used as ALU accumulator
+R14 : 1110 :FG: 16 bits flags  KIHRds-D GLASVXZC, see below flag R14:FG for description, can't be used as ALU accumulator
+R15 : 1111 :PC: Program address, can't be used as ALU accumulator
 There is two set of R0 to R15 registers: one when flag K=1 (interrupt handling),     another one when K=0 (normal execution)
 K=1 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
 when going from K=0 to K=1 all registers are switch to the interrupt handling register set: register R14 (flags) is modified with K=1, I=0 if switch occurs due to 
@@ -49,7 +49,7 @@ flags R14:FG
    bit 2
      X : custom flag to set/clear usable for conditional execution
    bit 3
-     V : overflow flag , set to 1 if signed addition or signed substraction is overflow, 0 otherwise.
+     V : overflow flag , set to 1 if signed addition or signed substraction is overflow or multiply result need more than 16 bits, 0 otherwise.
    bit 4
      S : Sign flag, set to 1 if result is negative (S= most significant bit result),0 if positive
    bit 5
@@ -231,7 +231,33 @@ dc : no division error, D flag is cleared
   become
     al nf mov x, R14:8
     xc f ope
+is : interruption is enable(in normal context K=0) / interrupt by signal(in context K=1)
+  instruction
+    is f ope
+  become
+    al nf mov x, R14:14
+    xs f ope
 
+ic : interruption is disable/lock (in normal context K=0) / interrupt by program(in context K=1)
+  instruction
+    is f ope
+  become
+    al nf mov x, R14:14
+    xc f ope
+
+ks : in context of interruption handling
+  instruction
+    ks f ope
+  become
+    al nf mov x, R14:15
+    xs f ope
+
+kc : in normal context
+  instruction
+    kc f ope
+  become
+    al nf mov x, R14:15
+    xc f ope
 
 flag modified : f
 if 0 then no flag is modified by the instruction, 1 flag(s) modified by the instruction
@@ -240,7 +266,7 @@ if 0 then no flag is modified by the instruction, 1 flag(s) modified by the inst
 
 mnemonics : mov, add, sub , and, or , xor, not, shl, shr, sar, mul, div, imul, idiv, neg
 
-27 instructions for 15 mnemonics
+27 core instructions for 15 mnemonics
 
 === 8 bits parameter
     === 2 registers (any registers)
@@ -294,8 +320,8 @@ ccc f oooooooo xxxx ( 4 instructions)
       11111111 neg Rx  ( Rx != R15, R14)
 
 
-Microprograms to complete the instruction set ( may extend existing or introduce new mnemonics)
-=== one bit handling
+58 Microprograms to complete the instruction set ( may extend existing or introduce new mnemonics)
+=== one bit handling (3 microprograms)
 ccc f mov Rx:imm4,  0   (X flag modified)
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 2  ; if ccc != al
@@ -320,7 +346,7 @@ ccc f not Rx:imm4  (X,Z flags modified)
     al  nf mov X, R14:1 ; set X=Z; =1
     al  f  mov Rx:imm4, X
 
-=== CPU behavior by Flag change
+=== CPU behavior by Flag change (12 microprograms)
 ccc f regsrc super  ; s=1 (Z,X flag modified), next "mov Rx, Ry" will use Ry from Interrupt Handling context
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 3  ; if ccc != al
@@ -372,7 +398,34 @@ ccc f user ; K=0 (Z,X flag modified), switch current context to normal context
     al  nf mov X, R13:1 ; X=R (R cleared)
     al  f  mov R14:15, X
 
-=== assign 16 bits immediate
+ccc f unlock ; I=1 (Z,X flag modified), switch current context to interrupt handling
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    no  fl xor R0,R0   ; set Z flag
+    al  nf mov X, R14:1 ; X=Z
+    al  f  mov R14:14, X
+
+ccc f lock ; I=0 (Z,X flag modified), switch current context to normal context
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov X, R13:1 ; X=R (R cleared)
+    al  f  mov R14:14, X
+
+ccc halt
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    no  fl xor R0,R0   ; set Z flag
+    al  nf mov X, R14:1 ; X=Z
+    al  nf mov R14:12, X    
+
+ccc reset
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    no  fl xor R0,R0   ; set Z flag
+    al  nf mov X, R14:1 ; X=Z
+    al  nf  mov R14:13, X    
+
+=== assign 16 bits immediate (5 microprograms)
 ccc f mov R0, imm16
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 2  ; if ccc != al, if f=nf add r15, 3 if f=fl
@@ -408,7 +461,7 @@ ccc f mov [imm16],Rx (Rx != R0, R0 modified)
     al  nf mov high R0, high imm16
     al  f  mov [R0],Rx
 
-=== extra memory addressing mode ( use full for R12, R13 (local and stack) relative access)
+=== extra memory addressing mode ( use full for R12, R13 (local and stack) relative access)  (4 microprograms)
 ccc f mov Rx, [Ry + Rz] ; Rx != R0, Ry in R1 to R13, Rz in R1 to R13 (R0 modified)
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 3  ; if ccc != al
@@ -439,7 +492,7 @@ ccc f mov [Rx + imm16], Ry ; Ry != R0 , Rx in R1 to R13, (R0 modified)
     al  nf add R0, Rx
     al  f  mov [R0], Ry
 
-=== Stack oriented microprograms
+=== Stack oriented microprograms  (25 microprograms)
    === push
 ccc f push Rx
     ccc nf add R15, 1  ; if ccc != al
@@ -663,8 +716,8 @@ ccc f neg  (R0, modified)
     al  f  neg R0
     al  nf mov [R13], R0
 
-=== Procedure call and return
-   === Call procedure  (5 microprograms)
+=== Procedure call and return  (6 microprograms)
+   === Call procedure
 ccc f call Rx (Rx != R0 & Rx != R15)
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 5  ; if ccc != al
@@ -723,7 +776,7 @@ ccc f ret
     al  nf add R13, 1
 	al  f  mov R15, R0    
 
-=== Swap two registers by using the stack
+=== Swap two registers by using the stack  (1 microprogram)
 ccc f swap Rx, Ry
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 5  ; if ccc != al
