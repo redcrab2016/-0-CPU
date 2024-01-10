@@ -20,9 +20,9 @@ R8  : 1000 : general
 R9  : 1001 : general
 R10 : 1010 : general
 R11 : 1011 : general
-R12 : 1100 :LP/BP: general or base/local pointer in stack dedicated microprograms
+R12 : 1100 : general
 R13 : 1101 :SP: general or stack pointer in stack dedicated microprograms
-R14 : 1110 :FG: 16 bits flags  KIHR---- GLASVXZC, see below flag R14:FG for description
+R14 : 1110 :FG: 16 bits flags  KIHRds-D GLASVXZC, see below flag R14:FG for description
 R15 : 1111 :PC: Program address
 There is two set of R0 to R15 registers: one when flag K=1 (interrupt handling),     another one when K=0 (normal execution)
 K=1 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
@@ -64,14 +64,28 @@ flags R14:FG
      G : computed flag: result of bit flag algebra Z==0 && S==V, 
         1: "is greater" (signed integer comparison)
         0: "is less or equal"
-   bit 8 - 11
+   bit 8
+     D : divide by zero error
+        1: last division operation tried to divide by zero
+        0: last division operation was ok        
+   bit 9
      - : general flag for program usage (bit general register)
+   bit 10
+     s : Register file to use as source for next operation "mov Rx, Ry" (for Ry)
+         by default s=K
+         after next operation "mov Rx, Ry" 's' is set to its default value
+         1: use interrupt handling context register file
+         0: use normal context register file
+   bit 11
+     d : Register file to use as destination for next operation "mov Rx, Ry" (for Rx)
+         by default d=K
+         after next operation "mov Rx, Ry" 'd' is set to its default value
+         1: use interrupt handling context register file
+         0: use normal context register file
    bit 12
      R : =1 request a soft cpu reset, =0 default running
-         CPU react only if  using  instruction "mov R14:12, b" : b=X and X==1, or b=1 
    bit 13:
      H : =1 to halt processor, =0 by default for running (once halted , no way to continue unless reset)
-         CPU react only if  using  instruction "mov R14:13, b" : b=X and X==1, or b=1 
    bit 14
         if K == 0 (normal context)
            I : =1 Interrupt input signal enabled , =0 Interrupt input signal disabled(default value at reset time)
@@ -99,19 +113,19 @@ ccc f oooo siii iiii  1 signed byte parameter
 ccc f oooo iiii xxxx  1 register and 1 quartet parameters
 ccc f ooooo yyyy xxx  2 registers parameters (from R0 to R7 and from R0 to R15)
 ccc f oooooo iii xxx  1 register (from R0 to R7) and 3 bits immediate
-ccc f oooooooo xxxx   1 register parameter
+ccc f oooooooo  xxxx  1 register parameter
 
 ccc       is the 3 bits of instruction execution condition
 f         is the bit of conditional flag modification by instruction execution
 oooo      is the 4 bits instruction code
+ooooo     is the 5 bits instruction code
 oooooo    is the 6 bits instruction code
 oooooooo  is the 8 bits instruction code
 xxxx      is the 4 bits register index (Rx) from R0 to R15
 yyyy      is the 4 bits register index (Ry) from R0 to R15
 xxx       is the 3 bits register index (Rx) from R0 to R7
-yyy       is the 3 bits register index (Ry) from R0 to R7
-iiii      is the 4 bits of an immediate unsigned integer
 iii       is the 3 bits of an immediate unsigned integer
+iiii      is the 4 bits of an immediate unsigned integer
 iiii iiii is the 8 bits of an immediate unsigned integer
 siii iiii is the 8 bits of an immediate signed integer
 
@@ -123,9 +137,9 @@ conditions: ccc
 100    cc or lo    Unsigned lower (or carry clear).          C==0, C flag is cleared
 101    xs          custom bit set                            X==1, X flag is set
 110    xc          custom bit clear                          X==0, X flag is cleared
-111    no          no result (NOP)*                          No flag tested
+111    no          no result *                               No flag tested
 
-* intruction executed but result is not written back.
+* intruction executed (same as 'al') but result is not written back.
   If instruction flag is fl then flags are modified.
   example: no fl sub R2, R3  ; z,c,s,v flags modified but R2 is not modified
   A no operation (nop) is doable by the combination of 'no' with 'nf'
@@ -189,7 +203,7 @@ vc : no overflow (signed) flag register 3, V flag is cleared
     xc f ope
 vs : overflow (signed) flag register 3, V flag is set
   instruction
-    vc f ope
+    vs f ope
   become 
     al nf mov x, R14:3
     xs f ope
@@ -201,10 +215,23 @@ pl, sc : is positive (signed) flag register 4, S flag is cleared
     xc f ope
 mi, ss : is negative (signed) flag register 4, S flag is set
   instruction
-    pl f ope
+    mi f ope
   become
     al nf mov x, R14:4
     xs f ope
+dz, ds : division by zero error, D flag is set
+  instruction
+    dz f ope
+  become
+    al nf mov x, R14:8
+    xs f ope
+dc : no division error, D flag is cleared
+  instruction
+    dc f ope
+  become
+    al nf mov x, R14:8
+    xc f ope
+
 
 flag modified : f
 if 0 then no flag is modified by the instruction, 1 flag(s) modified by the instruction
@@ -213,7 +240,7 @@ if 0 then no flag is modified by the instruction, 1 flag(s) modified by the inst
 
 mnemonics : mov, add, sub , and, or , xor, not, shl, shr, sar, mul, div, imul, idiv, neg
 
-30 instructions for 15 mnemonics
+27 instructions for 15 mnemonics
 
 === 8 bits parameter
     === 2 registers (any registers)
@@ -247,10 +274,10 @@ ccc f ooooo yyyy xxx   (Rx is R0 to R7, Ry is R0 to R15 ) ( 12 instructions)
       10111 shl Rx, Ry
       11000 shr Rx, Ry
       11001 sar Rx, Ry
-      11010 mul Rx, Ry  (Rx,Ry != R14 and R15, legal but weird: should be disallowed by the assembler)
-      11011 div Rx, Ry  (Rx,Ry != R14 and R15, legal but weird: should be disallowed by the assembler)
-      11100 imul Rx, Ry (Rx,Ry != R14 and R15, legal but weird: should be disallowed by the assembler)
-      11101 idiv Rx, Ry (Rx,Ry != R14 and R15, legal but weird: should be disallowed by the assembler)
+      11010 mul Rx, Ry  (Ry != R14 and R15, legal but undefined result: should be disallowed by the assembler)
+      11011 div Rx, Ry  (Ry != R14 and R15, legal but undefined result: should be disallowed by the assembler)
+      11100 imul Rx, Ry (Ry != R14 and R15, legal but undefined result: should be disallowed by the assembler)
+      11101 idiv Rx, Ry (Ry != R14 and R15, legal but undefined result: should be disallowed by the assembler)
 
     === 1 register (register from R0 to R7) and one 3 bits immediate
 ccc f oooooo iii xxx ; R0 to R7 , (iii = 0 to 7) ( 3 instructions)
@@ -267,31 +294,83 @@ ccc f oooooooo xxxx ( 4 instructions)
       11111111 neg Rx  ( Rx != R15, R14)
 
 
-Microprograms to complete the instruction set 
-=== bit handling
-ccc f mov Rx:imm4,  0   (R0, X flag modified)
+Microprograms to complete the instruction set ( may extend existing or introduce new mnemonics)
+=== one bit handling
+ccc f mov Rx:imm4,  0   (X flag modified)
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 2  ; if ccc != al
+    al  nf mov X, R14:13 ; R flag should always be zero
+    al  f  mov Rx:imm4, X
+
+ccc f mov Rx:imm4,  1 ( X,Z flags modified)
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 3  ; if ccc != al
-    al  nf xor R0, R0
-    al  nf mov X, R0:0
+    no  fl xor R0, R0  ; set Z flag to 1
+    al  nf mov X, R14:1 ; X<=Z
     al  f  mov Rx:imm4, X
 
-ccc mov Rx:imm4,  1 (R0, X flag modified)
+ccc f not Rx:imm4  (X,Z flags modified)
     ccc nf add R15, 1  ; if ccc != al
-    al  nf add R15, 4  ; if ccc != al
-    al  nf xor R0, R0
-    al  nf add R0, 1
-    al  nf mov X, R0:0
-    al  f  mov Rx:imm4, X
-
-ccc not Rx:imm4  (R0, X flag modified)
-    ccc nf add R15, 1  ; if ccc != al
-    al  nf add R15, 5  ; if ccc != al
-    al  nf xor R0, R0
+    al  nf add R15, 7  ; if ccc != al
+    no  fl xor R0, R0  ; set Z flag to 1
     al  nf mov X, Rx:imm4
-    xc  nf add R0, 1
-    al  nf mov X, R0:0
+    xc  nf add R15, 2
+    al  nf mov X, R14:13 ; set X=R; =0, R should always be zero
+    al  nf add R15, 1
+    al  nf mov X, R14:1 ; set X=Z; =1
     al  f  mov Rx:imm4, X
+
+=== CPU behavior by Flag change
+ccc f regsrc super  ; s=1 (Z,X flag modified), next "mov Rx, Ry" will use Ry from Interrupt Handling context
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    no  fl xor R0,R0   ; set Z flag
+    al  nf mov X, R14:1 ; X=Z
+    al  f  mov R14:10, X
+
+ccc f regsrc user ; s=0 (X flag modified), next "mov Rx, Ry" will use Ry from normal context
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 2  ; if ccc != al
+    al  nf mov X, R14:13 ; X=R (R cleared )
+    al  f  mov R14:10, X
+
+ccc f regsrc default ; s=K (X flag modified), next "mov Rx, Ry" will use Ry from current context
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 2  ; if ccc != al
+    al  nf mov X, R14:15 ; X=K 
+    al  f  mov R14:10, X
+
+ccc f regdst super  ; d=1 (Z,X flag modified), next "mov Rx, Ry" will use Rx from Interrupt Handling context
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    no  fl xor R0,R0   ; set Z flag
+    al  nf mov X, R14:1 ; X=Z
+    al  f  mov R14:11, X
+
+ccc f regdst user ; d=0 (X flag modified), next "mov Rx, Ry" will use Rx from normal context
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 2  ; if ccc != al
+    al  nf mov X, R14:13 ; X=R (R cleared )
+    al  f  mov R14:11, X
+
+ccc f regdst default ; d=K (X flag modified), next "mov Rx, Ry" will use Rx from current context
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 2  ; if ccc != al
+    al  nf mov X, R14:15 ; X=K 
+    al  f  mov R14:11, X
+
+ccc f super ; K=1 (Z,X flag modified), switch current context to interrupt handling
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    no  fl xor R0,R0   ; set Z flag
+    al  nf mov X, R14:1 ; X=Z
+    al  f  mov R14:15, X
+
+ccc f user ; K=0 (Z,X flag modified), switch current context to normal context
+    ccc nf add R15, 1  ; if ccc != al
+    al  nf add R15, 3  ; if ccc != al
+    al  nf mov X, R13:1 ; X=R (R cleared)
+    al  f  mov R14:15, X
 
 === assign 16 bits immediate
 ccc f mov R0, imm16
@@ -422,7 +501,7 @@ ccc f pop [imm16] (R0 modified)
     al  nf add R13, 1
 
    === drop
-ccc f drop imm16 (not one, nor zero) (R13, R0)
+ccc f drop imm16 (not one, nor zero) (R13, R0 modified)
     ccc nf add R15, 1  ; if ccc != al
     al  nf add R15, 4  ; if ccc != al
     al  nf mov low R0, low imm16
