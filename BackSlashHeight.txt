@@ -16,12 +16,12 @@ R2  : 0010 : general
 R3  : 0011 : general
 R4  : 0100 : general
 R5  : 0101 : general
-R6  : 0110 : general
-R7  : 0111 : general
-R8  : 1000 : general, can be used for address to access 8 bits data
-R9  : 1001 : general, can be used for address to access 8 bits data
-R10 : 1010 : general, can be used for address to access 16 bits data
-R11 : 1011 : general, can be used for address to access 16 bits data
+R6  : 0110 : general, can be used for address to access 8 bits data
+R7  : 0111 : general, can be used for address to access 8 bits data
+R8  : 1000 : general, can be used for address to access 16 bits data
+R9  : 1001 : general, can be used for address to access 16 bits data
+R10 : 1010 : general, can be used for address to access 32 bits data
+R11 : 1011 : general, can be used for address to access 32 bits data
 R12 : 1100 : general, can be used for address to access 32 bits data
 R13 : 1101 :SP: general or stack pointer in stack dedicated microprograms, can't be used as ALU accumulator
 R14 : 1110 :FG: 18 bits flags  10 KIHRds-D GLASVXZC, see below flag R14:FG for description, can't be used as ALU accumulator
@@ -124,10 +124,10 @@ ccc f ooo iiiii xxxx  1 register and 5 bits immediates
       100 sar Rx, Imm5
 ccc f oooo yyyy xxxx  2 registers parameters
       1010 mov Rx, Ry
-ccc f ooooo yyy xxxx  2 registers parameters (from R(y+8) (R8 - R15)
-      10110 mov Rx, [Ry]  [Ry] data size : R8-R9 8 bits, R10-R11 16 bits, R12-R13 32 bits
-ccc f ooooo yyyy xxx  2 registers parameters (from R(x+8) (R8 - R15) and from R0 to R15)
-      10111 mov [Rx], Ry  [Rx] data size : R8-R9 8 bits, R10-R11 16 bits, R12-R13 32 bits
+ccc f ooooo yyy xxxx  2 registers parameters (from R(y+6) (R6 - R13)
+      10110 mov Rx, [Ry]  [Ry] data size : R6-R7 8 bits, R8-R9 16 bits, R10-R13 32 bits
+ccc f ooooo yyyy xxx  2 registers parameters (from R(x+6) (R6 - R13) and from R0 to R15)
+      10111 mov [Rx], Ry  [Rx] data size : R6-R7 8 bits, R8-R9 16 bits, R10-R13 32 bits
 ccc f oooooo yyy xxx  2 registers parameters (from R0 to R7)
       110000 add Rx, Ry
       110001 sub Rx, Ry   if ccc=no then "sub" is "cmp"
