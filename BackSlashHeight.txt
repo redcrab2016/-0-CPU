@@ -10,22 +10,22 @@ Can be implemented for same address space for program, data and I/O
 or for seperated program and data, I/O address space (no mix betwen data and program, not possible to have self modified program)
 
 registers: - R0 to R15 (designated by 4 bits)
-R0  : 0000 : general
-R1  : 0001 : general
-R2  : 0010 : general
-R3  : 0011 : general
-R4  : 0100 : general
-R5  : 0101 : general
-R6  : 0110 : general, can be used for address to access 8 bits data
-R7  : 0111 : general, can be used for address to access 8 bits data
-R8  : 1000 : general, can be used for address to access 16 bits data
-R9  : 1001 : general, can be used for address to access 16 bits data
-R10 : 1010 : general, can be used for address to access 32 bits data
-R11 : 1011 : general, can be used for address to access 32 bits data
-R12 : 1100 : general, can be used for address to access 32 bits data
-R13 : 1101 :SP: general or stack pointer in stack dedicated microprograms, can't be used as ALU accumulator
-R14 : 1110 :FG: 18 bits flags  10 KIHRds-D GLASVXZC, see below flag R14:FG for description, can't be used as ALU accumulator
-R15 : 1111 :PC: Program address, can't be used as ALU accumulator
+R0  : 0000 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]", usable for ALU
+R1  : 0001 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]",  usable for ALU
+R2  : 0010 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]", usable for ALU
+R3  : 0011 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]", usable for ALU
+R4  : 0100 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]", usable for ALU
+R5  : 0101 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]", usable for ALU
+R6  : 0110 : can be used for address to access 8 bits data (mov [Rx],Ry / mov Rx, [Ry]), usable for ALU
+R7  : 0111 : can be used for address to access 8 bits data (mov [Rx],Ry / mov Rx, [Ry]), usable for ALU
+R8  : 1000 : can be used for address to access 16 bits data (mov [Rx],Ry / mov Rx, [Ry]), can't be used for ALU
+R9  : 1001 : can be used for address to access 16 bits data (mov [Rx],Ry / mov Rx, [Ry]), can't be used for ALU
+R10 : 1010 : can be used for address to access 32 bits data (mov [Rx],Ry / mov Rx, [Ry]), can't be used for ALU
+R11 : 1011 : can be used for address to access 32 bits data (mov [Rx],Ry / mov Rx, [Ry]), can't be used for ALU
+R12 : 1100 : can be used for address to access 32 bits data (mov [Rx],Ry / mov Rx, [Ry]), can't be used for ALU
+R13 : 1101 :SP: stack pointer, can't be used for ALU
+R14 : 1110 :FG: 18 bits flags  10 KIHRds-D GLASVXZC, see below flag R14:FG for description, can't be used for ALU
+R15 : 1111 :PC: Program counter, can't be used for ALU
 
 There is two set of R0 to R15 registers: one when flag K=0 (Supervisor: interrupt handling),     another one when K=1 (normal execution)
 K=0 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
@@ -124,7 +124,7 @@ ccc f ooo iiiii xxxx  1 register and 5 bits immediates
       100 sar Rx, Imm5
 ccc f oooo yyyy xxxx  2 registers parameters
       1010 mov Rx, Ry
-ccc f ooooo yyy xxxx  2 registers parameters (from R(y+6) (R6 - R13)
+ccc f ooooo yyy xxxx  2 registers parameters (Rx from R0 to R15, Ry from R(y+6) (R6 - R13)
       10110 mov Rx, [Ry]  [Ry] data size : R6-R7 8 bits, R8-R9 16 bits, R10-R13 32 bits
 ccc f ooooo yyyy xxx  2 registers parameters (from R(x+6) (R6 - R13) and from R0 to R15)
       10111 mov [Rx], Ry  [Rx] data size : R6-R7 8 bits, R8-R9 16 bits, R10-R13 32 bits
@@ -153,24 +153,23 @@ ccc f oooooooo  xxxx  1 register parameter
       11110111 push Rx
       11111000 pop Rx
       11111001 call Rx
-      11111010 call [Rx]
 ccc f oooooooo  xxxx iiiiiiiiiiiiiiii 1 register parameter, 16 bits immediate
-      11111011 mov low Rx, imm16
-      11111100 mov high Rx, imm16
+      11111010 mov low Rx, imm16
+      11111011 mov high Rx, imm16
 ccc f oooooooooooo siiiiiiiiiiiiiii 16 bits signed immediate
-      111111100000 call simm16
-      111111100001 add R15, simm16  or jmp simm16
+      111111000000 call simm16
+      111111000001 add R15, simm16  or jmp simm16
 ccc f oooooooooooo
-      111111100010 ret 
-      111111100011 wait
-      111111100100 swsuper
-      111111100101 swuser
-      111111100110 cli  (clear I flag)
-      111111100111 sli  (set I flag)
-      111111101000 srcsuper  (clear s flag)
-      111111101001 srcuser   (set s flag)
-      111111101010 dstsuper (clear d flag)
-      111111101011 dstuser  (set d flag)
+      111111000010 ret 
+      111111000011 wait
+      111111000100 swsuper
+      111111000101 swuser
+      111111000110 cli  (clear I flag)
+      111111000111 sli  (set I flag)
+      111111001000 srcsuper  (clear s flag)
+      111111001001 srcuser   (set s flag)
+      111111001010 dstsuper (clear d flag)
+      111111001011 dstuser  (set d flag)
 
 (...)
       111111111110 halt
