@@ -24,21 +24,24 @@ R10 : 1010 :T0: temp value register
 R11 : 1011 :T1: temp value register
 R12 : 1100 :BP: base pointer
 R13 : 1101 :SP: stack pointer
-R14 : 1110 :FG: 18 bits flags  -------- ------10 KIHRds-D GLASVXZC, see below flag R14:FG for description
+R14 : 1110 :FG: 32 bits flags  -------- -------- KI10ds-D GLASVXZC, see below flag R14:FG for description
 R15 : 1111 :PC: Program counter
 
-There is two set of R0 to R15 registers: one when flag K=0 (Supervisor: interrupt handling),     another one when K=1 (normal execution)
+There is two set of R0 to R15 registers: one when flag K=0 (Supervisor: interrupt handling),     another one when K=1 (user: normal execution)
 K=0 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
 when going from K=1 to K=0 all registers are switch to the interrupt handling register set: register R14 (flags) is modified with K=0, I=0 if switch occurs due to 
 external context switching, I=1 if the switch occurs due to the program. 
-In context when K=0, I flag a no effect (is like I is always = 0), no re-entrant interrupt possible. 
-when going from K=0 to K=1 all registers are switch to the normal register set: register R14 (flags) is modified with K=1
-when a switch occurs, this will cause a jump (from one R15 register to another)
-As it is not possible to modify one register context from another context and both context R15 register is 0 at reset time, your code has to manage the interrupt
-and non interrupt context from address 0,
-From address 0 you can detect the context by testing the flag K.
-In interrupt context handling (K=0) if I==1 that means the context switch due to a external interrupt signal, otherwise due to program.
-When switching to context, the program continue where the last context switch occured.
+In context when K=0, I flag a no effect (is like I is always = 0), no re-entrant interrupt possible. But "wait" insruction still works.
+When going from K=0 to K=1 all registers are switch to the normal register set: register R14 (flags) is modified with K=1.
+When a switch occurs, this will cause a jump (from one R15 register to another)
+At reset time:
+    all registers of user and supervisor context are set to 0.
+    CPU is in Supevisor context
+    You may prepare a user context by modifying user context registers : "mov Rx, Ry" with instruction "dstuser" to store values from supervisor register to user register.
+Both context start execution at address 0 by default.
+Testing K flag allows to determine the context, allowing to share procedure/routine between both context with dedicated behaviour for each.
+In interrupt context handling (K=0: supervisor) if I==1 that means the context switch due to a external interrupt signal, otherwise due to program. I==0 (program) at reset time.
+When context is switched, the program continue where the last context switch occured.
 
 flags R14:FG
    bit 0
@@ -86,9 +89,9 @@ flags R14:FG
          0: use interrupt handling context register file
          1: use normal context register file
    bit 12
-     R : =1 request a soft cpu reset, =0 default running
+     0 : always 0, can't be modified
    bit 13:
-     H : =1 to halt processor, =0 by default for running (once halted , no way to continue unless reset)
+     1 : always 1, can't be modified
    bit 14
         if K == 1 (normal context)
            I : =1 Interrupt input signal enabled , =0 Interrupt input signal disabled(default value at reset time)
@@ -96,23 +99,20 @@ flags R14:FG
            I : =0  interrupt by program, =1 interrupt by signal
    bit 15
      K : =0 supervisor/Interrupt context registers, =1 normal context registers(default value at reset time)
-   bit 16
-     0 : always 0, can't be modified
-   bit 17
-     1 : always 1, can't be modified   
+  
 
 Program counter R15:PC
    represent the address of the next natural instuction, not the address of current instruction in execution
-   branching is typically done by a "mov R15, ..." , "add R15, ..."  instruction
-   branching with "not R15..." instruction is allowed
+   branching is typically done by a "mov R15, ..." , "add R15, ..." "sub R15, ..." "jmp"  instructions
    At processor reset time PC is set to 0 ( same for all other registers, in all contexts)
    
-   In normal context( flag K=1), it is possible to block (get stuck) the processor by the following instruction
-    al nf sub R15, 1   ; the instruction is repeated endlessly
+   In user context( flag K=1), it is possible to block (get stuck) the processor by the following instruction
+    al nf sub R15, 2   ; the instruction is repeated endlessly
    Interrupt signal still handled if flag I=1.
-   Same instruction in interrupt context (flag K=0) get stuck forever the cpu by repeating endlessly the instruction.
+   Same instruction in supervisor context (flag K=0) get stuck forever the cpu by repeating endlessly the instruction.
 
-mnemonics : mov, add, sub , and, or , xor, not, shl, shr, sar, mul, div, imul, idiv, neg, push, pop, call, ret, wait , reset, swsuper, swuser, cli, sti, srcsuper, srcuser, dstsuper, dstuser, 
+mnemonics : mov, add, sub , and, or , xor, not, shl, shr, sar, mul, div, imul, idiv, neg, push, pop, call, ret, wait ,
+           reset, swsuper, swuser, cli, sti, srcsuper, srcuser, dstsuper, dstuser, sxb, sxhw, xb, xhw, swap
 
 Instruction structure: 16 bits 
 ccc f ooo iiiii xxxx  1 register and 5 bits immediates
@@ -123,87 +123,92 @@ ccc f oooo iiiii xxx 1 register from R0 to R7 and 5 bits immediate
       0101 shr Rx, Imm5
       0110 sar Rx, Imm5
 ccc f oooo yyyy xxxx  2 registers parameters
-      0111 mov Rx, Ry
+      0111 mov Rx, Ry , if s flag 1 then Ry taken from user register file, supervisor otherwise
+                        if d flag 1 then Rx taken from user register file, supervisor otherwise
+                        after this instruction s et d flags are set to default : s=d=K
 mmmm  ooooo yyy xxxx  2 registers parameters (Rx from R0 to R15, Ry R0 to R7)
-0000  10000 mov Rx, byte [Ry]  
-0001  10000 mov Rx, byte [Ry++]    , after memory access Ry = Ry + 1 
-0010  10000 mov Rx, byte [R12 + Ry]  
-0011  10000 mov Rx, byte [Ry--]  , after memory access Ry = Ry - 1 
-0100  10000 mov low Rx, hword [Ry]  
-0101  10000 mov low Rx, hword [Ry++] , after memory access Ry = Ry + 2   
-0110  10000 mov low Rx, hword [R12 + Ry shl 1]  
-0111  10000 mov low Rx, hword [Ry--] , after memory access Ry = Ry - 2 
-1000  10000 mov high Rx, hword [Ry]  
-1001  10000 mov high Rx, hword [Ry++]  , after memory access Ry = Ry + 2 
-1010  10000 mov high Rx, hword [R12 + Ry shl 2]  
-1011  10000 mov high Rx, hword [Ry--]  , after memory access Ry = Ry - 2 
-1100  10000 mov Rx, word [Ry]  
-1101  10000 mov Rx, word [Ry++] , after memory access Ry = Ry + 4 
-1110  10000 mov Rx, word [R12 + Ry shl 2]  
-1111  10000 mov Rx, word [Ry--]  , after memory access Ry = Ry - 4
+0000  10000 mov Rx, byte [Ry]    ; Rx = [Ry] & 0x000000FF
+0001  10000 mov Rx, byte [Ry++]    ;Rx = [Ry] & 0x000000FF, after memory access Ry = Ry + 1 
+0010  10000 mov Rx, byte [R12 + Ry]  ; Rx = [R12 + Ry] & 0x000000FF, Ry is an index of byte
+0011  10000 mov Rx, byte [Ry--]  ; Rx = [Ry] & 0x000000FF, after memory access Ry = Ry - 1 
+0100  10000 mov Rx, hword [Ry]  ; Rx = [Ry] & 0x0000FFFF, Most significant half word of Rx is set to 0 (zero)
+0101  10000 mov Rx, hword [Ry++] ; Rx = [Ry] & 0x0000FFFF, after memory access Ry = Ry + 2  , Most significant half word of Rx is set to 0 (zero)
+0110  10000 mov Rx, hword [R12 + Ry shl 1] ; Rx = [R12 + Ry shl 1] & 0x0000FFFF, Ry is an index of half word, Most significant half word of Rx is set to 0 (zero)
+0111  10000 mov Rx, hword [Ry--] ; Rx = [Ry] & 0x0000FFFF, after memory access Ry = Ry - 2 , Most significant half word of Rx is set to 0 (zero)
+1000  10000 mov high Rx, hword [Ry]  ; high Rx = hword [Ry], less significant half word of Rx is not modified
+1001  10000 mov high Rx, hword [Ry++]  ; high Rx = hword [Ry], after memory access Ry = Ry + 2 ,left significant half word of Rx is not modified
+1010  10000 mov high Rx, hword [R12 + Ry shl 1]  ; high Rx = hword [R12 + Ry shl 1], Ry is an index of half word,less significant half word of Rx is not modified
+1011  10000 mov high Rx, hword [Ry--]  ; high Rx = hword [Ry], after memory access Ry = Ry - 2 , left significant half word of Rx is not modified
+1100  10000 mov Rx, word [Ry]  ; Rx = [Ry]
+1101  10000 mov Rx, word [Ry++] ; Rx = [Ry], after memory access Ry = Ry + 4 
+1110  10000 mov Rx, word [R12 + Ry shl 2]  ; Rx = [R12 + Ry shl 2], Ry is an index of word
+1111  10000 mov Rx, word [Ry--]  ; Rx = [Ry], after memory access Ry = Ry - 4
 mmmm  ooooo yyyy xxx  2 registers parameters (Rx from R0 to R7 and Ry from R0 to R15)
-0000  10001 mov byte [Rx], Ry  
-0001  10001 mov byte [Rx++], Ry  
-0010  10001 mov byte [R12 + Rx shl 2], Ry  
-0011  10001 mov byte [Rx--], Ry  
+0000  10001 mov byte [Rx], Ry  ; byte at [Rx] = Ry & 0x000000FF
+0001  10001 mov byte [Rx++], Ry ; after memory access Rx = Rx + 1   
+0010  10001 mov byte [R12 + Rx], Ry  
+0011  10001 mov byte [Rx--], Ry   ; after memory access Rx = Rx - 1 
 0100  10001 mov hword [Rx], low Ry  
-0101  10001 mov hword [Rx++], low Ry  
-0110  10001 mov hword [R12 + Rx shl 2], low Ry  
-0111  10001 mov hword [Rx--], low Ry  
+0101  10001 mov hword [Rx++], low Ry   ; after memory access Rx = Rx + 2 
+0110  10001 mov hword [R12 + Rx shl 1], low Ry  
+0111  10001 mov hword [Rx--], low Ry   ; after memory access Rx = Rx - 2 
 1000  10001 mov hword [Rx], high Ry  
-1001  10001 mov hword [Rx++], high Ry  
-1010  10001 mov hword [R12 + Rx shl 2], high Ry  
-1011  10001 mov hword [Rx--], high Ry  
+1001  10001 mov hword [Rx++], high Ry   ; after memory access Rx = Rx + 2 
+1010  10001 mov hword [R12 + Rx shl 1], high Ry  
+1011  10001 mov hword [Rx--], high Ry   ; after memory access Rx = Rx - 2 
 1100  10001 mov word [Rx], Ry  
-1101  10001 mov word [Rx++], Ry  
+1101  10001 mov word [Rx++], Ry   ; after memory access Rx = Rx + 4 
 1110  10001 mov word [R12 + Rx shl 2], Ry  
-1111  10001 mov word [Rx--], Ry  
+1111  10001 mov word [Rx--], Ry   ; after memory access Rx = Rx - 4 
 ccc f oooooo yyy xxx  2 registers parameters (from R0 to R7)
-      100100 add Rx, Ry
-      100101 sub Rx, Ry   if ccc=no then "sub" is "cmp"
-      100110 and Rx, Ry   if ccc=no then "and" is "tst"
-      100111 or  Rx, Ry
-      101000 xor Rx, Ry
-      101001 shl Rx, Ry
-      101010 shr Rx, Ry
-      101011 sar Rx, Ry
-      101100 mul Rx, Ry  
-      101101 div Rx, Ry  
-      101110 imul Rx, Ry 
-      101111 idiv Rx, Ry 
+      100100 add Rx, Ry  ;  Rx = Rx + Ry
+      100101 sub Rx, Ry  ; Rx = Rx - Ry , if ccc=no then "sub" is "cmp"
+      100110 and Rx, Ry  ; Rx = Rx & Ry, if ccc=no then "and" is "tst"
+      100111 or  Rx, Ry  ; Rx = Rx | Ry
+      101000 xor Rx, Ry  ; Rx = Rx ^ Ry
+      101001 shl Rx, Ry  ; Rx = Rx << (Ry & 0x001F)
+      101010 shr Rx, Ry  ; Rx = Rx >> (Ry & 0x001F)
+      101011 sar Rx, Ry  ; Rx = Rx >> (Ry & 0x001F) signed
+      101100 mul Rx, Ry  ; M0 = LSW (Rx * Ry), M1 = MSW (Rx * Ry) unsigned
+      101101 div Rx, Ry  ; if (Ry != 0) then {M0 = Rx / Ry, M1 = Rx % Ry, D flag cleared} else { D flag set } unsigned
+      101110 imul Rx, Ry ; M0 = LSW (Rx * Ry), M1 = MSW (Rx * Ry) signed
+      101111 idiv Rx, Ry ; if (Ry != 0) then {M0 = Rx / Ry, M1 = Rx % Ry, D flag cleared} else { D flag set } signed
 ccc f oooooooo  xxxx  1 register parameter
-      11000000 add Rx, 1  or inc Rx
-      11000001 add Rx, 2 
-      11000010 add Rx, 4
-      11000011 neg Rx
-      11000100 sub Rx, 1 or dec Rx
-      11000101 sub Rx, 2
-      11000110 sub Rx, 4
-      11000111 not Rx
-      11001000 push Rx
-      11001001 pop Rx
-      11001010 call Rx
+      11000000 add Rx, 1 ;  or inc Rx, Rx = Rx + 1
+      11000001 add Rx, 2 ; Rx = Rx + 2
+      11000010 add Rx, 4 ; Rx = Rx + 4
+      11000011 neg Rx    ; Rx = -Rx
+      11000100 sub Rx, 1 ; or dec Rx, Rx = Rx - 1 
+      11000101 sub Rx, 2 ; Rx = Rx - 2
+      11000110 sub Rx, 4 ; Rx = Rx - 4
+      11000111 not Rx    ; Rx = ~Rx
+      11001000 push Rx   ; R13 = R13 + 4, [R13] = Rx
+      11001001 pop Rx    ;  Rx = [R13], R13 = R13 - 4, "ret" instruction is a pop R15
+      11001010 call Rx   ; push R15, R15 = Rx
+      11001011 sxb  Rx   ; sign extend of byte, if Rx:7 then Rx = Rx | 0xFFFFFF00 else Rx = Rx & 0x000000FF
+      11001100 sxhw Rx   ; sign extend of half word, if Rx:15 then Rx = Rx | 0xFFFF0000 else Rx = Rx & 0x0000FFFF
+      11001101 xb   Rx   ; extend of byte,  Rx = Rx & 0x000000FF
+      11001110 xhw  Rx   ; extend of half word, Rx = Rx & 0x0000FFFF
+      11001111 swap Rx   ; swap less significant half word with most significant half word of register Rx, Rx = { Rx[15:0], Rx[31:16] }
 ccc f oooooooo  xxxx iiiiiiiiiiiiiiii 1 register parameter, 16 bits immediate (R14, R15 forbidden: undefined behavior)
-      11001011 mov low Rx, imm16
-      11001100 mov high Rx, imm16
-ccc f oooooooooooo siiiiiiiiiiiiiii 16 bits signed immediate
-      110011010000 call simm16,  relative call
-      110011010001 add R15, simm16  or jmp simm16 , relative jump
+      11010000 mov Rx, imm16  ; Less significant half word of Rx = imm16, most significant half word is set to 0
+      11010001 mov high Rx, imm16 ; most significant half word of Rx = imm16, less significant half word is not modified
+ccc f oooooooooooo siiiiiiiiiiiiiii 16 bits signed immediate 
+      110100100000 call simm16 ;  relative call, push PC, PC = PC + simm16 (signed)
+      110100100001 jmp simm16  ;  relative jump, PC = PC + simm16 (signed)
 ccc f oooooooooooo
-      110011010010 ret 
-      110011010011 wait
-      110011010100 swsuper
-      110011010101 swuser
-      110011010110 cli  (clear I flag)
-      110011010111 sli  (set I flag)
-      110011011000 srcsuper  (clear s flag)
-      110011011001 srcuser   (set s flag)
-      110011011010 dstsuper (clear d flag)
-      110011011011 dstuser  (set d flag)
-
+      110100100010 wait
+      110100100011 swsuper
+      110100100100 swuser
+      110100100101 cli  ; clear I flag
+      110100100110 sli  ; set I flag
+      110100100111 srcsuper  ; clear s flag
+      110100101000 srcuser   ; set s flag
+      110100101001 dstsuper ; clear d flag
+      110100101010 dstuser  ; set d flag
 (...) undefined
-      1100________  reserved for floating point math on stack
-
+      11011_______  reserved for floating point math on stack
+(...) undefined 
       111111111110 halt
       111111111111 reset
 
@@ -217,8 +222,8 @@ oooooo    is the 6 bits instruction code
 oooooooo  is the 8 bits instruction code
 xxxx      is the 4 bits register index (Rx) from R0 to R15
 yyyy      is the 4 bits register index (Ry) from R0 to R15
-xxx       is the 3 bits register index (Rx) from R0 to R7 or [R8] to [R13]
-yyy       is the 3 bits register index (Ry) from R0 to R7 or [R8] to [R13]
+xxx       is the 3 bits register index (Rx) from R0 to R7 
+yyy       is the 3 bits register index (Ry) from R0 to R7
 iiiii     is the 5 bits of an immediate unsigned integer
 ii...ii   is the 16 bits of an immediate unsigned integer
 si...ii   is the 16 bits of an immediate signed integer
@@ -232,7 +237,7 @@ addressing mode: mmmm
   adressing 
     mm00 : address by register
     mm01 : address by register then increment the register by data size in byte
-    mm10 : base pointer (R12) + register left shifted by 2 
+    mm10 : base pointer (R12) + register left shifted by 0, 1 or 2 depending of the data size (byte, half word and word respectively) 
     mm11 : address by register then decrement the register by data size in byte
 
 conditions: ccc
