@@ -10,19 +10,19 @@ Can be implemented for same address space for program, data and I/O
 or for seperated program and data, I/O address space (no mix betwen data and program, not possible to have self modified program)
 
 registers: - R0 to R15 (designated by 4 bits)
-R0  : 0000 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]", usable for ALU
-R1  : 0001 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]",  usable for ALU
-R2  : 0010 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]", usable for ALU
-R3  : 0011 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]", usable for ALU
-R4  : 0100 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]", usable for ALU
-R5  : 0101 : can't be used as address for "mov [Rx],Ry" and "mov Rx, [Ry]", usable for ALU
-R6  : 0110 : can be used for address to access 8 bits data (mov [Rx],Ry / mov Rx, [Ry]), usable for ALU
-R7  : 0111 : can be used for address to access 8 bits data (mov [Rx],Ry / mov Rx, [Ry]), usable for ALU
-R8  : 1000 : can be used for address to access 16 bits data (mov [Rx],Ry / mov Rx, [Ry]), can't be used for ALU
-R9  : 1001 : can be used for address to access 16 bits data (mov [Rx],Ry / mov Rx, [Ry]), can't be used for ALU
-R10 : 1010 : can be used for address to access 32 bits data (mov [Rx],Ry / mov Rx, [Ry]), can't be used for ALU
-R11 : 1011 : can be used for address to access 32 bits data (mov [Rx],Ry / mov Rx, [Ry]), can't be used for ALU
-R12 : 1100 : can be used for address to access 32 bits data (mov [Rx],Ry / mov Rx, [Ry]), can't be used for ALU
+R0  : 0000 : ALU & addressing
+R1  : 0001 : ALU & addressing
+R2  : 0010 : ALU & addressing
+R3  : 0011 : ALU & addressing
+R4  : 0100 : ALU & addressing
+R5  : 0101 : ALU & addressing
+R6  : 0110 : ALU & addressing
+R7  : 0111 : ALU & addressing
+R8  : 1000 : 
+R9  : 1001 : 
+R10 : 1010 : 
+R11 : 1011 : 
+R12 : 1100 : 
 R13 : 1101 :SP: stack pointer, can't be used for ALU
 R14 : 1110 :FG: 18 bits flags  10 KIHRds-D GLASVXZC, see below flag R14:FG for description, can't be used for ALU
 R15 : 1111 :PC: Program counter, can't be used for ALU
@@ -124,10 +124,25 @@ ccc f ooo iiiii xxxx  1 register and 5 bits immediates
       100 sar Rx, Imm5
 ccc f oooo yyyy xxxx  2 registers parameters
       1010 mov Rx, Ry
-ccc f ooooo yyy xxxx  2 registers parameters (Rx from R0 to R15, Ry from R(y+6) (R6 - R13)
-      10110 mov Rx, [Ry]  [Ry] data size : R6-R7 8 bits, R8-R9 16 bits, R10-R13 32 bits
-ccc f ooooo yyyy xxx  2 registers parameters (from R(x+6) (R6 - R13) and from R0 to R15)
-      10111 mov [Rx], Ry  [Rx] data size : R6-R7 8 bits, R8-R9 16 bits, R10-R13 32 bits
+mmmm  ooooo yyy xxxx  2 registers parameters (Rx from R0 to R15, Ry R0 to R7)
+0000  10110 mov Rx, byte [Ry]  
+0001  10110 mov Rx, byte [Ry++]  
+0010  10110 mov Rx, byte [R13 + Ry shl 2]  
+0011  10110 mov Rx, byte [Ry--]  
+0100  10110 mov low Rx, hword [Ry]  
+0101  10110 mov low Rx, hword [Ry++]  
+0110  10110 mov low Rx, hword [R13 + Ry shl 2]  
+0111  10110 mov low Rx, hword [Ry--]  
+1000  10110 mov high Rx, hword [Ry]  
+1001  10110 mov high Rx, hword [Ry++]  
+1010  10110 mov high Rx, hword [R13 + Ry shl 2]  
+1011  10110 mov high Rx, hword [Ry--]  
+1100  10110 mov Rx, word [Ry]  
+1101  10110 mov Rx, word [Ry++]  
+1110  10110 mov Rx, word [R13 + Ry shl 2]  
+1111  10110 mov Rx, word [Ry--]  
+mmmm  ooooo yyyy xxx  2 registers parameters (Rx from R0 to R7 and Ry from R0 to R15)
+      10111 mov [Rx], Ry  
 ccc f oooooo yyy xxx  2 registers parameters (from R0 to R7)
       110000 add Rx, Ry
       110001 sub Rx, Ry   if ccc=no then "sub" is "cmp"
