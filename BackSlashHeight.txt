@@ -18,14 +18,14 @@ R4  : 0100 : ALU & addressing
 R5  : 0101 : ALU & addressing
 R6  : 0110 : ALU & addressing
 R7  : 0111 : ALU & addressing
-R8  : 1000 : 
-R9  : 1001 : 
-R10 : 1010 : 
-R11 : 1011 : 
-R12 : 1100 : 
-R13 : 1101 :SP: stack pointer, can't be used for ALU
-R14 : 1110 :FG: 18 bits flags  10 KIHRds-D GLASVXZC, see below flag R14:FG for description, can't be used for ALU
-R15 : 1111 :PC: Program counter, can't be used for ALU
+R8  : 1000 :M0: temp value register, low word of mul/imul  : result of division for div/idiv
+R9  : 1001 :M1: temp value register, high word of mul/imul : modulo result for div/idiv
+R10 : 1010 :T0: temp value register
+R11 : 1011 :T1: temp value register
+R12 : 1100 :BP: base pointer
+R13 : 1101 :SP: stack pointer
+R14 : 1110 :FG: 18 bits flags  -------- ------10 KIHRds-D GLASVXZC, see below flag R14:FG for description
+R15 : 1111 :PC: Program counter
 
 There is two set of R0 to R15 registers: one when flag K=0 (Supervisor: interrupt handling),     another one when K=1 (normal execution)
 K=0 and context change when flag is updated by program or by receiving an external interrupt signal (if I flag is set to 1)
@@ -77,7 +77,7 @@ flags R14:FG
      s : Register file to use as source for next operation "mov Rx, Ry" (for Ry)
          by default s=K
          after next operation "mov Rx, Ry" 's' is set to its default value
-         0: use interrupt handling context register file
+         0: use interrupt handling(supervisor) context register file
          1: use normal context register file
    bit 11
      d : Register file to use as destination for next operation "mov Rx, Ry" (for Rx)
@@ -97,9 +97,9 @@ flags R14:FG
    bit 15
      K : =0 supervisor/Interrupt context registers, =1 normal context registers(default value at reset time)
    bit 16
-     0 : always 0
+     0 : always 0, can't be modified
    bit 17
-     1 : always 1   
+     1 : always 1, can't be modified   
 
 Program counter R15:PC
    represent the address of the next natural instuction, not the address of current instruction in execution
@@ -114,84 +114,102 @@ Program counter R15:PC
 
 mnemonics : mov, add, sub , and, or , xor, not, shl, shr, sar, mul, div, imul, idiv, neg, push, pop, call, ret, wait , reset, swsuper, swuser, cli, sti, srcsuper, srcuser, dstsuper, dstuser, 
 
-
 Instruction structure: 16 bits 
 ccc f ooo iiiii xxxx  1 register and 5 bits immediates
       000 mov X, Rx:Imm5  (flag X is assign with the value of bit imm4 of register Rx)
       001 mov Rx:Imm5, X  (The value of bit imm4 of register Rx is assign with the value of flag X)
-      010 shl Rx, Imm5
-      011 shr Rx, Imm5
-      100 sar Rx, Imm5
+ccc f oooo iiiii xxx 1 register from R0 to R7 and 5 bits immediate
+      0100 shl Rx, Imm5
+      0101 shr Rx, Imm5
+      0110 sar Rx, Imm5
 ccc f oooo yyyy xxxx  2 registers parameters
-      1010 mov Rx, Ry
+      0111 mov Rx, Ry
 mmmm  ooooo yyy xxxx  2 registers parameters (Rx from R0 to R15, Ry R0 to R7)
-0000  10110 mov Rx, byte [Ry]  
-0001  10110 mov Rx, byte [Ry++]  
-0010  10110 mov Rx, byte [R13 + Ry shl 2]  
-0011  10110 mov Rx, byte [Ry--]  
-0100  10110 mov low Rx, hword [Ry]  
-0101  10110 mov low Rx, hword [Ry++]  
-0110  10110 mov low Rx, hword [R13 + Ry shl 2]  
-0111  10110 mov low Rx, hword [Ry--]  
-1000  10110 mov high Rx, hword [Ry]  
-1001  10110 mov high Rx, hword [Ry++]  
-1010  10110 mov high Rx, hword [R13 + Ry shl 2]  
-1011  10110 mov high Rx, hword [Ry--]  
-1100  10110 mov Rx, word [Ry]  
-1101  10110 mov Rx, word [Ry++]  
-1110  10110 mov Rx, word [R13 + Ry shl 2]  
-1111  10110 mov Rx, word [Ry--]  
+0000  10000 mov Rx, byte [Ry]  
+0001  10000 mov Rx, byte [Ry++]  
+0010  10000 mov Rx, byte [R12 + Ry shl 2]  
+0011  10000 mov Rx, byte [Ry--]  
+0100  10000 mov low Rx, hword [Ry]  
+0101  10000 mov low Rx, hword [Ry++]  
+0110  10000 mov low Rx, hword [R12 + Ry shl 2]  
+0111  10000 mov low Rx, hword [Ry--]  
+1000  10000 mov high Rx, hword [Ry]  
+1001  10000 mov high Rx, hword [Ry++]  
+1010  10000 mov high Rx, hword [R12 + Ry shl 2]  
+1011  10000 mov high Rx, hword [Ry--]  
+1100  10000 mov Rx, word [Ry]  
+1101  10000 mov Rx, word [Ry++]  
+1110  10000 mov Rx, word [R12 + Ry shl 2]  
+1111  10000 mov Rx, word [Ry--]  
 mmmm  ooooo yyyy xxx  2 registers parameters (Rx from R0 to R7 and Ry from R0 to R15)
-      10111 mov [Rx], Ry  
+0000  10001 mov byte [Rx], Ry  
+0001  10001 mov byte [Rx++], Ry  
+0010  10001 mov byte [R12 + Rx shl 2], Ry  
+0011  10001 mov byte [Rx--], Ry  
+0100  10001 mov hword [Rx], low Ry  
+0101  10001 mov hword [Rx++], low Ry  
+0110  10001 mov hword [R12 + Rx shl 2], low Ry  
+0111  10001 mov hword [Rx--], low Ry  
+1000  10001 mov hword [Rx], high Ry  
+1001  10001 mov hword [Rx++], high Ry  
+1010  10001 mov hword [R12 + Rx shl 2], high Ry  
+1011  10001 mov hword [Rx--], high Ry  
+1100  10001 mov word [Rx], Ry  
+1101  10001 mov word [Rx++], Ry  
+1110  10001 mov word [R12 + Rx shl 2], Ry  
+1111  10001 mov word [Rx--], Ry  
 ccc f oooooo yyy xxx  2 registers parameters (from R0 to R7)
-      110000 add Rx, Ry
-      110001 sub Rx, Ry   if ccc=no then "sub" is "cmp"
-      110010 and Rx, Ry   if ccc=no then "and" is "tst"
-      110011 or  Rx, Ry
-      110100 xor Rx, Ry
-      110101 shl Rx, Ry
-      110110 shr Rx, Ry
-      110111 sar Rx, Ry
-      111000 mul Rx, Ry  
-      111001 div Rx, Ry  
-      111010 imul Rx, Ry 
-      111011 idiv Rx, Ry 
+      100100 add Rx, Ry
+      100101 sub Rx, Ry   if ccc=no then "sub" is "cmp"
+      100110 and Rx, Ry   if ccc=no then "and" is "tst"
+      100111 or  Rx, Ry
+      101000 xor Rx, Ry
+      101001 shl Rx, Ry
+      101010 shr Rx, Ry
+      101011 sar Rx, Ry
+      101100 mul Rx, Ry  
+      101101 div Rx, Ry  
+      101110 imul Rx, Ry 
+      101111 idiv Rx, Ry 
 ccc f oooooooo  xxxx  1 register parameter
-      11110000 add Rx, 1  or inc Rx
-      11110001 add Rx, 2 
-      11110010 add Rx, 4
-      11110011 neg Rx
-      11110100 sub Rx, 1 or dec Rx
-      11110101 sub Rx, 2
-      11110110 sub Rx, 4
-      11110110 not Rx
-      11110111 push Rx
-      11111000 pop Rx
-      11111001 call Rx
-ccc f oooooooo  xxxx iiiiiiiiiiiiiiii 1 register parameter, 16 bits immediate
-      11111010 mov low Rx, imm16
-      11111011 mov high Rx, imm16
+      11000000 add Rx, 1  or inc Rx
+      11000001 add Rx, 2 
+      11000010 add Rx, 4
+      11000011 neg Rx
+      11000100 sub Rx, 1 or dec Rx
+      11000101 sub Rx, 2
+      11000110 sub Rx, 4
+      11000111 not Rx
+      11001000 push Rx
+      11001001 pop Rx
+      11001010 call Rx
+ccc f oooooooo  xxxx iiiiiiiiiiiiiiii 1 register parameter, 16 bits immediate (R14, R15 forbidden: undefined behavior)
+      11001011 mov low Rx, imm16
+      11001100 mov high Rx, imm16
 ccc f oooooooooooo siiiiiiiiiiiiiii 16 bits signed immediate
-      111111000000 call simm16
-      111111000001 add R15, simm16  or jmp simm16
+      110011010000 call simm16,  relative call
+      110011010001 add R15, simm16  or jmp simm16 , relative jump
 ccc f oooooooooooo
-      111111000010 ret 
-      111111000011 wait
-      111111000100 swsuper
-      111111000101 swuser
-      111111000110 cli  (clear I flag)
-      111111000111 sli  (set I flag)
-      111111001000 srcsuper  (clear s flag)
-      111111001001 srcuser   (set s flag)
-      111111001010 dstsuper (clear d flag)
-      111111001011 dstuser  (set d flag)
+      110011010010 ret 
+      110011010011 wait
+      110011010100 swsuper
+      110011010101 swuser
+      110011010110 cli  (clear I flag)
+      110011010111 sli  (set I flag)
+      110011011000 srcsuper  (clear s flag)
+      110011011001 srcuser   (set s flag)
+      110011011010 dstsuper (clear d flag)
+      110011011011 dstuser  (set d flag)
 
-(...)
+(...) undefined
+      1100________  reserved for floating point math on stack
+
       111111111110 halt
       111111111111 reset
 
 ccc       is the 3 bits of instruction execution condition
 f         is the bit of conditional flag modification by instruction execution
+mmmm      is the 4 bits for addressing mode
 ooo       is the 3 bits instruction code
 oooo      is the 4 bits instruction code
 ooooo     is the 5 bits instruction code
@@ -204,6 +222,18 @@ yyy       is the 3 bits register index (Ry) from R0 to R7 or [R8] to [R13]
 iiiii     is the 5 bits of an immediate unsigned integer
 ii...ii   is the 16 bits of an immediate unsigned integer
 si...ii   is the 16 bits of an immediate signed integer
+
+addressing mode: mmmm
+  data size access 
+    00mm : byte access
+    01mm : half word access from/to low register part (less significant half word)
+    10mm : half word access from/to high register part (most significant half word)
+    11mm : word access
+  adressing 
+    mm00 : address by register
+    mm01 : address by register then increment the register by data size in byte
+    mm10 : base pointer (R12) + register address
+    mm11 : address by register then decrement the register by data size in byte
 
 conditions: ccc
 000    al          Always executed.                          No flag tested.
