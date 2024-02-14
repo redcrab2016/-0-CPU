@@ -2,9 +2,9 @@ BackslashHeight \8
 Light processor inspired by BS7
 16 registers 32 bits ( word )
 8 execution conditions (24 with generated assembler condition)
-32bits byte addresses (4GiB )
-16 bits per instruction ( one word per instruction)
-32 bits for instruction with large immediate
+32 bits byte addresses (4GiB )
+16 bits per instruction ( one half word per instruction) :  PC = PC + 2
+32 bits for instruction with 16 bits immediate :  PC = PC + 4
 
 Can be implemented for same address space for program, data and I/O
 or for seperated program and data, I/O address space (no mix betwen data and program, not possible to have self modified program)
@@ -22,7 +22,7 @@ R8  : 1000 :M0: temp value register, low word of mul/imul  : result of division 
 R9  : 1001 :M1: temp value register, high word of mul/imul : modulo result for div/idiv
 R10 : 1010 :T0: temp value register
 R11 : 1011 :T1: temp value register
-R12 : 1100 :BP: base pointer
+R12 : 1100 :T2: temp value register
 R13 : 1101 :SP: stack pointer
 R14 : 1110 :FG: 32 bits flags  -------- -------- KI10ds-D GLASVXZC, see below flag R14:FG for description
 R15 : 1111 :PC: Program counter
@@ -114,10 +114,26 @@ Program counter R15:PC
 mnemonics : mov, add, sub , and, or , xor, not, shl, shr, sar, mul, div, imul, idiv, neg, push, pop, call, ret, wait ,
            reset, swsuper, swuser, cli, sti, srcsuper, srcuser, dstsuper, dstuser, sxb, sxhw, xb, xhw, swap
 
-Instruction structure: 16 bits 
+Instruction structure: 16 bits or 32 bits with 16 bits immediate data
+Instruction is stored in memory on 2/4 bytes instructions with big endian immediate
+  oooooooo oooooooo 
+  PC       PC + 1   
+or
+  oooooooo oooooooo iiiiiiii IIIIIIII
+  PC       PC + 1   PC + 2   PC + 3
+
+For example if we have an instruction structured like
+  Code        ccc f oooooooooooo siiiiiiiiiiiiiii
+  Code bit#   210 0 BA9876543210 FEDCBA9876543210
+Then in memory we have 
+  Code        cccfoooo oooooooo iiiiiiii siiiiiii
+  Code bit#   2100BA98 76543210 76543210 FEDCBA98
+  Byte bit#   76543210 76543210 76543210 76543210
+  Address     PC       PC + 1   PC + 2   PC + 3
+
 ccc f ooo iiiii xxxx  1 register and 5 bits immediates
-      000 mov X, Rx:Imm5  (flag X is assign with the value of bit imm4 of register Rx)
-      001 mov Rx:Imm5, X  (The value of bit imm4 of register Rx is assign with the value of flag X)
+      000 mov X, Rx:Imm5  ; flag X is assign with the value of bit imm4 of register Rx
+      001 mov Rx:Imm5, X  ; The value of bit imm4 of register Rx is assign with the value of flag X
 ccc f oooo iiiii xxx 1 register from R0 to R7 and 5 bits immediate
       0100 shl Rx, Imm5
       0101 shr Rx, Imm5
@@ -126,39 +142,39 @@ ccc f oooo yyyy xxxx  2 registers parameters
       0111 mov Rx, Ry , if s flag 1 then Ry taken from user register file, supervisor otherwise
                         if d flag 1 then Rx taken from user register file, supervisor otherwise
                         after this instruction s et d flags are set to default : s=d=K
-mmmm  ooooo yyy xxxx  2 registers parameters (Rx from R0 to R15, Ry R0 to R7)
+mmmm  ooooo yyy xxxx [iiiiiiiiiiiiiiii] 2 registers parameters (Rx from R0 to R15, Ry R0 to R7), and 16 bits immediate for mode mm10
 0000  10000 mov Rx, byte [Ry]    ; Rx = [Ry] & 0x000000FF
 0001  10000 mov Rx, byte [Ry++]    ;Rx = [Ry] & 0x000000FF, after memory access Ry = Ry + 1 
-0010  10000 mov Rx, byte [R12 + Ry]  ; Rx = [R12 + Ry] & 0x000000FF, Ry is an index of byte
+0010  10000 mov Rx, byte [Ry + imm16]  ; Rx = [Ry + imm16] & 0x000000FF
 0011  10000 mov Rx, byte [Ry--]  ; Rx = [Ry] & 0x000000FF, after memory access Ry = Ry - 1 
 0100  10000 mov Rx, hword [Ry]  ; Rx = [Ry] & 0x0000FFFF, Most significant half word of Rx is set to 0 (zero)
 0101  10000 mov Rx, hword [Ry++] ; Rx = [Ry] & 0x0000FFFF, after memory access Ry = Ry + 2  , Most significant half word of Rx is set to 0 (zero)
-0110  10000 mov Rx, hword [R12 + Ry shl 1] ; Rx = [R12 + Ry shl 1] & 0x0000FFFF, Ry is an index of half word, Most significant half word of Rx is set to 0 (zero)
+0110  10000 mov Rx, hword [Ry + imm16] ; Rx = [Ry + imm16] & 0x0000FFFF, Most significant half word of Rx is set to 0 (zero)
 0111  10000 mov Rx, hword [Ry--] ; Rx = [Ry] & 0x0000FFFF, after memory access Ry = Ry - 2 , Most significant half word of Rx is set to 0 (zero)
 1000  10000 mov high Rx, hword [Ry]  ; high Rx = hword [Ry], less significant half word of Rx is not modified
 1001  10000 mov high Rx, hword [Ry++]  ; high Rx = hword [Ry], after memory access Ry = Ry + 2 ,left significant half word of Rx is not modified
-1010  10000 mov high Rx, hword [R12 + Ry shl 1]  ; high Rx = hword [R12 + Ry shl 1], Ry is an index of half word,less significant half word of Rx is not modified
+1010  10000 mov high Rx, hword [Ry + imm16]  ; high Rx = hword [Ry + imm16], less significant half word of Rx is not modified
 1011  10000 mov high Rx, hword [Ry--]  ; high Rx = hword [Ry], after memory access Ry = Ry - 2 , left significant half word of Rx is not modified
 1100  10000 mov Rx, word [Ry]  ; Rx = [Ry]
 1101  10000 mov Rx, word [Ry++] ; Rx = [Ry], after memory access Ry = Ry + 4 
-1110  10000 mov Rx, word [R12 + Ry shl 2]  ; Rx = [R12 + Ry shl 2], Ry is an index of word
+1110  10000 mov Rx, word [Ry + imm16]  ; Rx = [Ry + imm16]
 1111  10000 mov Rx, word [Ry--]  ; Rx = [Ry], after memory access Ry = Ry - 4
-mmmm  ooooo yyyy xxx  2 registers parameters (Rx from R0 to R7 and Ry from R0 to R15)
+mmmm  ooooo yyyy xxx [iiiiiiiiiiiiiiii]  2 registers parameters (Rx from R0 to R7, Ry from R0 to R15), and 16 bits immediate for mode mm10
 0000  10001 mov byte [Rx], Ry  ; byte at [Rx] = Ry & 0x000000FF
 0001  10001 mov byte [Rx++], Ry ; after memory access Rx = Rx + 1   
-0010  10001 mov byte [R12 + Rx], Ry  
+0010  10001 mov byte [Rx + imm16], Ry  
 0011  10001 mov byte [Rx--], Ry   ; after memory access Rx = Rx - 1 
 0100  10001 mov hword [Rx], low Ry  
 0101  10001 mov hword [Rx++], low Ry   ; after memory access Rx = Rx + 2 
-0110  10001 mov hword [R12 + Rx shl 1], low Ry  
+0110  10001 mov hword [Rx + imm16], low Ry  
 0111  10001 mov hword [Rx--], low Ry   ; after memory access Rx = Rx - 2 
 1000  10001 mov hword [Rx], high Ry  
 1001  10001 mov hword [Rx++], high Ry   ; after memory access Rx = Rx + 2 
-1010  10001 mov hword [R12 + Rx shl 1], high Ry  
+1010  10001 mov hword [Rx + imm16], high Ry  
 1011  10001 mov hword [Rx--], high Ry   ; after memory access Rx = Rx - 2 
 1100  10001 mov word [Rx], Ry  
 1101  10001 mov word [Rx++], Ry   ; after memory access Rx = Rx + 4 
-1110  10001 mov word [R12 + Rx shl 2], Ry  
+1110  10001 mov word [Rx + imm16], Ry  
 1111  10001 mov word [Rx--], Ry   ; after memory access Rx = Rx - 4 
 ccc f oooooo yyy xxx  2 registers parameters (from R0 to R7)
       100100 add Rx, Ry  ;  Rx = Rx + Ry
@@ -183,7 +199,7 @@ ccc f oooooooo  xxxx  1 register parameter
       11000110 sub Rx, 4 ; Rx = Rx - 4
       11000111 not Rx    ; Rx = ~Rx
       11001000 push Rx   ; R13 = R13 + 4, [R13] = Rx
-      11001001 pop Rx    ;  Rx = [R13], R13 = R13 - 4, "ret" instruction is a pop R15
+      11001001 pop Rx    ; Rx = [R13], R13 = R13 - 4, "ret" instruction is a pop R15
       11001010 call Rx   ; push R15, R15 = Rx
       11001011 sxb  Rx   ; sign extend of byte, if Rx:7 then Rx = Rx | 0xFFFFFF00 else Rx = Rx & 0x000000FF
       11001100 sxhw Rx   ; sign extend of half word, if Rx:15 then Rx = Rx | 0xFFFF0000 else Rx = Rx & 0x0000FFFF
@@ -234,10 +250,10 @@ addressing mode: mmmm
     01mm : half word access from/to low register part (less significant half word)
     10mm : half word access from/to high register part (most significant half word)
     11mm : word access
-  adressing 
+  addressing 
     mm00 : address by register
     mm01 : address by register then increment the register by data size in byte
-    mm10 : base pointer (R12) + register left shifted by 0, 1 or 2 depending of the data size (byte, half word and word respectively) 
+    mm10 : address by register added by a 16 bits immediate 
     mm11 : address by register then decrement the register by data size in byte
 
 conditions: ccc
@@ -375,4 +391,11 @@ if 0 then no flag is modified by the instruction, 1 flag(s) modified by the inst
 0    nf
 1    fl
 
+In term of human readable intruction,
+ccc and f can be coded on the mnemonic
+example
+  add.al.f R10, 2    ; incondionaly (al) add 2 to register R10 and modify the flags (f) (default for "add" instruction)
+  add.al R10, 2      ; same as above, because "add" modiufied the flag by default
+  add R10, 2         ; same as above because 'al' (always) is by default for any instruction
+  add.nf R10, 2      ; same as above but do not modify the flags
 
